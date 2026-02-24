@@ -94,3 +94,31 @@
 +Do NOT modify public/customer pages (booking, confirmation, home, root layout).
 +
 +Commit with message "Recreate/fill admin dashboard placeholder pages and layout"
+
+# 2026-02-24 19:46:27.194073
++cd ~/Documents/GitHub/Waterfront/waterfront-web
+
+# 2026-02-24 19:47:21.555939
++In waterfront-web/src/app/admin/layout.tsx improve the session check:
++- Fetch profile from public.profiles table where id = session.user.id
++- Check if profile.role === 'admin' (or user_metadata.role === 'admin')
++- Redirect to /admin/login if not admin
++- Show "Access denied" message if role is wrong
++- Keep the sidebar and top bar (logout button should call supabase.auth.signOut())
+
+# 2026-02-24 19:47:40.859193
++yes
+
+# 2026-02-24 20:10:04.989078
++Follow docs/Admin-Layout-Spec.md exactly.
++Implement the full admin section step by step:
++1. Complete admin/layout.tsx with role check (profiles.role = 'admin')
++2. Make login page fully functional with redirect
++3. Build dashboard with 3 realtime stat cards (use Supabase realtime subscription)
++4. Add placeholder DataTable to bookings page
++5. Add realtime machines table to machines page
++6. Add basic event log to logs page
++After each step show diff and wait for my y/n
+
+# 2026-02-24 20:10:07.408325
++y
