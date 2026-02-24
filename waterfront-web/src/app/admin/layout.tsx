@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import AdminHeader from '@/components/AdminHeader';
 
 export default async function AdminLayout({
   children,
@@ -12,6 +13,13 @@ export default async function AdminLayout({
 
   if (!session) {
     redirect('/admin/login');
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+  const isAdmin = profile?.role === 'admin' || session.user.user_metadata?.role === 'admin';
+
+  if (!isAdmin) {
+    return <div>Access denied</div>;
   }
 
   return (
@@ -50,13 +58,7 @@ export default async function AdminLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Waterfront Admin</h2>
-          <div className="flex items-center space-x-4">
-            <span>{session.user.email}</span>
-            <button className="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
-          </div>
-        </header>
+        <AdminHeader email={session.user.email} />
 
         {/* Page Content */}
         <main className="flex-1 p-6">
