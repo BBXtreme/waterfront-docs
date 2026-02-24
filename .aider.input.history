@@ -122,3 +122,26 @@
 
 # 2026-02-24 20:10:07.408325
 +y
+
+# 2026-02-24 20:14:32.378951
++Recreate the missing admin structure in waterfront-web/src/app/admin/ with exact folders and empty placeholder page.tsx files:
++
++- admin/bookings/page.tsx: <h2>Bookings</h2> placeholder
++- admin/dashboard/page.tsx: <h2>Dashboard</h2> placeholder
++- admin/layout.tsx: export default function AdminLayout({ children }: { children: ReactNode }) { return <div>{children}</div>; }
++- admin/login/page.tsx: 'use client'; <h2>Login</h2> placeholder
++- admin/logs/page.tsx: <h2>Logs</h2> placeholder
++- admin/machines/page.tsx: <h2>Machines</h2> placeholder
++
++Do not touch other folders/files like booking, confirmation, favicon.ico, globals.css, layout.tsx, page.tsx, components/ui, lib/utils.ts.
++
++Commit with message "Recreate deleted admin folder structure and placeholder pages"
+
+# 2026-02-24 20:14:34.634298
++y
+
+# 2026-02-24 20:14:36.941974
++all
+
+# 2026-02-24 20:27:33.853865
++/exit
