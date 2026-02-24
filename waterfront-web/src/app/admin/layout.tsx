@@ -16,10 +16,9 @@ export default async function AdminLayout({
   }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-  const isAdmin = profile?.role === 'admin' || session.user.user_metadata?.role === 'admin';
 
-  if (!isAdmin) {
-    return <div>Access denied</div>;
+  if (!profile || profile.role !== 'admin') {
+    redirect('/admin/login');
   }
 
   return (
