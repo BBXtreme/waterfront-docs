@@ -13,7 +13,7 @@ interface Status {
 
 export default function TestConnectionsPage() {
   const mqttUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'ws://localhost:9001/mqtt';
-  console.log('MQTT URL:', mqttUrl);
+  console.log('Attempting MQTT WS connect to:', mqttUrl);
 
   // State for loading
   const [loading, setLoading] = useState(true);
@@ -73,46 +73,49 @@ export default function TestConnectionsPage() {
     if (!mqttClient) {
       try {
         const client = mqtt.connect(mqttUrl, {
-          clientId: 'waterfront-test-' + Math.random().toString(16).slice(3),
-          reconnect: true,
-          clean: true,
-          reconnectPeriod: 1000,
-          connectTimeout: 5000,
+          protocol: 'ws',
+          reconnectPeriod: 3000,
+          connectTimeout: 10000,
+          rejectUnauthorized: false,
+          clientId: 'waterfront-browser-' + Math.random().toString(16).slice(3),
         });
         client.on('connect', () => {
-          console.log('MQTT connected to', mqttUrl);
+          console.log('MQTT CONNECTED to ' + mqttUrl);
           setIsMqttConnected(true);
           setMqttStatus({
-            status: 'Connected',
-            message: `Connected to ${mqttUrl}`,
+            status: 'connected',
+            message: 'Connected to broker',
             timestamp: new Date().toLocaleString(),
           });
         });
         client.on('error', (error) => {
-          console.error('MQTT error:', error);
+          console.error('MQTT ERROR:', error);
           setIsMqttConnected(false);
           setMqttStatus({
-            status: 'Error',
-            message: error.message + ' Reconnecting...',
+            status: 'error',
+            message: 'Connection error: ' + (error.message || error),
             timestamp: new Date().toLocaleString(),
           });
         });
         client.on('offline', () => {
-          console.log('MQTT offline');
+          console.log('MQTT OFFLINE');
           setIsMqttConnected(false);
           setMqttStatus({
-            status: 'Offline',
-            message: 'MQTT client offline',
+            status: 'disconnected',
+            message: 'Offline – reconnecting...',
             timestamp: new Date().toLocaleString(),
           });
         });
         client.on('close', () => {
-          console.log('MQTT closed');
+          console.log('MQTT CLOSED');
+        });
+        client.on('reconnect', () => {
+          console.log('MQTT reconnect attempt');
         });
         setMqttClient(client);
       } catch (error: any) {
         setMqttStatus({
-          status: 'Error',
+          status: 'error',
           message: error.message,
           timestamp: new Date().toLocaleString(),
         });
@@ -121,8 +124,8 @@ export default function TestConnectionsPage() {
       // Update status if already connected
       if (isMqttConnected) {
         setMqttStatus({
-          status: 'Connected',
-          message: `Connected to ${mqttUrl}`,
+          status: 'connected',
+          message: 'Connected to broker',
           timestamp: new Date().toLocaleString(),
         });
       }
@@ -132,18 +135,16 @@ export default function TestConnectionsPage() {
   // Function to send test message
   const sendTestMessage = () => {
     if (mqttClient && isMqttConnected) {
-      const payload = {
+      const payload = JSON.stringify({
         action: 'test_unlock',
         kayakId: 'test-001',
         timestamp: new Date().toISOString(),
-      };
-      mqttClient.publish('/kayak/test/unlock', JSON.stringify(payload), { qos: 1 }, (err) => {
+      });
+      mqttClient.publish('/kayak/test/unlock', payload, { qos: 1 }, (err) => {
         if (err) {
-          console.error('Publish error:', err);
-          alert('Failed to publish message: ' + err.message);
+          console.error('Publish failed:', err);
         } else {
-          console.log('Published test message');
-          alert('Test message sent successfully!');
+          console.log('Test message published successfully');
         }
       });
     } else {
