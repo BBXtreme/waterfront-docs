@@ -12,7 +12,7 @@ interface Status {
 }
 
 export default function TestConnectionsPage() {
-  const mqttUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'mqtt://localhost:1883';
+  const mqttUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'ws://localhost:9001/mqtt';
   console.log('MQTT URL:', mqttUrl);
 
   // State for loading
@@ -76,9 +76,11 @@ export default function TestConnectionsPage() {
           clientId: 'waterfront-test-' + Math.random().toString(16).slice(3),
           reconnect: true,
           clean: true,
+          reconnectPeriod: 1000,
+          connectTimeout: 5000,
         });
         client.on('connect', () => {
-          console.log('MQTT connected');
+          console.log('MQTT connected to', mqttUrl);
           setIsMqttConnected(true);
           setMqttStatus({
             status: 'Connected',
@@ -87,7 +89,7 @@ export default function TestConnectionsPage() {
           });
         });
         client.on('error', (error) => {
-          console.log('MQTT error:', error);
+          console.error('MQTT error:', error);
           setIsMqttConnected(false);
           setMqttStatus({
             status: 'Error',
