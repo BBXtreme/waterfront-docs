@@ -180,3 +180,11 @@
 
 # 2026-02-25 09:06:49.434591
 +all
+
+# 2026-02-25 09:51:54.636310
++Fix Supabase in test-connections/page.tsx:
++Change the failing count(*) query to:
++const { data: session, error } = await supabase.auth.getSession();
++if (error) throw error;
++set status "Connected (auth session OK)" or error message
++Use try/catch
