@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import mqtt from 'mqtt';
 
+// Optional debug log (can stay here now)
+console.log('MQTT_BROKER_URL from env:', process.env.MQTT_BROKER_URL);
+
 // Define types for status objects
 interface Status {
   status: string;
