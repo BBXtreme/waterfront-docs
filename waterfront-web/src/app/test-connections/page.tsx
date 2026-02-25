@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import mqtt from 'mqtt';
 import { useTheme } from 'next-themes';
-import { ThemeProvider } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +63,9 @@ function TestConnectionsPage() {
   // State for calendar
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
+  // Generate clientId with useMemo to avoid hydration mismatch
+  const clientIdSuffix = useMemo(() => Math.random().toString(16).slice(3), []);
+
   // Load credentials from localStorage on mount
   useEffect(() => {
     const savedCredentials = localStorage.getItem('mqttCloudCreds');
@@ -76,6 +78,7 @@ function TestConnectionsPage() {
         console.error('Failed to parse saved credentials:', e);
       }
     }
+    console.log('Hydration check: client theme class:', document.documentElement.className);
   }, []);
 
   // Save credentials to localStorage
@@ -146,7 +149,7 @@ function TestConnectionsPage() {
       reconnectPeriod: 3000,
       connectTimeout: 10000,
       rejectUnauthorized: false,
-      clientId: `waterfront-browser-${broker}-${Math.random().toString(16).slice(3)}`,
+      clientId: `waterfront-browser-${broker}-${clientIdSuffix}`,
     };
 
     if (broker === 'local') {
@@ -503,242 +506,238 @@ function TestConnectionsPage() {
   };
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center relative">
-        <Toggle
-          pressed={theme === 'dark'}
-          onPressedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="absolute top-4 right-4"
-        >
-          Toggle Dark Mode
-        </Toggle>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center relative">
+      <Toggle
+        pressed={theme === 'dark'}
+        onPressedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        className="absolute top-4 right-4"
+      >
+        Toggle Dark Mode
+      </Toggle>
 
-        <h1 className="text-4xl font-bold mb-6">Waterfront – Connection & Environment Test</h1>
+      <h1 className="text-4xl font-bold mb-6">Waterfront – Connection & Environment Test</h1>
 
-        {loading && <p className="text-xl mb-4">Loading...</p>}
+      {loading && <p className="text-xl mb-4">Loading...</p>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Environment Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Environment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Status: <Badge variant={envStatus.status === 'OK' ? 'default' : 'destructive'}>{envStatus.status}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground">{envStatus.message}</p>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Environment Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Environment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg">
+              Status: <Badge variant={envStatus.status === 'OK' ? 'default' : 'destructive'}>{envStatus.status}</Badge>
+            </p>
+            <p className="text-sm text-muted-foreground">{envStatus.message}</p>
+          </CardContent>
+        </Card>
 
-          {/* Supabase Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Supabase</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Status: <Badge variant={supabaseStatus.status.includes('Connected') ? 'default' : 'destructive'}>{supabaseStatus.status}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
-              {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
-            </CardContent>
-          </Card>
+        {/* Supabase Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Supabase</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg">
+              Status: <Badge variant={supabaseStatus.status.includes('Connected') ? 'default' : 'destructive'}>{supabaseStatus.status}</Badge>
+            </p>
+            <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
+            {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
+          </CardContent>
+        </Card>
 
-          {/* MQTT Broker Cards */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Local Mosquitto Card */}
-              <Card className="flex-1 min-w-[300px]">
-                <CardHeader>
-                  <CardTitle>MQTT - Local Mosquitto</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-lg">
-                    Status: <Badge variant={getBadgeVariant(localStatus, localIsConnected)}>{localStatus.status}</Badge>
-                  </p>
-                  <p className="text-sm text-muted-foreground">{localStatus.message}</p>
-                  {localStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {localStatus.timestamp}</p>}
-                  <p className="text-red-600 text-sm mt-2">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
-                  <Button
-                    onClick={localIsStarted ? stopLocal : startLocal}
-                    variant={localIsStarted ? 'destructive' : 'default'}
-                    className="mt-4"
-                  >
-                    {localIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageLocal}
-                    disabled={!localIsConnected}
-                    className="mt-4 ml-2"
-                  >
-                    Send Test Message
-                  </Button>
-                </CardContent>
-              </Card>
+        {/* MQTT Broker Cards */}
+        <div className="col-span-1 md:col-span-2">
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Local Mosquitto Card */}
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader>
+                <CardTitle>MQTT - Local Mosquitto</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={getBadgeVariant(localStatus, localIsConnected)}>{localStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{localStatus.message}</p>
+                {localStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {localStatus.timestamp}</p>}
+                <p className="text-red-600 text-sm mt-2">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
+                <Button
+                  onClick={localIsStarted ? stopLocal : startLocal}
+                  variant={localIsStarted ? 'destructive' : 'default'}
+                  className="mt-4"
+                >
+                  {localIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageLocal}
+                  disabled={!localIsConnected}
+                  className="mt-4 ml-2"
+                >
+                  Send Test Message
+                </Button>
+              </CardContent>
+            </Card>
 
-              {/* HiveMQ Public Card */}
-              <Card className="flex-1 min-w-[300px]">
-                <CardHeader>
-                  <CardTitle>MQTT - HiveMQ Public</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-lg">
-                    Status: <Badge variant={getBadgeVariant(hivemqStatus, hivemqIsConnected)}>{hivemqStatus.status}</Badge>
-                  </p>
-                  <p className="text-sm text-muted-foreground">{hivemqStatus.message}</p>
-                  {hivemqStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqStatus.timestamp}</p>}
-                  <Button
-                    onClick={hivemqIsStarted ? stopHivemq : startHivemq}
-                    variant={hivemqIsStarted ? 'destructive' : 'default'}
-                    className="mt-4"
-                  >
-                    {hivemqIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageHivemq}
-                    disabled={!hivemqIsConnected}
-                    className="mt-4 ml-2"
-                  >
-                    Send Test Message
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* HiveMQ Public Card */}
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader>
+                <CardTitle>MQTT - HiveMQ Public</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={getBadgeVariant(hivemqStatus, hivemqIsConnected)}>{hivemqStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{hivemqStatus.message}</p>
+                {hivemqStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqStatus.timestamp}</p>}
+                <Button
+                  onClick={hivemqIsStarted ? stopHivemq : startHivemq}
+                  variant={hivemqIsStarted ? 'destructive' : 'default'}
+                  className="mt-4"
+                >
+                  {hivemqIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageHivemq}
+                  disabled={!hivemqIsConnected}
+                  className="mt-4 ml-2"
+                >
+                  Send Test Message
+                </Button>
+              </CardContent>
+            </Card>
 
-              {/* EMQX Public Card */}
-              <Card className="flex-1 min-w-[300px]">
-                <CardHeader>
-                  <CardTitle>MQTT - EMQX Public</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-lg">
-                    Status: <Badge variant={getBadgeVariant(emqxStatus, emqxIsConnected)}>{emqxStatus.status}</Badge>
-                  </p>
-                  <p className="text-sm text-muted-foreground">{emqxStatus.message}</p>
-                  {emqxStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {emqxStatus.timestamp}</p>}
-                  <Button
-                    onClick={emqxIsStarted ? stopEmqx : startEmqx}
-                    variant={emqxIsStarted ? 'destructive' : 'default'}
-                    className="mt-4"
-                  >
-                    {emqxIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageEmqx}
-                    disabled={!emqxIsConnected}
-                    className="mt-4 ml-2"
-                  >
-                    Send Test Message
-                  </Button>
-                </CardContent>
-              </Card>
+            {/* EMQX Public Card */}
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader>
+                <CardTitle>MQTT - EMQX Public</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={getBadgeVariant(emqxStatus, emqxIsConnected)}>{emqxStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{emqxStatus.message}</p>
+                {emqxStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {emqxStatus.timestamp}</p>}
+                <Button
+                  onClick={emqxIsStarted ? stopEmqx : startEmqx}
+                  variant={emqxIsStarted ? 'destructive' : 'default'}
+                  className="mt-4"
+                >
+                  {emqxIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageEmqx}
+                  disabled={!emqxIsConnected}
+                  className="mt-4 ml-2"
+                >
+                  Send Test Message
+                </Button>
+              </CardContent>
+            </Card>
 
-              {/* HiveMQ Cloud Card */}
-              <Card className="flex-1 min-w-[300px]">
-                <CardHeader>
-                  <CardTitle>MQTT - HiveMQ Cloud (Private)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-lg">
-                    Status: <Badge variant={getBadgeVariant(hivemqCloudStatus, hivemqCloudIsConnected)}>{hivemqCloudStatus.status}</Badge>
-                  </p>
-                  <p className="text-sm text-muted-foreground">{hivemqCloudStatus.message}</p>
-                  {hivemqCloudStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqCloudStatus.timestamp}</p>}
-                  <div className="mt-4">
-                    <div className="mb-2">
-                      <Label htmlFor="username">Username</Label>
-                      <Input
-                        id="username"
-                        type="text"
-                        value={cloudUsername}
-                        onChange={(e) => setCloudUsername(e.target.value)}
-                        placeholder="Enter username"
-                      />
-                    </div>
-                    <div className="mb-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={cloudPassword}
-                        onChange={(e) => setCloudPassword(e.target.value)}
-                        placeholder="Enter password"
-                      />
-                    </div>
+            {/* HiveMQ Cloud Card */}
+            <Card className="flex-1 min-w-[300px]">
+              <CardHeader>
+                <CardTitle>MQTT - HiveMQ Cloud (Private)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={getBadgeVariant(hivemqCloudStatus, hivemqCloudIsConnected)}>{hivemqCloudStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{hivemqCloudStatus.message}</p>
+                {hivemqCloudStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqCloudStatus.timestamp}</p>}
+                <div className="mt-4">
+                  <div className="mb-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      value={cloudUsername}
+                      onChange={(e) => setCloudUsername(e.target.value)}
+                      placeholder="Enter username"
+                    />
                   </div>
-                  <Button
-                    onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
-                    variant={hivemqCloudIsStarted ? 'destructive' : 'default'}
-                    className="mt-4"
-                  >
-                    {hivemqCloudIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageHivemqCloud}
-                    disabled={!hivemqCloudIsConnected}
-                    className="mt-4 ml-2"
-                  >
-                    Send Test Message
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="mb-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={cloudPassword}
+                      onChange={(e) => setCloudPassword(e.target.value)}
+                      placeholder="Enter password"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
+                  variant={hivemqCloudIsStarted ? 'destructive' : 'default'}
+                  className="mt-4"
+                >
+                  {hivemqCloudIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageHivemqCloud}
+                  disabled={!hivemqCloudIsConnected}
+                  className="mt-4 ml-2"
+                >
+                  Send Test Message
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-
-          {/* Calendar Card */}
-          <Card className="col-span-1 md:col-span-2">
-            <CardHeader>
-              <CardTitle>Availability Calendar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="rounded-md border"
-              />
-              <p className="mt-4">Selected date: {selectedDate?.toDateString()}</p>
-              {/* Placeholder for availability grid */}
-              <div className="mt-4 grid grid-cols-7 gap-2">
-                {Array.from({ length: 7 }, (_, i) => (
-                  <div key={i} className="p-2 border rounded text-center">
-                    {i + 9}:00 - {i + 10}:00
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Vercel Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Vercel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Status: <Badge variant={vercelStatus.status === 'OK' ? 'default' : 'destructive'}>{vercelStatus.status}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
-            </CardContent>
-          </Card>
         </div>
 
-        <Button
-          onClick={refreshStatuses}
-          disabled={loading}
-        >
-          {loading ? 'Refreshing...' : 'Refresh All'}
-        </Button>
-        <Toaster />
-      </main>
-    </ThemeProvider>
+        {/* Calendar Card */}
+        <Card className="col-span-1 md:col-span-2">
+          <CardHeader>
+            <CardTitle>Availability Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              className="rounded-md border"
+            />
+            <p className="mt-4">Selected date: {selectedDate?.toDateString()}</p>
+            {/* Placeholder for availability grid */}
+            <div className="mt-4 grid grid-cols-7 gap-2">
+              {Array.from({ length: 7 }, (_, i) => (
+                <div key={i} className="p-2 border rounded text-center">
+                  {i + 9}:00 - {i + 10}:00
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Vercel Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vercel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg">
+              Status: <Badge variant={vercelStatus.status === 'OK' ? 'default' : 'destructive'}>{vercelStatus.status}</Badge>
+            </p>
+            <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Button
+        onClick={refreshStatuses}
+        disabled={loading}
+      >
+        {loading ? 'Refreshing...' : 'Refresh All'}
+      </Button>
+      <Toaster />
+    </main>
   );
 }
 
 export default function Page() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TestConnectionsPage />
-    </ThemeProvider>
+    <TestConnectionsPage />
   );
 }
