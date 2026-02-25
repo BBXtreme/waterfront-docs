@@ -24,6 +24,10 @@ export default function TestConnectionsPage() {
   const [mqttStatus, setMqttStatus] = useState<Status>({ status: 'Checking...', message: '' });
   const [vercelStatus, setVercelStatus] = useState<Status>({ status: 'Checking...', message: '' });
 
+  // MQTT client state
+  const [mqttClient, setMqttClient] = useState<any>(null);
+  const [isMqttConnected, setIsMqttConnected] = useState(false);
+
   // Function to check environment variables
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -66,68 +70,82 @@ export default function TestConnectionsPage() {
 
   // Function to check MQTT connection
   const checkMQTT = () => {
-    try {
-      const client = mqtt.connect(mqttUrl);
-      client.on('connect', () => {
-        setMqttStatus({
-          status: 'Connected',
-          message: `Connected to ${mqttUrl}`,
-          timestamp: new Date().toLocaleString(),
+    if (!mqttClient) {
+      try {
+        const client = mqtt.connect(mqttUrl, {
+          clientId: 'waterfront-test-' + Math.random().toString(16).slice(3),
+          reconnect: true,
+          clean: true,
         });
-        client.end(); // Disconnect after confirming connection
-      });
-      client.on('error', (error) => {
+        client.on('connect', () => {
+          console.log('MQTT connected');
+          setIsMqttConnected(true);
+          setMqttStatus({
+            status: 'Connected',
+            message: `Connected to ${mqttUrl}`,
+            timestamp: new Date().toLocaleString(),
+          });
+        });
+        client.on('error', (error) => {
+          console.log('MQTT error:', error);
+          setIsMqttConnected(false);
+          setMqttStatus({
+            status: 'Error',
+            message: error.message + ' Reconnecting...',
+            timestamp: new Date().toLocaleString(),
+          });
+        });
+        client.on('offline', () => {
+          console.log('MQTT offline');
+          setIsMqttConnected(false);
+          setMqttStatus({
+            status: 'Offline',
+            message: 'MQTT client offline',
+            timestamp: new Date().toLocaleString(),
+          });
+        });
+        client.on('close', () => {
+          console.log('MQTT closed');
+        });
+        setMqttClient(client);
+      } catch (error: any) {
         setMqttStatus({
           status: 'Error',
           message: error.message,
           timestamp: new Date().toLocaleString(),
         });
-      });
-      client.on('offline', () => {
+      }
+    } else {
+      // Update status if already connected
+      if (isMqttConnected) {
         setMqttStatus({
-          status: 'Disconnected',
-          message: 'MQTT client offline',
+          status: 'Connected',
+          message: `Connected to ${mqttUrl}`,
           timestamp: new Date().toLocaleString(),
         });
-      });
-    } catch (error: any) {
-      setMqttStatus({
-        status: 'Error',
-        message: error.message,
-        timestamp: new Date().toLocaleString(),
-      });
+      }
     }
   };
 
   // Function to send test message
   const sendTestMessage = () => {
-    try {
-      const client = mqtt.connect(mqttUrl);
-      client.on('connect', () => {
-        const payload = {
-          action: 'test_unlock',
-          kayakId: 'test-kayak-001',
-          timestamp: new Date().toISOString(),
-        };
-        const topic = '/kayak/test/unlock';
-        client.publish(topic, JSON.stringify(payload), (err) => {
-          if (err) {
-            console.error('Publish error:', err);
-            alert('Failed to publish message: ' + err.message);
-          } else {
-            console.log('Published test message:', payload);
-            alert('Test message sent successfully!');
-          }
-          client.end();
-        });
+    if (mqttClient && isMqttConnected) {
+      const payload = {
+        action: 'test_unlock',
+        kayakId: 'test-001',
+        timestamp: new Date().toISOString(),
+      };
+      mqttClient.publish('/kayak/test/unlock', JSON.stringify(payload), { qos: 1 }, (err) => {
+        if (err) {
+          console.error('Publish error:', err);
+          alert('Failed to publish message: ' + err.message);
+        } else {
+          console.log('Published test message');
+          alert('Test message sent successfully!');
+        }
       });
-      client.on('error', (error) => {
-        console.error('Connection error:', error);
-        alert('Failed to connect: ' + error.message);
-      });
-    } catch (error: any) {
-      console.error('Error:', error);
-      alert('Error: ' + error.message);
+    } else {
+      alert('MQTT not connected');
     }
   };
 
@@ -163,6 +181,15 @@ export default function TestConnectionsPage() {
     refreshStatuses();
   }, []);
 
+  // useEffect for MQTT client cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mqttClient) {
+        mqttClient.end();
+      }
+    };
+  }, [mqttClient]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
       <h1 className="text-4xl font-bold mb-6">Waterfront – Connection & Environment Test</h1>
@@ -193,13 +220,13 @@ export default function TestConnectionsPage() {
         <div className="bg-white border border-gray-300 rounded-lg p-6 shadow-md">
           <h2 className="text-2xl font-semibold mb-4">MQTT</h2>
           <p className="text-lg">
-            Status: <span className={mqttStatus.status === 'Connected' ? 'text-green-600' : 'text-red-600'}>{mqttStatus.status}</span>
+            Status: <span className={isMqttConnected ? 'text-green-600' : 'text-red-600'}>{mqttStatus.status}</span>
           </p>
           <p className="text-sm text-gray-600">{mqttStatus.message}</p>
           {mqttStatus.timestamp && <p className="text-xs text-gray-500">Last checked: {mqttStatus.timestamp}</p>}
           <button
             onClick={sendTestMessage}
-            disabled={mqttStatus.status !== 'Connected'}
+            disabled={!isMqttConnected}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded mt-4"
           >
             Send Test Message
