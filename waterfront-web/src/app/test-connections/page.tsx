@@ -127,8 +127,10 @@ export default function TestConnectionsPage() {
       url = process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'ws://localhost:9001/mqtt';
       options.protocol = 'ws';
     } else {
-      if (broker === 'hivemq') url = 'wss://broker.hivemq.com:8883/mqtt';
-      else if (broker === 'emqx') url = 'wss://broker.emqx.io:8084/mqtt';
+      if (broker === 'hivemq') {
+        url = 'wss://broker.hivemq.com:8884/mqtt';
+        console.log('HiveMQ Public URL:', url);
+      } else if (broker === 'emqx') url = 'wss://broker.emqx.io:8084/mqtt';
       else if (broker === 'hivemq-cloud') {
         url = 'wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt';
         if (cloudUsername && cloudPassword) {
@@ -195,8 +197,8 @@ export default function TestConnectionsPage() {
       console.error(`MQTT WS error for ${broker}:`, error);
       setIsConnected(false);
       let errorMessage = 'Connection error: ' + (error.message || error);
-      if (error.message && (error.message.includes('lost') || error.message.includes('failed'))) {
-        errorMessage = 'Connection lost – check network / broker firewall';
+      if (broker === 'hivemq' && error.message && (error.message.includes('lost') || error.message.includes('failed'))) {
+        errorMessage = 'Connection failed – check network or try EMQX/HiveMQ Cloud';
       } else if (broker === 'hivemq-cloud' && (error.message?.includes('Not authorized') || error.message?.includes('401') || error.message?.includes('403'))) {
         errorMessage = 'Authentication failed – check username/password';
       }
