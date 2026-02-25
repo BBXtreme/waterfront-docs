@@ -108,6 +108,43 @@ export default function TestConnectionsPage() {
     }
   };
 
+  // Function to send test message
+  const sendTestMessage = () => {
+    const brokerUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL;
+    if (!brokerUrl) {
+      alert('MQTT_BROKER_URL not set');
+      return;
+    }
+    try {
+      const client = mqtt.connect(brokerUrl);
+      client.on('connect', () => {
+        const payload = {
+          action: 'test_unlock',
+          kayakId: 'test-kayak-001',
+          timestamp: new Date().toISOString(),
+        };
+        const topic = '/kayak/test/unlock';
+        client.publish(topic, JSON.stringify(payload), (err) => {
+          if (err) {
+            console.error('Publish error:', err);
+            alert('Failed to publish message: ' + err.message);
+          } else {
+            console.log('Published test message:', payload);
+            alert('Test message sent successfully!');
+          }
+          client.end();
+        });
+      });
+      client.on('error', (error) => {
+        console.error('Connection error:', error);
+        alert('Failed to connect: ' + error.message);
+      });
+    } catch (error: any) {
+      console.error('Error:', error);
+      alert('Error: ' + error.message);
+    }
+  };
+
   // Function to check Vercel environment
   const checkVercel = () => {
     const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
@@ -174,6 +211,13 @@ export default function TestConnectionsPage() {
           </p>
           <p className="text-sm text-gray-600">{mqttStatus.message}</p>
           {mqttStatus.timestamp && <p className="text-xs text-gray-500">Last checked: {mqttStatus.timestamp}</p>}
+          <button
+            onClick={sendTestMessage}
+            disabled={mqttStatus.status !== 'Connected'}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded mt-4"
+          >
+            Send Test Message
+          </button>
         </div>
 
         {/* Vercel Card */}
