@@ -849,3 +849,128 @@
 +
 +Next.js version: 16.1.6 (Turbopack)
 +
+
+# 2026-02-25 23:00:45.073867
++Redesign src/app/test-connections/page.tsx for professional, spacious, Apple-inspired look.
++
++Current issues: cards too close, no space, Toggle misplaced, calendar unclear, layout crowded.
++
++Goals:
++- Clean, minimal, lots of white space (padding-6, gap-6/8)
++- Top header: title "Waterfront – Connection & Environment Test" centered/large, dark mode Toggle in top-right corner (fixed or header)
++- Global sections (Environment, Supabase): vertical stack at top, full-width cards with subtle shadow (shadcn Card)
++- MQTT brokers: responsive grid (grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6)
++  - Each broker card: shadcn Card with header (title + status Badge), content (status text, last checked, warning for local, inputs for Cloud)
++  - Buttons: shadcn Button (Start/Stop toggle, Send Test Message disabled if disconnected)
++  - Status Badge: green "Connected", red "Disconnected", yellow "Connecting", gray "Stopped"
++- Remove calendar entirely (or hide with comment "Placeholder for booking calendar – add later")
++- Dark mode: full support (shadcn + sonner + Tailwind dark: classes)
++- Add subtle hover effects on cards/buttons
++- Responsive: stack cards vertically on mobile, horizontal on larger screens
++- Keep all logic (broker selector hidden or removed since separate cards, start/stop per card, publish, reconnect limit)
++
++Use shadcn/ui components (Card, CardHeader, CardTitle, CardContent, Badge, Button, Toggle, Toaster)
++Keep sonner toast for feedback.
++
++Do not add new functionality – focus on layout, spacing, colors, arrangement.
++
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Toggle dark mode – check cards, badges, buttons, toast in dark
++- Resize window – cards stack on small screen
++- Confirm no build errors
++- Take screenshot – layout should feel spacious and modern (like Apple.com or clean SaaS dashboard)
+
+# 2026-02-25 23:03:37.546651
++Redesign src/app/test-connections/page.tsx for a professional, spacious, Apple-inspired modern dashboard look.
++
++Current problems: no spacing between cards, buttons too wide, no internal padding, toggle misplaced, overall cramped and flat.
++
++New layout goals:
++- Spacious, minimal, lots of white space (gap-8, padding-8)
++- Top fixed header bar (bg-background border-b sticky top-0 z-10 p-4 flex justify-between items-center)
++  - Left: title "Waterfront – Connection Test" (text-2xl font-semibold)
++  - Right: shadcn Toggle for dark mode (icon sun/moon or text "Dark Mode")
++- Main content: max-w-7xl mx-auto px-4 md:px-8 py-8
++- Environment + Supabase cards: vertical stack at top, full-width, shadcn Card with shadow-md rounded-xl p-6
++- MQTT brokers: responsive grid (grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6)
++  - Each broker card: shadcn Card shadow-lg rounded-xl overflow-hidden
++    - CardHeader: title "MQTT - [Broker Name]" font-medium text-lg, right-aligned Badge for status (success green "Connected", destructive red "Disconnected", secondary gray "Stopped", warning yellow "Connecting")
++    - CardContent: p-6 flex flex-col gap-4
++      - Status text + last checked (text-sm text-muted-foreground)
++      - Warning for local (text-destructive text-sm)
++      - Username/password inputs only for HiveMQ Cloud (shadcn Input with label)
++      - Buttons row: shadcn Button variants (Start/Stop toggle: outline green/red, Send Test Message: default disabled if disconnected)
++    - Hover effect: hover:shadow-xl transition-shadow
++- Global "Refresh All" button in header or bottom (secondary variant)
++- Use shadcn/ui for all: Card, CardHeader, CardTitle, CardContent, Badge, Button, Input, Label, Toggle, Toaster
++- Dark mode: full support (shadcn + sonner + Tailwind dark: classes)
++- Responsive: cards stack vertically on mobile, 2–4 columns on larger screens
++- Keep all logic (per-card start/stop, connect, publish, sonner toast, reconnect limit)
++- Remove calendar if present (comment "Placeholder for booking calendar – add later")
++
++Do NOT add new functionality – focus purely on layout, spacing, padding, colors, arrangement.
++
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page (Cmd+Shift+R)
++- Toggle dark mode – check cards, badges, buttons, spacing in dark
++- Resize window – cards stack on mobile
++- Confirm spacious feel (like Apple.com or clean SaaS dashboard)
++- Take screenshot – layout should be airy, modern, easy to read
+
+# 2026-02-25 23:05:42.454563
++Redesign src/app/test-connections/page.tsx to match a clean, professional dashboard style like https://thebitcoinportal.com/nodes/bip110 – high clarity, strong status indicators, generous whitespace, minimal clutter.
++
++Current problems: cards cramped, buttons too wide, no padding, toggle misplaced.
++
++New layout & style:
++- Fixed/sticky header bar (bg-background border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center)
++  - Left: title "Waterfront – Connection Test" text-2xl font-semibold
++  - Right: shadcn Toggle for dark mode (icon or text "Dark / Light")
++- Main content: max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8
++- Environment + Supabase: two full-width shadcn Cards at top (grid grid-cols-1 lg:grid-cols-2 gap-6)
++  - Compact: title, status Badge (green OK, red error), key info (URL, key length, auth status)
++- MQTT Brokers section: header "MQTT Brokers" text-xl font-medium mb-6
++  - Responsive grid: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6
++  - Each broker: shadcn Card shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden
++    - CardHeader: title "MQTT - [Name]" font-medium, right-aligned Badge (success green "Connected", destructive red "Disconnected", secondary gray "Stopped", warning yellow "Connecting")
++    - CardContent: p-6 flex flex-col gap-4 text-sm
++      - Status text + last checked (text-muted-foreground)
++      - Warning text for Local (text-destructive text-xs)
++      - Credentials inputs only for HiveMQ Cloud (shadcn Input + Label, conditional)
++      - Controls: flex gap-3
++        - shadcn Button variant="outline" size="sm" for Start/Stop toggle (green/red text)
++        - shadcn Button size="sm" for Send Test Message (disabled if disconnected)
++- Global "Refresh All" button (secondary, top-right below header or bottom)
++- Use shadcn/ui: Card, CardHeader, CardTitle, CardContent, Badge, Button, Input, Label, Toggle, Toaster
++- Dark mode: full support (shadcn + sonner + Tailwind dark: classes)
++- Responsive: stack everything vertically on mobile, horizontal grid on larger screens
++- Remove calendar completely (or comment out with "Placeholder for booking calendar")
++- Keep all logic: per-card start/stop, connect, publish, sonner toast, reconnect limit, credentials inputs
++
++Do NOT add new functionality – focus only on layout, spacing, padding, colors, visual hierarchy, responsiveness.
++
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page (Cmd+Shift+R)
++- Toggle dark mode – check all elements (cards, badges, buttons, toasts) in dark mode
++- Resize window – cards stack on mobile, grid on desktop
++- Confirm spacious, clean, Apple-like or modern SaaS feel
++- Take screenshot – layout should feel airy, readable, professional
+
+# 2026-02-25 23:05:47.531519
++y
+
+# 2026-02-25 23:07:56.916308
++give 25px space arround each card and 25px padding inside each card. 
+
+# 2026-02-25 23:10:08.510423
++the cards should min width 300px and max 75% of width of brwoser window. the headline inside each card needs padding of 25px as well
+
+# 2026-02-25 23:11:37.420020
++center all cards
+
+# 2026-02-25 23:12:33.114589
++make cards all same width of 350px
