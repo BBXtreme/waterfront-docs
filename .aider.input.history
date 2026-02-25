@@ -551,3 +551,52 @@
 +- Click Send Test Message on a connected broker – check console log
 +- Toggle dark mode – check if page switches
 +- If reconnect loop, check max attempts stops it
+
+# 2026-02-25 17:05:16.268217
++Fix HiveMQ Public in src/app/test-connections/page.tsx
++
++Current: MQTT - HiveMQ Public card stays disconnected
++
++Fix:
++- Change URL for HiveMQ public to wss://broker.hivemq.com:8883/mqtt (secure WebSocket – ws:// is not supported)
++- Keep other brokers unchanged (local ws://9001, EMQX wss://8084, HiveMQ Cloud wss://your-cluster:8884)
++- Add console.log('HiveMQ Public URL:', activeUrl) when selected
++- In connect options: protocol: 'wss' for HiveMQ public only
++- If error contains 'lost' or 'failed' → set card message "Connection failed – check network or try EMQX/HiveMQ Cloud"
++
++Do not change other cards or logic.
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Select HiveMQ Public → check if card goes Connected
++- Check console for URL log and connect success
++- Click Send Test Message → verify publish
+
+# 2026-02-25 17:07:34.505315
++Add subscribe listener (per broker card)
++Listen on /kayak/test/ack → show incoming messages (simulate ESP32 response "unlocked")
++Supabase logging
++On publish success → insert row in mqtt_logs table (topic, payload, timestamp, broker)
++Dark mode polish
++Toggle works – now add shadcn/ui components (Card, Button, Input) for nicer look
++Calendar skeleton
++Start shadcn/ui date-picker + availability grid
+
+# 2026-02-25 17:09:05.712598
++In src/app/test-connections/page.tsx:
++
++On successful publish ("Published successfully"):
++- Insert row into Supabase table 'mqtt_logs'
++- Columns: broker (selectedBroker), topic ('/kayak/test/unlock'), payload (JSON object), created_at (auto)
++- Use supabase.from('mqtt_logs').insert({ broker: selectedBroker, topic: '/kayak/test/unlock', payload: payloadObject })
++- Show success toast/message in card: "Logged to Supabase"
++- If insert fails → console.error + card warning "Supabase log failed"
++
++Import supabase client from '@/lib/supabase' (assume it exists or create simple createClient)
++
++Keep all existing logic.
++After changes:
++- Remind to create table mqtt_logs in Supabase if missing (id, broker text, topic text, payload jsonb, created_at timestamptz)
++- Run pnpm dev
++- Publish message → check Supabase table for new row
++- Confirm payload is JSONB with action, kayakId, broker, timestamp
