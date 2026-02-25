@@ -79,17 +79,17 @@ export default function TestConnectionsPage() {
   }, [cloudUsername, cloudPassword]);
 
   // Function to insert log into Supabase
-  const insertLog = async (topic: string, payload: string, broker: string) => {
+  const insertLog = async (topic: string, payload: any, broker: string) => {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    await supabase.from('mqtt_logs').insert({
+    const { error } = await supabase.from('mqtt_logs').insert({
+      broker,
       topic,
-      payload,
-      timestamp: new Date().toISOString(),
-      broker
+      payload
     });
+    if (error) throw error;
   };
 
   // Function to check environment variables
@@ -335,18 +335,24 @@ export default function TestConnectionsPage() {
   // Send test message functions
   const sendTestMessageLocal = async () => {
     if (localClient && localIsConnected) {
-      const payload = JSON.stringify({
+      const payloadObject = {
         action: 'test_unlock',
         kayakId: 'test-001',
         broker: 'local',
         timestamp: new Date().toISOString(),
-      });
-      localClient.publish('/kayak/test/unlock', payload, { qos: 1 }, async (err) => {
+      };
+      localClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
         } else {
           console.log('Test message published to local');
-          await insertLog('/kayak/test/unlock', payload, 'local');
+          try {
+            await insertLog('/kayak/test/unlock', payloadObject, 'local');
+            setLocalStatus({ ...localStatus, message: 'Logged to Supabase' });
+          } catch (logErr) {
+            console.error('Supabase log failed:', logErr);
+            setLocalStatus({ ...localStatus, message: 'Supabase log failed' });
+          }
         }
       });
     }
@@ -354,18 +360,24 @@ export default function TestConnectionsPage() {
 
   const sendTestMessageHivemq = async () => {
     if (hivemqClient && hivemqIsConnected) {
-      const payload = JSON.stringify({
+      const payloadObject = {
         action: 'test_unlock',
         kayakId: 'test-001',
         broker: 'hivemq',
         timestamp: new Date().toISOString(),
-      });
-      hivemqClient.publish('/kayak/test/unlock', payload, { qos: 1 }, async (err) => {
+      };
+      hivemqClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
         } else {
           console.log('Test message published to hivemq');
-          await insertLog('/kayak/test/unlock', payload, 'hivemq');
+          try {
+            await insertLog('/kayak/test/unlock', payloadObject, 'hivemq');
+            setHivemqStatus({ ...hivemqStatus, message: 'Logged to Supabase' });
+          } catch (logErr) {
+            console.error('Supabase log failed:', logErr);
+            setHivemqStatus({ ...hivemqStatus, message: 'Supabase log failed' });
+          }
         }
       });
     }
@@ -373,18 +385,24 @@ export default function TestConnectionsPage() {
 
   const sendTestMessageEmqx = async () => {
     if (emqxClient && emqxIsConnected) {
-      const payload = JSON.stringify({
+      const payloadObject = {
         action: 'test_unlock',
         kayakId: 'test-001',
         broker: 'emqx',
         timestamp: new Date().toISOString(),
-      });
-      emqxClient.publish('/kayak/test/unlock', payload, { qos: 1 }, async (err) => {
+      };
+      emqxClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
         } else {
           console.log('Test message published to emqx');
-          await insertLog('/kayak/test/unlock', payload, 'emqx');
+          try {
+            await insertLog('/kayak/test/unlock', payloadObject, 'emqx');
+            setEmqxStatus({ ...emqxStatus, message: 'Logged to Supabase' });
+          } catch (logErr) {
+            console.error('Supabase log failed:', logErr);
+            setEmqxStatus({ ...emqxStatus, message: 'Supabase log failed' });
+          }
         }
       });
     }
@@ -392,18 +410,24 @@ export default function TestConnectionsPage() {
 
   const sendTestMessageHivemqCloud = async () => {
     if (hivemqCloudClient && hivemqCloudIsConnected) {
-      const payload = JSON.stringify({
+      const payloadObject = {
         action: 'test_unlock',
         kayakId: 'test-001',
         broker: 'hivemq-cloud',
         timestamp: new Date().toISOString(),
-      });
-      hivemqCloudClient.publish('/kayak/test/unlock', payload, { qos: 1 }, async (err) => {
+      };
+      hivemqCloudClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
         } else {
           console.log('Test message published to hivemq-cloud');
-          await insertLog('/kayak/test/unlock', payload, 'hivemq-cloud');
+          try {
+            await insertLog('/kayak/test/unlock', payloadObject, 'hivemq-cloud');
+            setHivemqCloudStatus({ ...hivemqCloudStatus, message: 'Logged to Supabase' });
+          } catch (logErr) {
+            console.error('Supabase log failed:', logErr);
+            setHivemqCloudStatus({ ...hivemqCloudStatus, message: 'Supabase log failed' });
+          }
         }
       });
     }
