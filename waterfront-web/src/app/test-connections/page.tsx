@@ -288,7 +288,7 @@ function TestConnectionsPage() {
     setLocalIsStarted(true);
     setLocalStatus({ status: 'connecting', message: 'Connecting...' });
     checkMQTT('local');
-    toast({ title: "Broker Local Mosquitto", description: "Started" });
+    toast("Broker Local Mosquitto", { description: "Started" });
   };
 
   const stopLocal = () => {
@@ -297,14 +297,14 @@ function TestConnectionsPage() {
     setLocalClient(null);
     setLocalIsConnected(false);
     setLocalStatus({ status: 'disconnected', message: 'Stopped' });
-    toast({ title: "Broker Local Mosquitto", description: "Stopped" });
+    toast("Broker Local Mosquitto", { description: "Stopped" });
   };
 
   const startHivemq = () => {
     setHivemqIsStarted(true);
     setHivemqStatus({ status: 'connecting', message: 'Connecting...' });
     checkMQTT('hivemq');
-    toast({ title: "Broker HiveMQ Public", description: "Started" });
+    toast("Broker HiveMQ Public", { description: "Started" });
   };
 
   const stopHivemq = () => {
@@ -313,14 +313,14 @@ function TestConnectionsPage() {
     setHivemqClient(null);
     setHivemqIsConnected(false);
     setHivemqStatus({ status: 'disconnected', message: 'Stopped' });
-    toast({ title: "Broker HiveMQ Public", description: "Stopped" });
+    toast("Broker HiveMQ Public", { description: "Stopped" });
   };
 
   const startEmqx = () => {
     setEmqxIsStarted(true);
     setEmqxStatus({ status: 'connecting', message: 'Connecting...' });
     checkMQTT('emqx');
-    toast({ title: "Broker EMQX Public", description: "Started" });
+    toast("Broker EMQX Public", { description: "Started" });
   };
 
   const stopEmqx = () => {
@@ -329,14 +329,14 @@ function TestConnectionsPage() {
     setEmqxClient(null);
     setEmqxIsConnected(false);
     setEmqxStatus({ status: 'disconnected', message: 'Stopped' });
-    toast({ title: "Broker EMQX Public", description: "Stopped" });
+    toast("Broker EMQX Public", { description: "Stopped" });
   };
 
   const startHivemqCloud = () => {
     setHivemqCloudIsStarted(true);
     setHivemqCloudStatus({ status: 'connecting', message: 'Connecting...' });
     checkMQTT('hivemq-cloud');
-    toast({ title: "Broker HiveMQ Cloud (Private)", description: "Started" });
+    toast("Broker HiveMQ Cloud (Private)", { description: "Started" });
   };
 
   const stopHivemqCloud = () => {
@@ -345,7 +345,7 @@ function TestConnectionsPage() {
     setHivemqCloudClient(null);
     setHivemqCloudIsConnected(false);
     setHivemqCloudStatus({ status: 'disconnected', message: 'Stopped' });
-    toast({ title: "Broker HiveMQ Cloud (Private)", description: "Stopped" });
+    toast("Broker HiveMQ Cloud (Private)", { description: "Stopped" });
   };
 
   // Send test message functions
@@ -360,15 +360,15 @@ function TestConnectionsPage() {
       localClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
-          toast({ variant: "destructive", title: "Failed", description: err.message });
+          toast.error("Failed", { description: err.message });
         } else {
           console.log('Test message published to local');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'local');
-            toast({ title: "Message Sent", description: `to local` });
+            toast.success("Message Sent", { description: `to local` });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            toast({ variant: "destructive", title: "Log Failed", description: 'Supabase log failed' });
+            toast.error("Log Failed", { description: 'Supabase log failed' });
           }
         }
       });
@@ -386,15 +386,15 @@ function TestConnectionsPage() {
       hivemqClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
-          toast({ variant: "destructive", title: "Failed", description: err.message });
+          toast.error("Failed", { description: err.message });
         } else {
           console.log('Test message published to hivemq');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'hivemq');
-            toast({ title: "Message Sent", description: `to hivemq` });
+            toast.success("Message Sent", { description: `to hivemq` });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            toast({ variant: "destructive", title: "Log Failed", description: 'Supabase log failed' });
+            toast.error("Log Failed", { description: 'Supabase log failed' });
           }
         }
       });
@@ -412,15 +412,15 @@ function TestConnectionsPage() {
       emqxClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
-          toast({ variant: "destructive", title: "Failed", description: err.message });
+          toast.error("Failed", { description: err.message });
         } else {
           console.log('Test message published to emqx');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'emqx');
-            toast({ title: "Message Sent", description: `to emqx` });
+            toast.success("Message Sent", { description: `to emqx` });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            toast({ variant: "destructive", title: "Log Failed", description: 'Supabase log failed' });
+            toast.error("Log Failed", { description: 'Supabase log failed' });
           }
         }
       });
@@ -438,15 +438,15 @@ function TestConnectionsPage() {
       hivemqCloudClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
-          toast({ variant: "destructive", title: "Failed", description: err.message });
+          toast.error("Failed", { description: err.message });
         } else {
           console.log('Test message published to hivemq-cloud');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'hivemq-cloud');
-            toast({ title: "Message Sent", description: `to hivemq-cloud` });
+            toast.success("Message Sent", { description: `to hivemq-cloud` });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            toast({ variant: "destructive", title: "Log Failed", description: 'Supabase log failed' });
+            toast.error("Log Failed", { description: 'Supabase log failed' });
           }
         }
       });
