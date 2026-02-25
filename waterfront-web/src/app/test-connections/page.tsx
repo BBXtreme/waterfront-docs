@@ -48,17 +48,11 @@ export default function TestConnectionsPage() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
-      // Try a simple query (using a dummy table or auth session)
-      const { data, error } = await supabase.from('_dummy').select('count(*)').maybeSingle();
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "relation does not exist"
-        throw error;
-      }
-      // Fallback to auth session if query fails
-      const { data: session, error: authError } = await supabase.auth.getSession();
-      if (authError) throw authError;
+      const { data: session, error } = await supabase.auth.getSession();
+      if (error) throw error;
       setSupabaseStatus({
-        status: 'Connected ✅',
-        message: 'Supabase client initialized and query/auth successful',
+        status: 'Connected (auth session OK)',
+        message: 'Supabase client initialized and auth session retrieved successfully',
         timestamp: new Date().toLocaleString(),
       });
     } catch (error: any) {
@@ -166,7 +160,7 @@ export default function TestConnectionsPage() {
         <div className="bg-white border border-gray-300 rounded-lg p-6 shadow-md">
           <h2 className="text-2xl font-semibold mb-4">Supabase</h2>
           <p className="text-lg">
-            Status: <span className={supabaseStatus.status.includes('✅') ? 'text-green-600' : 'text-red-600'}>{supabaseStatus.status}</span>
+            Status: <span className={supabaseStatus.status.includes('Connected') ? 'text-green-600' : 'text-red-600'}>{supabaseStatus.status}</span>
           </p>
           <p className="text-sm text-gray-600">{supabaseStatus.message}</p>
           {supabaseStatus.timestamp && <p className="text-xs text-gray-500">Last checked: {supabaseStatus.timestamp}</p>}
