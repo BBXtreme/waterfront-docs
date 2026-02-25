@@ -188,3 +188,37 @@
 +if (error) throw error;
 +set status "Connected (auth session OK)" or error message
 +Use try/catch
+
+# 2026-02-25 09:54:05.193803
++In src/app/test-connections/page.tsx:
++
++Supabase card is red with "failed to parse select parameter (count(*))"
++
++Fix the Supabase connection check:
++- Replace the bad query with safe auth check: await supabase.auth.getSession()
++- If no error → set status "Connected (auth OK)"
++- If error → show error.message
++- Use try/catch
++- Keep loading state
++- Do not change MQTT or other parts
++
++After fix, remind to run pnpm dev and refresh the page.
+
+# 2026-02-25 09:55:02.537439
++In src/app/test-connections/page.tsx:
++
++Add a button to the MQTT card: "Send Test Message"
++
++When clicked:
++- Publish JSON payload { "action": "test_unlock", "kayakId": "test-kayak-001", "timestamp": current ISO time }
++- To topic: /kayak/test/unlock
++- Use mqtt client (already imported)
++- Show success toast or console log on publish
++- Show error if publish fails
++
++Keep button disabled while not connected.
++Use simple Tailwind button (bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded)
++
++Add console.log on publish for debugging.
++
++Do not change other parts of the page.
