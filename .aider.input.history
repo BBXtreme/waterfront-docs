@@ -630,3 +630,32 @@
 +- Test dark mode toggle
 +- Check if cards/buttons look polished in light/dark
 +- Confirm publish still works
+
+# 2026-02-25 22:16:35.461819
++Final polish for src/app/test-connections/page.tsx after sonner install.
++
++Changes:
++- Replace all useToast() / toast from shadcn with sonner toast()
++- Import: import { toast } from 'sonner'
++- Add <Toaster /> near root return (inside main or body wrapper)
++- On publish success: toast({ title: "Message Sent", description: `to ${selectedBroker}` })
++- On publish error: toast({ variant: "destructive", title: "Publish Failed", description: err.message })
++- On Supabase log success: toast({ title: "Logged", description: "Publish event saved to mqtt_logs" })
++- Use shadcn Card, CardHeader, CardTitle, CardContent for each broker/environment/Supabase card
++- Use shadcn Button for Start/Stop, Send Test Message, Refresh All
++- Use shadcn Input for username/password
++- Use shadcn Toggle for dark mode switch (top right)
++- Use shadcn RadioGroup + Label for broker selector
++- Make layout responsive: cards stack vertically on mobile (flex-col md:flex-row gap-6)
++- Add shadcn Badge for status (green "Connected", red "Disconnected", yellow "Connecting")
++- Keep all logic (per-broker start/stop/connect, publish, subscribe if added)
++
++Do not add new features – only polish existing ones with shadcn/ui + sonner.
++
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Toggle dark mode – check if all components (cards, buttons, inputs, toasts) switch theme correctly
++- Publish message → check sonner toast appears (top-right, styled)
++- Confirm no build errors or deprecated toast warnings
++- Test responsiveness: resize window – cards should stack on small screen
