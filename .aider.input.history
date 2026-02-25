@@ -659,3 +659,30 @@
 +- Publish message → check sonner toast appears (top-right, styled)
 +- Confirm no build errors or deprecated toast warnings
 +- Test responsiveness: resize window – cards should stack on small screen
+
+# 2026-02-25 22:24:52.580966
++Polish src/app/test-connections/page.tsx after all shadcn components installed.
++
++Improvements:
++- Use shadcn Badge for broker status: variant="default" green for connected, destructive red for disconnected, secondary yellow for connecting, outline gray for stopped
++- Add sonner toast for:
++  - Broker start/stop: toast({ title: "Broker [name]", description: "Started" / "Stopped" })
++  - Publish success: toast({ title: "Message Sent", description: `to ${selectedBroker}` })
++  - Publish error: toast({ variant: "destructive", title: "Failed", description: err.message })
++- Ensure responsive layout: cards stack vertically on mobile (flex-col md:flex-row gap-6)
++- Add global "Refresh All" button (re-check all started brokers)
++- Make sure dark mode applies correctly to Badge, Card, Button, Toast (shadcn + sonner support dark)
++
++Do not add new features – only UI polish and toast usage.
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Toggle dark mode – check Badge colors, cards, toasts in dark
++- Publish message → check toast appears
++- Confirm no build errors
+
+# 2026-02-25 22:28:56.718661
++/stop
+
+# 2026-02-25 22:28:56.799541
++/exit
