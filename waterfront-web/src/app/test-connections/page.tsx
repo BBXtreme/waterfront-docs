@@ -13,7 +13,7 @@ interface Status {
 
 export default function TestConnectionsPage() {
   const mqttUrls = {
-    local: process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'ws://localhost:9001/mqtt',
+    local: process.env.NEXT_PUBLIC_MQTT_BROKER_URL || 'wss://localhost:9001/mqtt',
     hivemq: 'wss://broker.hivemq.com:8883/mqtt',
     emqx: 'wss://broker.emqx.io:8084/mqtt',
     'hivemq-cloud': 'wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt'
@@ -23,7 +23,7 @@ export default function TestConnectionsPage() {
   const [selectedBroker, setSelectedBroker] = useState<'local' | 'hivemq' | 'emqx' | 'hivemq-cloud'>('hivemq');
 
   const activeUrl = mqttUrls[selectedBroker];
-  console.log('Attempting MQTT WS connect to:', activeUrl);
+  console.log('MQTT URL used:', activeUrl);
 
   // State for loading
   const [loading, setLoading] = useState(true);
@@ -119,7 +119,9 @@ export default function TestConnectionsPage() {
       try {
         console.log(`Connecting to ${selectedBroker} broker: ${activeUrl}`);
         const options: any = {
-          protocol: 'ws',
+          protocol: 'wss',
+          protocolVersion: 4,
+          clean: true,
           reconnectPeriod: 3000,
           connectTimeout: 10000,
           rejectUnauthorized: false,
@@ -131,7 +133,7 @@ export default function TestConnectionsPage() {
         }
         const client = mqtt.connect(activeUrl, options);
         client.on('connect', () => {
-          console.log(selectedBroker === 'hivemq-cloud' ? 'Connected to HiveMQ Cloud (authenticated)' : 'MQTT CONNECTED to ' + activeUrl);
+          console.log('MQTT SECURE CONNECTED – protocol:', client.options.protocol);
           setIsMqttConnected(true);
           setMqttStatus({
             status: 'connected',
@@ -143,11 +145,14 @@ export default function TestConnectionsPage() {
           }
         });
         client.on('error', (error) => {
-          console.error(selectedBroker === 'hivemq-cloud' ? 'HiveMQ Cloud auth/connection failed – check credentials' : 'MQTT ERROR:', error);
+          console.error('MQTT WS error details:', error);
           setIsMqttConnected(false);
-          const errorMessage = selectedBroker === 'hivemq-cloud' && (error.message?.includes('Not authorized') || error.message?.includes('401') || error.message?.includes('403'))
-            ? 'Authentication failed – check username/password'
-            : 'Connection error: ' + (error.message || error);
+          let errorMessage = 'Connection error: ' + (error.message || error);
+          if (error.message && (error.message.includes('lost') || error.message.includes('failed'))) {
+            errorMessage = 'Connection lost – check network / broker firewall';
+          } else if (selectedBroker === 'hivemq-cloud' && (error.message?.includes('Not authorized') || error.message?.includes('401') || error.message?.includes('403'))) {
+            errorMessage = 'Authentication failed – check username/password';
+          }
           setMqttStatus({
             status: 'error',
             message: errorMessage,
