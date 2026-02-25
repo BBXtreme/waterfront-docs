@@ -450,3 +450,27 @@
 +- Open console: look for auth success and "Connected to HiveMQ Cloud"
 +- Click Send Test Message → check publish log
 +- If auth fails (401/403), show error in card: "Auth failed – check username/password"
+
+# 2026-02-25 16:34:46.482227
++Enhance src/app/test-connections/page.tsx with username/password inputs for authenticated brokers.
++
++Requirements:
++- Add two input fields below the broker selector: Username and Password (type="text" for username, type="password" for pw)
++- Show only when HiveMQ Cloud or other authenticated broker is selected (hide for public/local)
++- Use useState for username and password
++- Save to localStorage on change (key: 'mqttCredentials')
++- Load from localStorage on mount
++- Add warning text: "Credentials stored in browser localStorage – for dev/testing only, not secure for production"
++- In mqtt.connect options: add { username, password } if both are set
++- On connect error if 401/403: show card error "Authentication failed – check username/password"
++- Keep existing selector, reconnect on change, and "Send Test Message" button
++
++Do NOT remove existing broker URLs or logic.
++Keep Tailwind styling (inputs with border, focus:ring, etc.)
++
++After changes:
++- Remind to test with HiveMQ Cloud credentials
++- Run pnpm dev
++- Enter username/password → select HiveMQ Cloud → check if connects
++- Check console for auth success/failure
++- Confirm no credentials are hardcoded or committed
