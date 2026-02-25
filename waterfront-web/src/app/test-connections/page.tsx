@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import mqtt from 'mqtt';
 import { useTheme } from 'next-themes';
+import { ThemeProvider } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Toggle } from '@/components/ui/toggle';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 
 // Define types for status objects
@@ -16,8 +20,9 @@ interface Status {
   timestamp?: string;
 }
 
-export default function TestConnectionsPage() {
+function TestConnectionsPage() {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
 
   // State for loading
   const [loading, setLoading] = useState(true);
@@ -344,14 +349,26 @@ export default function TestConnectionsPage() {
       localClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
+          toast({
+            title: 'Publish Failed',
+            description: err.message,
+            variant: 'destructive',
+          });
         } else {
           console.log('Test message published to local');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'local');
-            setLocalStatus({ ...localStatus, message: 'Logged to Supabase' });
+            toast({
+              title: 'Message Sent',
+              description: 'Logged to Supabase',
+            });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            setLocalStatus({ ...localStatus, message: 'Supabase log failed' });
+            toast({
+              title: 'Log Failed',
+              description: 'Supabase log failed',
+              variant: 'destructive',
+            });
           }
         }
       });
@@ -369,14 +386,26 @@ export default function TestConnectionsPage() {
       hivemqClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
+          toast({
+            title: 'Publish Failed',
+            description: err.message,
+            variant: 'destructive',
+          });
         } else {
           console.log('Test message published to hivemq');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'hivemq');
-            setHivemqStatus({ ...hivemqStatus, message: 'Logged to Supabase' });
+            toast({
+              title: 'Message Sent',
+              description: 'Logged to Supabase',
+            });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            setHivemqStatus({ ...hivemqStatus, message: 'Supabase log failed' });
+            toast({
+              title: 'Log Failed',
+              description: 'Supabase log failed',
+              variant: 'destructive',
+            });
           }
         }
       });
@@ -394,14 +423,26 @@ export default function TestConnectionsPage() {
       emqxClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
+          toast({
+            title: 'Publish Failed',
+            description: err.message,
+            variant: 'destructive',
+          });
         } else {
           console.log('Test message published to emqx');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'emqx');
-            setEmqxStatus({ ...emqxStatus, message: 'Logged to Supabase' });
+            toast({
+              title: 'Message Sent',
+              description: 'Logged to Supabase',
+            });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            setEmqxStatus({ ...emqxStatus, message: 'Supabase log failed' });
+            toast({
+              title: 'Log Failed',
+              description: 'Supabase log failed',
+              variant: 'destructive',
+            });
           }
         }
       });
@@ -419,14 +460,26 @@ export default function TestConnectionsPage() {
       hivemqCloudClient.publish('/kayak/test/unlock', JSON.stringify(payloadObject), { qos: 1 }, async (err) => {
         if (err) {
           console.error('Publish failed:', err);
+          toast({
+            title: 'Publish Failed',
+            description: err.message,
+            variant: 'destructive',
+          });
         } else {
           console.log('Test message published to hivemq-cloud');
           try {
             await insertLog('/kayak/test/unlock', payloadObject, 'hivemq-cloud');
-            setHivemqCloudStatus({ ...hivemqCloudStatus, message: 'Logged to Supabase' });
+            toast({
+              title: 'Message Sent',
+              description: 'Logged to Supabase',
+            });
           } catch (logErr) {
             console.error('Supabase log failed:', logErr);
-            setHivemqCloudStatus({ ...hivemqCloudStatus, message: 'Supabase log failed' });
+            toast({
+              title: 'Log Failed',
+              description: 'Supabase log failed',
+              variant: 'destructive',
+            });
           }
         }
       });
@@ -479,228 +532,241 @@ export default function TestConnectionsPage() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center relative">
-      <Button
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="absolute top-4 right-4"
-      >
-        Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode
-      </Button>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center relative">
+        <Toggle
+          pressed={theme === 'dark'}
+          onPressedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="absolute top-4 right-4"
+        >
+          Toggle Dark Mode
+        </Toggle>
 
-      <h1 className="text-4xl font-bold mb-6">Waterfront – Connection & Environment Test</h1>
+        <h1 className="text-4xl font-bold mb-6">Waterfront – Connection & Environment Test</h1>
 
-      {loading && <p className="text-xl mb-4">Loading...</p>}
+        {loading && <p className="text-xl mb-4">Loading...</p>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Environment Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Environment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg">
-              Status: <span className={envStatus.status === 'OK' ? 'text-green-600' : 'text-red-600'}>{envStatus.status}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">{envStatus.message}</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Environment Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Environment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg">
+                Status: <span className={envStatus.status === 'OK' ? 'text-green-600' : 'text-red-600'}>{envStatus.status}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">{envStatus.message}</p>
+            </CardContent>
+          </Card>
 
-        {/* Supabase Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Supabase</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg">
-              Status: <span className={supabaseStatus.status.includes('Connected') ? 'text-green-600' : 'text-red-600'}>{supabaseStatus.status}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
-            {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
-          </CardContent>
-        </Card>
+          {/* Supabase Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Supabase</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg">
+                Status: <span className={supabaseStatus.status.includes('Connected') ? 'text-green-600' : 'text-red-600'}>{supabaseStatus.status}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
+              {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
+            </CardContent>
+          </Card>
 
-        {/* MQTT Broker Cards */}
-        <div className="col-span-1 md:col-span-2">
-          <div className="flex flex-row gap-4 flex-wrap">
-            {/* Local Mosquitto Card */}
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader>
-                <CardTitle>MQTT - Local Mosquitto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <span className={localIsConnected ? 'text-green-600' : localStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{localStatus.status}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">{localStatus.message}</p>
-                {localStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {localStatus.timestamp}</p>}
-                <p className="text-red-600 text-sm mt-2">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
-                <Button
-                  onClick={localIsStarted ? stopLocal : startLocal}
-                  variant={localIsStarted ? 'destructive' : 'default'}
-                  className="mt-4"
-                >
-                  {localIsStarted ? 'Stop' : 'Start'}
-                </Button>
-                <Button
-                  onClick={sendTestMessageLocal}
-                  disabled={!localIsConnected}
-                  className="mt-4 ml-2"
-                >
-                  Send Test Message
-                </Button>
-              </CardContent>
-            </Card>
+          {/* MQTT Broker Cards */}
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex flex-row gap-4 flex-wrap">
+              {/* Local Mosquitto Card */}
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader>
+                  <CardTitle>MQTT - Local Mosquitto</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg">
+                    Status: <span className={localIsConnected ? 'text-green-600' : localStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{localStatus.status}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">{localStatus.message}</p>
+                  {localStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {localStatus.timestamp}</p>}
+                  <p className="text-red-600 text-sm mt-2">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
+                  <Button
+                    onClick={localIsStarted ? stopLocal : startLocal}
+                    variant={localIsStarted ? 'destructive' : 'default'}
+                    className="mt-4"
+                  >
+                    {localIsStarted ? 'Stop' : 'Start'}
+                  </Button>
+                  <Button
+                    onClick={sendTestMessageLocal}
+                    disabled={!localIsConnected}
+                    className="mt-4 ml-2"
+                  >
+                    Send Test Message
+                  </Button>
+                </CardContent>
+              </Card>
 
-            {/* HiveMQ Public Card */}
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader>
-                <CardTitle>MQTT - HiveMQ Public</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <span className={hivemqIsConnected ? 'text-green-600' : hivemqStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{hivemqStatus.status}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">{hivemqStatus.message}</p>
-                {hivemqStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqStatus.timestamp}</p>}
-                <Button
-                  onClick={hivemqIsStarted ? stopHivemq : startHivemq}
-                  variant={hivemqIsStarted ? 'destructive' : 'default'}
-                  className="mt-4"
-                >
-                  {hivemqIsStarted ? 'Stop' : 'Start'}
-                </Button>
-                <Button
-                  onClick={sendTestMessageHivemq}
-                  disabled={!hivemqIsConnected}
-                  className="mt-4 ml-2"
-                >
-                  Send Test Message
-                </Button>
-              </CardContent>
-            </Card>
+              {/* HiveMQ Public Card */}
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader>
+                  <CardTitle>MQTT - HiveMQ Public</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg">
+                    Status: <span className={hivemqIsConnected ? 'text-green-600' : hivemqStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{hivemqStatus.status}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">{hivemqStatus.message}</p>
+                  {hivemqStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqStatus.timestamp}</p>}
+                  <Button
+                    onClick={hivemqIsStarted ? stopHivemq : startHivemq}
+                    variant={hivemqIsStarted ? 'destructive' : 'default'}
+                    className="mt-4"
+                  >
+                    {hivemqIsStarted ? 'Stop' : 'Start'}
+                  </Button>
+                  <Button
+                    onClick={sendTestMessageHivemq}
+                    disabled={!hivemqIsConnected}
+                    className="mt-4 ml-2"
+                  >
+                    Send Test Message
+                  </Button>
+                </CardContent>
+              </Card>
 
-            {/* EMQX Public Card */}
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader>
-                <CardTitle>MQTT - EMQX Public</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <span className={emqxIsConnected ? 'text-green-600' : emqxStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{emqxStatus.status}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">{emqxStatus.message}</p>
-                {emqxStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {emqxStatus.timestamp}</p>}
-                <Button
-                  onClick={emqxIsStarted ? stopEmqx : startEmqx}
-                  variant={emqxIsStarted ? 'destructive' : 'default'}
-                  className="mt-4"
-                >
-                  {emqxIsStarted ? 'Stop' : 'Start'}
-                </Button>
-                <Button
-                  onClick={sendTestMessageEmqx}
-                  disabled={!emqxIsConnected}
-                  className="mt-4 ml-2"
-                >
-                  Send Test Message
-                </Button>
-              </CardContent>
-            </Card>
+              {/* EMQX Public Card */}
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader>
+                  <CardTitle>MQTT - EMQX Public</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg">
+                    Status: <span className={emqxIsConnected ? 'text-green-600' : emqxStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{emqxStatus.status}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">{emqxStatus.message}</p>
+                  {emqxStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {emqxStatus.timestamp}</p>}
+                  <Button
+                    onClick={emqxIsStarted ? stopEmqx : startEmqx}
+                    variant={emqxIsStarted ? 'destructive' : 'default'}
+                    className="mt-4"
+                  >
+                    {emqxIsStarted ? 'Stop' : 'Start'}
+                  </Button>
+                  <Button
+                    onClick={sendTestMessageEmqx}
+                    disabled={!emqxIsConnected}
+                    className="mt-4 ml-2"
+                  >
+                    Send Test Message
+                  </Button>
+                </CardContent>
+              </Card>
 
-            {/* HiveMQ Cloud Card */}
-            <Card className="flex-1 min-w-[300px]">
-              <CardHeader>
-                <CardTitle>MQTT - HiveMQ Cloud (Private)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <span className={hivemqCloudIsConnected ? 'text-green-600' : hivemqCloudStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{hivemqCloudStatus.status}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">{hivemqCloudStatus.message}</p>
-                {hivemqCloudStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqCloudStatus.timestamp}</p>}
-                <div className="mt-4">
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium">Username</label>
-                    <Input
-                      type="text"
-                      value={cloudUsername}
-                      onChange={(e) => setCloudUsername(e.target.value)}
-                      placeholder="Enter username"
-                    />
+              {/* HiveMQ Cloud Card */}
+              <Card className="flex-1 min-w-[300px]">
+                <CardHeader>
+                  <CardTitle>MQTT - HiveMQ Cloud (Private)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg">
+                    Status: <span className={hivemqCloudIsConnected ? 'text-green-600' : hivemqCloudStatus.status === 'connecting' ? 'text-yellow-600' : 'text-red-600'}>{hivemqCloudStatus.status}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">{hivemqCloudStatus.message}</p>
+                  {hivemqCloudStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqCloudStatus.timestamp}</p>}
+                  <div className="mt-4">
+                    <div className="mb-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        type="text"
+                        value={cloudUsername}
+                        onChange={(e) => setCloudUsername(e.target.value)}
+                        placeholder="Enter username"
+                      />
+                    </div>
+                    <div className="mb-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={cloudPassword}
+                        onChange={(e) => setCloudPassword(e.target.value)}
+                        placeholder="Enter password"
+                      />
+                    </div>
                   </div>
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium">Password</label>
-                    <Input
-                      type="password"
-                      value={cloudPassword}
-                      onChange={(e) => setCloudPassword(e.target.value)}
-                      placeholder="Enter password"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
-                  variant={hivemqCloudIsStarted ? 'destructive' : 'default'}
-                  className="mt-4"
-                >
-                  {hivemqCloudIsStarted ? 'Stop' : 'Start'}
-                </Button>
-                <Button
-                  onClick={sendTestMessageHivemqCloud}
-                  disabled={!hivemqCloudIsConnected}
-                  className="mt-4 ml-2"
-                >
-                  Send Test Message
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button
+                    onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
+                    variant={hivemqCloudIsStarted ? 'destructive' : 'default'}
+                    className="mt-4"
+                  >
+                    {hivemqCloudIsStarted ? 'Stop' : 'Start'}
+                  </Button>
+                  <Button
+                    onClick={sendTestMessageHivemqCloud}
+                    disabled={!hivemqCloudIsConnected}
+                    className="mt-4 ml-2"
+                  >
+                    Send Test Message
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+
+          {/* Calendar Card */}
+          <Card className="col-span-1 md:col-span-2">
+            <CardHeader>
+              <CardTitle>Availability Calendar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="rounded-md border"
+              />
+              <p className="mt-4">Selected date: {selectedDate?.toDateString()}</p>
+              {/* Placeholder for availability grid */}
+              <div className="mt-4 grid grid-cols-7 gap-2">
+                {Array.from({ length: 7 }, (_, i) => (
+                  <div key={i} className="p-2 border rounded text-center">
+                    {i + 9}:00 - {i + 10}:00
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vercel Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Vercel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg">
+                Status: <span className={vercelStatus.status === 'OK' ? 'text-green-600' : 'text-red-600'}>{vercelStatus.status}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Calendar Card */}
-        <Card className="col-span-1 md:col-span-2">
-          <CardHeader>
-            <CardTitle>Availability Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="rounded-md border"
-            />
-            <p className="mt-4">Selected date: {selectedDate?.toDateString()}</p>
-            {/* Placeholder for availability grid */}
-            <div className="mt-4 grid grid-cols-7 gap-2">
-              {Array.from({ length: 7 }, (_, i) => (
-                <div key={i} className="p-2 border rounded text-center">
-                  {i + 9}:00 - {i + 10}:00
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <Button
+          onClick={refreshStatuses}
+          disabled={loading}
+        >
+          {loading ? 'Refreshing...' : 'Refresh All'}
+        </Button>
+      </main>
+    </ThemeProvider>
+  );
+}
 
-        {/* Vercel Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Vercel</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg">
-              Status: <span className={vercelStatus.status === 'OK' ? 'text-green-600' : 'text-red-600'}>{vercelStatus.status}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Button
-        onClick={refreshStatuses}
-        disabled={loading}
-      >
-        {loading ? 'Refreshing...' : 'Refresh All'}
-      </Button>
-    </main>
+export default function Page() {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TestConnectionsPage />
+    </ThemeProvider>
   );
 }
