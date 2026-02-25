@@ -474,3 +474,80 @@
 +- Enter username/password → select HiveMQ Cloud → check if connects
 +- Check console for auth success/failure
 +- Confirm no credentials are hardcoded or committed
+
+# 2026-02-25 16:40:46.021069
++Fix MQTT connection in src/app/test-connections/page.tsx
++
++Current log shows:
++- Attempting wss://... but error uses ws://... (protocol downgrade)
++- Repeated "MQTT OFFLINE", "CLOSED", "reconnect attempt", "WebSocket ... lost"
++
++Fix requirements:
++- Force secure WebSocket: always use 'wss://' scheme
++- In mqtt.connect(url, options):
++  - Explicitly set protocol: 'wss' in options
++  - Add: protocolVersion: 4 (MQTT 3.1.1), clean: true
++  - Keep reconnectPeriod: 3000, connectTimeout: 10000
++  - Add username/password from state (or hardcoded for Cloud test)
++- If URL starts with 'wss://', force secure; if 'ws://' → warn in console/card
++- Enhance logging:
++  - console.log('MQTT URL used:', activeUrl)
++  - on connect: console.log('MQTT SECURE CONNECTED – protocol:', client.options.protocol)
++  - on error: console.error('MQTT WS error details:', err)
++- If error message contains 'lost' or 'failed' → set card status "Connection lost – check network / broker firewall"
++- Keep broker selector, inputs, button – test with HiveMQ Cloud creds
++
++Do not change Supabase or Environment sections.
++
++After changes:
++- Remind to verify .env.local or hardcoded URL starts with wss://
++- Run pnpm dev
++- Select HiveMQ Cloud
++- Hard-refresh page
++- Check console for "MQTT SECURE CONNECTED" and protocol
++- If still ws:// in error → log client.options
++- Test Send Test Message → look for publish log
+
+# 2026-02-25 16:54:48.449997
++Improve src/app/test-connections/page.tsx to have separate horizontal cards for each MQTT broker.
++
++Current: Vertical MQTT card with radio selector – works but Safari slows due to reconnect loops on local failure.
++
++New layout & functionality:
++- Keep Environment and Supabase cards vertical (no change)
++- Replace single MQTT card with horizontal row (flex flex-row gap-4 wrap) of 4 separate cards:
++  1. Local Mosquitto
++  2. HiveMQ public
++  3. EMQX public
++  4. HiveMQ Cloud (private)
++- Each card: Tailwind or shadcn/ui Card with:
++  - Title "MQTT - [Broker Name]" bold
++  - Status: Connected / Connecting / Disconnected / Error (color green/red/yellow/gray)
++  - Message: e.g. "Connected to wss://..." or error.message
++  - Last Checked time
++  - Start/Stop button (toggle connect – text "Start" / "Stop", green/red bg)
++  - Send Test Message button (disabled if not connected)
++  - For HiveMQ Cloud: show username/password inputs (use state, localStorage 'mqttCloudCreds')
++  - Warning for Local: red text "Local WS may fail on macOS Docker – use public for stable test"
++- Use independent mqtt clients for each broker (useState for each status/client)
++- Connect only if "Started" (per broker toggle)
++- On Start: connect with broker-specific URL/options (local: ws://localhost:9001/mqtt, HiveMQ public: wss://broker.hivemq.com:8883/mqtt, EMQX public: wss://broker.emqx.io:8084/mqtt, HiveMQ Cloud: wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt with username/password)
++- On Stop: client.end() + set disconnected
++- Add global "Refresh All" button (recheck all started brokers)
++- Fix Safari slow: limit reconnect to 5 attempts, then stop + show "Max reconnect failed – restart manually"
++- Install shadcn/ui if missing: suggest pnpm add shadcn-ui@latest
++- Add dark mode switch (use next-themes, install if missing: pnpm add next-themes)
++- Dark mode toggle at top right (shadcn Toggle or button)
++- Style with shadcn Card, Button, Input, Toggle – keep Tailwind classes
++
++Do NOT hardcode passwords – use inputs for Cloud.
++
++After changes:
++- Remind to install shadcn-ui and next-themes if needed
++- Run pnpm dev
++- Hard-refresh page
++- Start each broker one by one, check status
++- For HiveMQ Cloud, enter username 'waterfront-user' and password – check if connects
++- Click Send Test Message on a connected broker – check console log
++- Toggle dark mode – check if page switches
++- If reconnect loop, check max attempts stops it
