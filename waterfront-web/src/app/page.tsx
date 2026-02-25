@@ -22,7 +22,7 @@ export default function Home() {
         </Button>
 
         <Card className="p-6 bg-gray-50 border-none shadow-sm">
-          <p className="text-lg font-medium">Bremen Waterfront Locations</p>
+          <p className="text-lg font-medium">Waterfront Locations</p>
           <p className="text-sm text-gray-500 mt-2">
             Select your spot on next screen
           </p>
