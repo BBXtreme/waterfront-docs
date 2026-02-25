@@ -399,3 +399,54 @@
 +- Check console for connect logs
 +- Switch between brokers and watch status change
 +- If local still fails, suggest trying host.docker.internal or confirm docker logs show websocket listener
+
+# 2026-02-25 16:19:55.991154
++In src/app/test-connections/page.tsx:
++
++MQTT selector is working (Local / HiveMQ / EMQX), but local WS often fails on macOS Docker with "network connection lost".
++
++Improve:
++- Add warning text/badge when 'local' is selected: red text "Warning: Local Mosquitto WebSocket may not work reliably on macOS Docker. Use HiveMQ or EMQX public for stable browser testing."
++- Auto-fallback: if local is selected and connection fails 3 times (or after 10s timeout), switch to 'hivemq' automatically and show toast/note "Auto-switched to HiveMQ public due to local connection failure"
++- Show current broker name bigger in card header (e.g. "MQTT - HiveMQ public" in bold)
++- Add console.log on selection change: console.log(`Switched to broker: ${selectedBroker} (${activeUrl})`)
++- Keep radio buttons, localStorage save, reconnect on change, and "Send Test Message" (include selectedBroker in payload: { ..., broker: selectedBroker })
++
++Do NOT change Supabase card or Environment card.
++
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Test switching brokers
++- Select local → wait for failure → check if auto-switches to HiveMQ
++- Check console for switch logs
++- Confirm "Send Test Message" publishes to current broker (payload includes broker name)
+
+# 2026-02-25 16:29:20.915704
++Integrate HiveMQ Cloud into src/app/test-connections/page.tsx
++
++Requirements:
++- Add HiveMQ Cloud as a new option in the broker selector (keep Local, HiveMQ public, EMQX public)
++- Label: "HiveMQ Cloud (private)"
++- URL: wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt (hardcode for now)
++- Auth: username 'waterfront-user', password 'YOUR_PASSWORD_HERE' (hardcode password temporarily – warn it's insecure for git)
++
++In mqtt.connect options:
++- Add { username: 'waterfront-user', password: 'YOUR_PASSWORD_HERE' }
++- Keep reconnectPeriod: 3000, connectTimeout: 10000, rejectUnauthorized: false
++
++- Update activeUrl logic to use this URL when 'hivemq-cloud' selected
++- On connect: log "Connected to HiveMQ Cloud (authenticated)"
++- On error: log "HiveMQ Cloud auth/connection failed – check credentials"
++- Keep "Send Test Message" button – publish to current broker (include broker name in payload)
++
++Security note: Hardcoded password is only for local dev testing – never commit to git.
++
++After changes:
++- Remind to replace password placeholder
++- Run pnpm dev
++- Select HiveMQ Cloud in radio buttons
++- Check if card goes Connected
++- Open console: look for auth success and "Connected to HiveMQ Cloud"
++- Click Send Test Message → check publish log
++- If auth fails (401/403), show error in card: "Auth failed – check username/password"
