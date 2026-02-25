@@ -686,3 +686,68 @@
 
 # 2026-02-25 22:28:56.799541
 +/exit
+
+# 2026-02-25 22:30:48.016227
++y
+
+# 2026-02-25 22:31:22.457855
++/version
+
+# 2026-02-25 22:31:26.834938
++/help
+
+# 2026-02-25 22:33:27.063752
++/ask
+
+# 2026-02-25 22:33:38.161510
++how to update aider to newer version?
+
+# 2026-02-25 22:34:24.065041
++/code
+
+# 2026-02-25 22:34:27.734147
++pip install --upgrade aider-chat   
+
+# 2026-02-25 22:35:14.107583
++Polish src/app/test-connections/page.tsx after all shadcn components installed.
++
++Improvements:
++- Use shadcn Badge for broker status: variant="default" green for connected, destructive red for disconnected, secondary yellow for connecting, outline gray for stopped
++- Add sonner toast for:
++  - Broker start/stop: toast({ title: "Broker [name]", description: "Started" / "Stopped" })
++  - Publish success: toast({ title: "Message Sent", description: `to ${selectedBroker}` })
++  - Publish error: toast({ variant: "destructive", title: "Failed", description: err.message })
++- Ensure responsive layout: cards stack vertically on mobile (flex-col md:flex-row gap-6)
++- Add global "Refresh All" button (re-check all started brokers)
++- Make sure dark mode applies correctly to Badge, Card, Button, Toast (shadcn + sonner support dark)
++
++Do not add new features – only UI polish and toast usage.
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Toggle dark mode – check Badge colors, cards, toasts in dark
++- Publish message → check toast appears
++- Confirm no build errors
+
+# 2026-02-25 22:40:28.116484
++y
+
+# 2026-02-25 22:41:37.450690
++In src/app/test-connections/page.tsx:
++
++Badge import was fixed – now ensure all shadcn imports resolve (Toggle, Card, Button, Input, Label, RadioGroup, Calendar).
++
++Fix:
++- Verify imports match src/components/ui/ files
++- Use Badge for status (variant="success" green connected, "destructive" red disconnected, "secondary" gray stopped, "warning" yellow connecting)
++- Add sonner toast for publish/log success/error/start/stop
++- Make layout fully responsive (cards flex-col on small, flex-row md: on large)
++- Add dark mode class support to all shadcn components
++
++Do not add new features.
++After changes:
++- Remind to run pnpm dev
++- Hard-refresh page
++- Toggle dark mode – check Badge colors, cards, toasts in dark
++- Publish message → check toast
++- Confirm no build errors
