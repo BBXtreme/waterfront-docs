@@ -30,8 +30,8 @@ export default function MachineCard({
             className={cn(
               "font-medium px-2 py-1 mr-2",
               isConnected
-                ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
-                : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
             )}
           >
             {status}
