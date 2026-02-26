@@ -779,9 +779,6 @@ const debugMQTTConnection = async () => {
                   <Button variant="secondary" size="sm" onClick={debugSupabaseConnection}>
                     Deep Debug Supabase
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={debugMQTTConnection}>
-                    Deep Debug MQTT
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -1059,6 +1056,11 @@ const debugMQTTConnection = async () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+          <div className="text-center mt-4">
+            <Button variant="secondary" size="sm" onClick={debugMQTTConnection}>
+              Deep Debug MQTT
+            </Button>
           </div>
         </div>
 
