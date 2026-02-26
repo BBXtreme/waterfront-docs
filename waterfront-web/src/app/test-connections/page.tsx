@@ -502,9 +502,9 @@ function TestConnectionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/10 p-[50px]">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center">
+      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center shadow-lg rounded-lg mb-8">
         <h1 className="text-2xl font-semibold">Waterfront – Connection Test</h1>
         <Toggle
           pressed={theme === 'dark'}
@@ -514,43 +514,58 @@ function TestConnectionsPage() {
         </Toggle>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto">
         {loading && <p className="text-xl text-center">Loading...</p>}
 
-        {/* Environment + Supabase */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[25px] mb-8 justify-items-center">
-          <Card className="shadow-md rounded-xl p-[25px] w-[350px]">
-            <CardHeader className="p-[25px]">
-              <CardTitle>Environment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Status: <Badge variant={envStatus.status === 'OK' ? 'default' : 'destructive'}>{envStatus.status}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground">{envStatus.message}</p>
-            </CardContent>
-          </Card>
+        {/* System Connections */}
+        <div className="mb-12">
+          <h2 className="text-xl font-medium text-center mb-6">System Connections</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
+              <CardHeader className="p-[25px]">
+                <CardTitle>Environment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={envStatus.status === 'OK' ? 'default' : 'destructive'}>{envStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{envStatus.message}</p>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-md rounded-xl p-[25px] w-[350px]">
-            <CardHeader className="p-[25px]">
-              <CardTitle>Supabase</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                Status: <Badge variant={supabaseStatus.status.includes('Connected') ? 'default' : 'destructive'}>{supabaseStatus.status}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
-              {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
-            </CardContent>
-          </Card>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
+              <CardHeader className="p-[25px]">
+                <CardTitle>Vercel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={vercelStatus.status === 'OK' ? 'default' : 'destructive'}>{vercelStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
+              <CardHeader className="p-[25px]">
+                <CardTitle>Supabase</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg">
+                  Status: <Badge variant={supabaseStatus.status.includes('Connected') ? 'default' : 'destructive'}>{supabaseStatus.status}</Badge>
+                </p>
+                <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
+                {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* MQTT Brokers */}
         <div>
-          <h2 className="text-xl font-medium mb-6">MQTT Brokers</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[25px] justify-items-center">
+          <h2 className="text-xl font-medium text-center mb-6">MQTT Brokers</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Local Mosquitto Card */}
-            <Card className="shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden w-[350px]">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
               <CardHeader className="p-[25px] flex justify-between items-center">
                 <CardTitle className="font-medium">MQTT - Local Mosquitto</CardTitle>
                 <Badge variant={getBadgeVariant(localStatus, localIsConnected)}>{localStatus.status}</Badge>
@@ -582,7 +597,7 @@ function TestConnectionsPage() {
             </Card>
 
             {/* HiveMQ Public Card */}
-            <Card className="shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden w-[350px]">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
               <CardHeader className="p-[25px] flex justify-between items-center">
                 <CardTitle className="font-medium">MQTT - HiveMQ Public</CardTitle>
                 <Badge variant={getBadgeVariant(hivemqStatus, hivemqIsConnected)}>{hivemqStatus.status}</Badge>
@@ -613,7 +628,7 @@ function TestConnectionsPage() {
             </Card>
 
             {/* EMQX Public Card */}
-            <Card className="shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden w-[350px]">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
               <CardHeader className="p-[25px] flex justify-between items-center">
                 <CardTitle className="font-medium">MQTT - EMQX Public</CardTitle>
                 <Badge variant={getBadgeVariant(emqxStatus, emqxIsConnected)}>{emqxStatus.status}</Badge>
@@ -644,7 +659,7 @@ function TestConnectionsPage() {
             </Card>
 
             {/* HiveMQ Cloud Card */}
-            <Card className="shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden w-[350px]">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
               <CardHeader className="p-[25px] flex justify-between items-center">
                 <CardTitle className="font-medium">MQTT - HiveMQ Cloud (Private)</CardTitle>
                 <Badge variant={getBadgeVariant(hivemqCloudStatus, hivemqCloudIsConnected)}>{hivemqCloudStatus.status}</Badge>
