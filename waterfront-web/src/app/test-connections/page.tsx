@@ -634,22 +634,23 @@ function TestConnectionsPage() {
         {/* Payment Gateway Tests */}
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">Payment Gateway Tests</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="max-w-xs">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-md font-medium">Stripe Connection Test</CardTitle>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
+              <CardHeader className="p-[15px] pb-0">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-medium">Stripe</CardTitle>
+                  <Badge
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      stripeStatus === "OK" ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100" : stripeStatus === "Pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100" : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                    )}
+                  >
+                    {stripeStatus}
+                  </Badge>
+                </div>
                 <CardDescription>Check connection to Stripe API</CardDescription>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div 
-                    className={cn(
-                      "w-3 h-3 rounded-full",
-                      stripeStatus === "OK" ? "bg-green-500" : stripeStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
-                    )}
-                  />
-                  <span className="text-sm">{stripeStatus}</span>
-                </div>
+              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -658,25 +659,26 @@ function TestConnectionsPage() {
                 >
                   Test Connection
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">{stripeResult}</p>
+                <p className="text-xs text-muted-foreground">{stripeResult}</p>
               </CardContent>
             </Card>
             
-            <Card className="max-w-xs">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-md font-medium">BTCPay/Lightning Connection Test</CardTitle>
+            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
+              <CardHeader className="p-[15px] pb-0">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-medium">BTCPay/Lightning</CardTitle>
+                  <Badge
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      btcPayStatus === "OK" ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100" : btcPayStatus === "Pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100" : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                    )}
+                  >
+                    {btcPayStatus}
+                  </Badge>
+                </div>
                 <CardDescription>Check connection to BTCPay Server</CardDescription>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div 
-                    className={cn(
-                      "w-3 h-3 rounded-full",
-                      btcPayStatus === "OK" ? "bg-green-500" : btcPayStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
-                    )}
-                  />
-                  <span className="text-sm">{btcPayStatus}</span>
-                </div>
+              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -685,25 +687,26 @@ function TestConnectionsPage() {
                 >
                   Test Connection
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">{btcPayResult}</p>
+                <p className="text-xs text-muted-foreground">{btcPayResult}</p>
               </CardContent>
             </Card>
             
-            <Card className="max-w-xs">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-md font-medium">Supabase Database Test</CardTitle>
+            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
+              <CardHeader className="p-[15px] pb-0">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-medium">Supabase Database</CardTitle>
+                  <Badge
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium",
+                      supabaseDbStatus === "OK" ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100" : supabaseDbStatus === "Pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100" : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                    )}
+                  >
+                    {supabaseDbStatus}
+                  </Badge>
+                </div>
                 <CardDescription>Check connection to Supabase</CardDescription>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div 
-                    className={cn(
-                      "w-3 h-3 rounded-full",
-                      supabaseDbStatus === "OK" ? "bg-green-500" : supabaseDbStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
-                    )}
-                  />
-                  <span className="text-sm">{supabaseDbStatus}</span>
-                </div>
+              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -712,7 +715,7 @@ function TestConnectionsPage() {
                 >
                   Test Connection
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">{supabaseDbResult}</p>
+                <p className="text-xs text-muted-foreground">{supabaseDbResult}</p>
               </CardContent>
             </Card>
           </div>
