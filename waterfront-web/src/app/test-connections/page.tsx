@@ -580,7 +580,7 @@ function TestConnectionsPage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => checkEnvironment()}
+                    onClick={checkEnvironment}
                     disabled={loading}
                   >
                     Test Connection
@@ -613,7 +613,7 @@ function TestConnectionsPage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => checkVercel()}
+                    onClick={checkVercel}
                     disabled={loading}
                   >
                     Test Connection
@@ -647,7 +647,7 @@ function TestConnectionsPage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => checkSupabase()}
+                    onClick={async () => await checkSupabase()}
                     disabled={loading}
                   >
                     Test Connection
