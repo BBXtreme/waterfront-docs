@@ -1273,7 +1273,7 @@ const debugHivemqCloudMQTT = async () => {
                 <div className="space-y-6 p-6 bg-muted/20 rounded-lg border border-border">
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
-                    <div className="max-w-xs">
+                    <div className="w-64">
                       <Input
                         id="username"
                         type="text"
@@ -1287,7 +1287,7 @@ const debugHivemqCloudMQTT = async () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <div className="max-w-xs">
+                    <div className="w-64">
                       <Input
                         id="password"
                         type="password"
