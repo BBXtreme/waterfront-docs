@@ -482,7 +482,12 @@ function TestConnectionsPage() {
 
   // useEffect to run checks on mount
   useEffect(() => {
-    refreshStatuses();
+    const runChecks = async () => {
+      setLoading(true);
+      await refreshStatuses();
+      setLoading(false);
+    };
+    runChecks();
   }, []);
 
   // Cleanup on unmount
