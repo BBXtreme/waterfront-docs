@@ -1,6 +1,3 @@
-import MachineCard from '@/components/MachineCard';
-import { Button } from '@/components/ui/button';
-
 import { useState } from 'react';
 import MachineCard from '@/components/MachineCard';
 import { Button } from '@/components/ui/button';
