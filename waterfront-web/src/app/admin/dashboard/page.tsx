@@ -10,7 +10,7 @@ export default function AdminDashboardPage() {
 
       <main className="max-w-7xl mx-auto">
         <h2 className="text-xl font-medium text-center mb-6">Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
           <MachineCard
             title="Machine 1"
             status="connected"
