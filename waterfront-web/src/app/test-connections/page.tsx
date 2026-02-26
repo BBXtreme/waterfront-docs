@@ -475,6 +475,19 @@ const debugHivemqCloudMQTT = async () => {
   }
 };
 
+const debugVercelEnvironment = async () => {
+  console.log('=== Vercel Deep Debug Start ===');
+  console.log('VERCEL:', process.env.VERCEL);
+  console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
+  console.log('VERCEL_URL:', process.env.VERCEL_URL);
+  console.log('VERCEL_REGION:', process.env.VERCEL_REGION);
+  console.log('VERCEL_GIT_COMMIT_SHA:', process.env.VERCEL_GIT_COMMIT_SHA);
+  console.log('VERCEL_GIT_REPO_SLUG:', process.env.VERCEL_GIT_REPO_SLUG);
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Is Vercel detected?', !!process.env.VERCEL);
+  console.log('=== Vercel Deep Debug End ===');
+};
+
   // Function to check environment variables
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -832,8 +845,8 @@ const debugHivemqCloudMQTT = async () => {
 
   // Function to check Vercel environment
   const checkVercel = () => {
-    const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
-    const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL;
+    const vercelEnv = process.env.VERCEL_ENV;
+    const vercelUrl = process.env.VERCEL_URL;
     if (vercelEnv || vercelUrl) {
       setVercelStatus({
         status: 'OK',
@@ -988,6 +1001,9 @@ const debugHivemqCloudMQTT = async () => {
                     disabled={loading}
                   >
                     Test Connection
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={debugVercelEnvironment}>
+                    Deep Debug Vercel
                   </Button>
                 </div>
               </CardContent>
@@ -1256,7 +1272,7 @@ const debugHivemqCloudMQTT = async () => {
                   <Badge
                     className={cn(
                       "px-2 py-1 rounded-full text-xs font-medium",
-                      hivemqCloudStatus.status === "OK" || hivemqCloudStatus.status.includes("Connected") || hivemqCloudStatus.status.includes("Detected") || hivemqCloudStatus.status.includes("connected")
+                      hivemqCloudStatus.status === "OK" || hivemqCloudStatus.status.includes("Connected") || hivemqCloudStatus.includes("Detected") || hivemqCloudStatus.includes("connected")
                         ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
                         : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
                     )}
@@ -1340,6 +1356,7 @@ const debugHivemqCloudMQTT = async () => {
     </div>
   );
 }
+
 export default function Page() {
   return (
     <TestConnectionsPage />
