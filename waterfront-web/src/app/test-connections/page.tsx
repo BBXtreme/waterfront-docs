@@ -103,6 +103,48 @@ function TestConnectionsPage() {
     if (error) throw error;
   };
 
+  const debugSupabaseConnection = async () => {
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      console.log('=== Supabase Deep Debug Start ===');
+      console.log('Using URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('Anon key length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 'missing');
+
+      // Check auth session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Auth session:', session);
+      console.log('Session error:', sessionError);
+
+      // Try a lightweight metadata query (no table dependency)
+      const { data: versionData, error: versionError } = await supabase
+        .from('pg_stat_activity')
+        .select('count(*)')
+        .limit(0);
+
+      console.log('Metadata query result:', versionData);
+      console.log('Metadata query error:', versionError);
+
+      // If bookings table exists – optional safe check
+      try {
+        const { data: countData, error: countError } = await supabase
+          .from('bookings')
+          .select('count(*)', { count: 'exact', head: true });
+
+        console.log('Bookings table count:', countData, 'error:', countError);
+      } catch (tableErr) {
+        console.log('Bookings table check skipped (table may not exist yet):', tableErr.message);
+      }
+
+      console.log('=== Supabase Deep Debug End ===');
+    } catch (err) {
+      console.error('Supabase debug failed:', err);
+    }
+  };
+
   // Function to check environment variables
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -660,6 +702,9 @@ function TestConnectionsPage() {
                     disabled={loading}
                   >
                     Test Connection
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={debugSupabaseConnection}>
+                    Deep Debug Supabase
                   </Button>
                 </div>
               </CardContent>
