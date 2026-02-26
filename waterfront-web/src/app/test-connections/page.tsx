@@ -36,8 +36,6 @@ function TestConnectionsPage() {
   const [stripeResult, setStripeResult] = useState<string>("");
   const [btcPayStatus, setBTCPayStatus] = useState<string>("Not Tested");
   const [btcPayResult, setBTCPayResult] = useState<string>("");
-  const [supabaseDbStatus, setSupabaseDbStatus] = useState<string>("Not Tested");
-  const [supabaseDbResult, setSupabaseDbResult] = useState<string>("");
 
   // MQTT states for each broker
   const [localIsStarted, setLocalIsStarted] = useState(false);
@@ -496,7 +494,6 @@ function TestConnectionsPage() {
   
   const testStripeConnection = () => testConnection('/api/test-stripe', setStripeStatus, setStripeResult);
   const testBTCPayConnection = () => testConnection('/api/test-btcpay', setBTCPayStatus, setBTCPayResult);
-  const testSupabaseDbConnection = () => testConnection('/api/test-supabase', setSupabaseDbStatus, setSupabaseDbResult);
 
   // Function to refresh all statuses
   const refreshStatuses = async () => {
@@ -696,38 +693,6 @@ function TestConnectionsPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">{btcPayResult}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="font-medium">Supabase Database</CardTitle>
-                  <Badge
-                    className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
-                      supabaseDbStatus === "OK" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" : supabaseDbStatus === "Pending" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200" : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-                    )}
-                  >
-                    {supabaseDbStatus}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Check connection to Supabase</p>
-                </div>
-                <div className="flex gap-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={testSupabaseDbConnection}
-                    disabled={supabaseDbStatus === "Pending"}
-                  >
-                    Test Connection
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">{supabaseDbResult}</p>
               </CardContent>
             </Card>
           </div>
