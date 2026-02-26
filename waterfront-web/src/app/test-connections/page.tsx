@@ -517,6 +517,9 @@ function TestConnectionsPage() {
     const runChecks = async () => {
       setLoading(true);
       await refreshStatuses();
+      // Also run payment gateway tests on page load
+      testStripeConnection();
+      testBTCPayConnection();
       setLoading(false);
     };
     runChecks();
