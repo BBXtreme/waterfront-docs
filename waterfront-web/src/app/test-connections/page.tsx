@@ -634,9 +634,9 @@ function TestConnectionsPage() {
         {/* Payment Gateway Tests */}
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">Payment Gateway Tests</h2>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
             <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Stripe</CardTitle>
                   <Badge
@@ -648,23 +648,27 @@ function TestConnectionsPage() {
                     {stripeStatus}
                   </Badge>
                 </div>
-                <CardDescription>Check connection to Stripe API</CardDescription>
               </CardHeader>
               <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={testStripeConnection}
-                  disabled={stripeStatus === "Pending"}
-                >
-                  Test Connection
-                </Button>
+                <div>
+                  <p className="text-muted-foreground">Check connection to Stripe API</p>
+                </div>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testStripeConnection}
+                    disabled={stripeStatus === "Pending"}
+                  >
+                    Test Connection
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">{stripeResult}</p>
               </CardContent>
             </Card>
             
             <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">BTCPay/Lightning</CardTitle>
                   <Badge
@@ -676,23 +680,27 @@ function TestConnectionsPage() {
                     {btcPayStatus}
                   </Badge>
                 </div>
-                <CardDescription>Check connection to BTCPay Server</CardDescription>
               </CardHeader>
               <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={testBTCPayConnection}
-                  disabled={btcPayStatus === "Pending"}
-                >
-                  Test Connection
-                </Button>
+                <div>
+                  <p className="text-muted-foreground">Check connection to BTCPay Server</p>
+                </div>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testBTCPayConnection}
+                    disabled={btcPayStatus === "Pending"}
+                  >
+                    Test Connection
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">{btcPayResult}</p>
               </CardContent>
             </Card>
             
             <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Supabase Database</CardTitle>
                   <Badge
@@ -704,17 +712,21 @@ function TestConnectionsPage() {
                     {supabaseDbStatus}
                   </Badge>
                 </div>
-                <CardDescription>Check connection to Supabase</CardDescription>
               </CardHeader>
               <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={testSupabaseDbConnection}
-                  disabled={supabaseDbStatus === "Pending"}
-                >
-                  Test Connection
-                </Button>
+                <div>
+                  <p className="text-muted-foreground">Check connection to Supabase</p>
+                </div>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testSupabaseDbConnection}
+                    disabled={supabaseDbStatus === "Pending"}
+                  >
+                    Test Connection
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">{supabaseDbResult}</p>
               </CardContent>
             </Card>
