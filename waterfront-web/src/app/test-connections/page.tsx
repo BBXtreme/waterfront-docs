@@ -223,6 +223,258 @@ const debugMQTTConnection = async () => {
   }
 };
 
+const debugLocalMQTT = async () => {
+  try {
+    console.log('=== Debugging Local Mosquitto ===');
+
+    const brokerUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL;
+    console.log('Broker URL:', brokerUrl || 'NOT SET');
+
+    if (!brokerUrl) {
+      console.warn('No NEXT_PUBLIC_MQTT_BROKER_URL in env – cannot test');
+      return;
+    }
+
+    const options: any = {
+      protocol: brokerUrl.startsWith('wss') ? 'wss' : 'ws',
+      connectTimeout: 5000,
+      reconnectPeriod: 0,
+    };
+
+    if (process.env.NEXT_PUBLIC_MQTT_USERNAME) {
+      options.username = process.env.NEXT_PUBLIC_MQTT_USERNAME;
+    }
+    if (process.env.NEXT_PUBLIC_MQTT_PASSWORD) {
+      options.password = process.env.NEXT_PUBLIC_MQTT_PASSWORD;
+    }
+
+    if (brokerUrl.includes('localhost') || brokerUrl.includes('127.0.0.1')) {
+      options.rejectUnauthorized = false;
+      console.warn('rejectUnauthorized = false (local debug only)');
+    }
+
+    const mqtt = (await import('mqtt')).default;
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on('connect', () => {
+      console.log('MQTT connected successfully');
+      client.subscribe('/kayak/+/status', (err) => {
+        if (err) {
+          console.error('Subscribe failed:', err);
+        } else {
+          console.log('Subscribed to /kayak/+/status');
+        }
+      });
+      client.publish('/kayak/test/debug', 'Hello from browser debug', (err) => {
+        if (err) console.error('Test publish failed:', err);
+        else console.log('Test message published');
+      });
+      setTimeout(() => client.end(), 4000);
+    });
+
+    client.on('message', (topic, message) => {
+      console.log(`MQTT message received on ${topic}:`, message.toString());
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error:', err.message || err);
+      client.end();
+    });
+
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
+
+    setTimeout(() => {
+      if (!client.connected && !client.disconnecting) {
+        console.error('MQTT connection timeout after 5s');
+        client.end();
+      }
+    }, 6000);
+
+  } catch (err) {
+    console.error('MQTT debug init failed:', err);
+  }
+};
+
+const debugHivemqMQTT = async () => {
+  try {
+    console.log('=== Debugging HiveMQ Public ===');
+
+    const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
+    console.log('Broker URL:', brokerUrl);
+
+    const options: any = {
+      protocol: 'wss',
+      connectTimeout: 5000,
+      reconnectPeriod: 0,
+    };
+
+    const mqtt = (await import('mqtt')).default;
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on('connect', () => {
+      console.log('MQTT connected successfully');
+      client.subscribe('/kayak/+/status', (err) => {
+        if (err) {
+          console.error('Subscribe failed:', err);
+        } else {
+          console.log('Subscribed to /kayak/+/status');
+        }
+      });
+      client.publish('/kayak/test/debug', 'Hello from browser debug', (err) => {
+        if (err) console.error('Test publish failed:', err);
+        else console.log('Test message published');
+      });
+      setTimeout(() => client.end(), 4000);
+    });
+
+    client.on('message', (topic, message) => {
+      console.log(`MQTT message received on ${topic}:`, message.toString());
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error:', err.message || err);
+      client.end();
+    });
+
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
+
+    setTimeout(() => {
+      if (!client.connected && !client.disconnecting) {
+        console.error('MQTT connection timeout after 5s');
+        client.end();
+      }
+    }, 6000);
+
+  } catch (err) {
+    console.error('MQTT debug init failed:', err);
+  }
+};
+
+const debugEmqxMQTT = async () => {
+  try {
+    console.log('=== Debugging EMQX Public ===');
+
+    const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+    console.log('Broker URL:', brokerUrl);
+
+    const options: any = {
+      protocol: 'wss',
+      connectTimeout: 5000,
+      reconnectPeriod: 0,
+    };
+
+    const mqtt = (await import('mqtt')).default;
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on('connect', () => {
+      console.log('MQTT connected successfully');
+      client.subscribe('/kayak/+/status', (err) => {
+        if (err) {
+          console.error('Subscribe failed:', err);
+        } else {
+          console.log('Subscribed to /kayak/+/status');
+        }
+      });
+      client.publish('/kayak/test/debug', 'Hello from browser debug', (err) => {
+        if (err) console.error('Test publish failed:', err);
+        else console.log('Test message published');
+      });
+      setTimeout(() => client.end(), 4000);
+    });
+
+    client.on('message', (topic, message) => {
+      console.log(`MQTT message received on ${topic}:`, message.toString());
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error:', err.message || err);
+      client.end();
+    });
+
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
+
+    setTimeout(() => {
+      if (!client.connected && !client.disconnecting) {
+        console.error('MQTT connection timeout after 5s');
+        client.end();
+      }
+    }, 6000);
+
+  } catch (err) {
+    console.error('MQTT debug init failed:', err);
+  }
+};
+
+const debugHivemqCloudMQTT = async () => {
+  try {
+    console.log('=== Debugging HiveMQ Cloud ===');
+
+    const brokerUrl = 'wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt';
+    console.log('Broker URL:', brokerUrl);
+
+    const options: any = {
+      protocol: 'wss',
+      connectTimeout: 5000,
+      reconnectPeriod: 0,
+    };
+
+    if (cloudUsername) {
+      options.username = cloudUsername;
+    }
+    if (cloudPassword) {
+      options.password = cloudPassword;
+    }
+
+    const mqtt = (await import('mqtt')).default;
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on('connect', () => {
+      console.log('MQTT connected successfully');
+      client.subscribe('/kayak/+/status', (err) => {
+        if (err) {
+          console.error('Subscribe failed:', err);
+        } else {
+          console.log('Subscribed to /kayak/+/status');
+        }
+      });
+      client.publish('/kayak/test/debug', 'Hello from browser debug', (err) => {
+        if (err) console.error('Test publish failed:', err);
+        else console.log('Test message published');
+      });
+      setTimeout(() => client.end(), 4000);
+    });
+
+    client.on('message', (topic, message) => {
+      console.log(`MQTT message received on ${topic}:`, message.toString());
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error:', err.message || err);
+      client.end();
+    });
+
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
+
+    setTimeout(() => {
+      if (!client.connected && !client.disconnecting) {
+        console.error('MQTT connection timeout after 5s');
+        client.end();
+      }
+    }, 6000);
+
+  } catch (err) {
+    console.error('MQTT debug init failed:', err);
+  }
+};
+
   // Function to check environment variables
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -901,6 +1153,9 @@ const debugMQTTConnection = async () => {
                   >
                     Send Test Message
                   </Button>
+                  <Button variant="secondary" size="sm" onClick={debugLocalMQTT}>
+                    Deep Debug
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -942,6 +1197,9 @@ const debugMQTTConnection = async () => {
                   >
                     Send Test Message
                   </Button>
+                  <Button variant="secondary" size="sm" onClick={debugHivemqMQTT}>
+                    Deep Debug
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -982,6 +1240,9 @@ const debugMQTTConnection = async () => {
                     className="px-5 py-2.5 mr-2.5"
                   >
                     Send Test Message
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={debugEmqxMQTT}>
+                    Deep Debug
                   </Button>
                 </div>
               </CardContent>
@@ -1052,6 +1313,9 @@ const debugMQTTConnection = async () => {
                     className="px-5 py-2.5 mr-2.5"
                   >
                     Send Test Message
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={debugHivemqCloudMQTT}>
+                    Deep Debug
                   </Button>
                 </div>
               </CardContent>
