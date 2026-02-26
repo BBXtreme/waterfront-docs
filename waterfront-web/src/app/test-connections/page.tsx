@@ -146,6 +146,83 @@ const debugSupabaseConnection = async () => {
   }
 };
 
+const debugMQTTConnection = async () => {
+  try {
+    console.log('=== MQTT Deep Debug Start ===');
+
+    const brokerUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL;
+    console.log('Broker URL:', brokerUrl || 'NOT SET');
+
+    if (!brokerUrl) {
+      console.warn('No NEXT_PUBLIC_MQTT_BROKER_URL in env – cannot test');
+      return;
+    }
+
+    const options: any = {
+      protocol: brokerUrl.startsWith('wss') ? 'wss' : 'ws',
+      connectTimeout: 5000,
+      reconnectPeriod: 0, // no auto-reconnect for test
+    };
+
+    if (process.env.NEXT_PUBLIC_MQTT_USERNAME) {
+      options.username = process.env.NEXT_PUBLIC_MQTT_USERNAME;
+    }
+    if (process.env.NEXT_PUBLIC_MQTT_PASSWORD) {
+      options.password = process.env.NEXT_PUBLIC_MQTT_PASSWORD;
+    }
+
+    // For local self-signed certs – temporary debug only!
+    if (brokerUrl.includes('localhost') || brokerUrl.includes('127.0.0.1')) {
+      options.rejectUnauthorized = false;
+      console.warn('rejectUnauthorized = false (local debug only)');
+    }
+
+    const mqtt = (await import('mqtt')).default;
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on('connect', () => {
+      console.log('MQTT connected successfully');
+      client.subscribe('/kayak/+/status', (err) => {
+        if (err) {
+          console.error('Subscribe failed:', err);
+        } else {
+          console.log('Subscribed to /kayak/+/status');
+        }
+      });
+      // Publish a test message (optional)
+      client.publish('/kayak/test/debug', 'Hello from browser debug', (err) => {
+        if (err) console.error('Test publish failed:', err);
+        else console.log('Test message published');
+      });
+      setTimeout(() => client.end(), 4000); // close after ~4s
+    });
+
+    client.on('message', (topic, message) => {
+      console.log(`MQTT message received on ${topic}:`, message.toString());
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error:', err.message || err);
+      client.end();
+    });
+
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
+
+    // Safety timeout
+    setTimeout(() => {
+      if (!client.connected && !client.disconnecting) {
+        console.error('MQTT connection timeout after 5s');
+        client.end();
+      }
+    }, 6000);
+
+  } catch (err) {
+    console.error('MQTT debug init failed:', err);
+  }
+};
+
   // Function to check environment variables
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -706,6 +783,9 @@ const debugSupabaseConnection = async () => {
                   </Button>
                   <Button variant="secondary" size="sm" onClick={debugSupabaseConnection}>
                     Deep Debug Supabase
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={debugMQTTConnection}>
+                    Deep Debug MQTT
                   </Button>
                 </div>
               </CardContent>
