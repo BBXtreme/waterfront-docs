@@ -1203,3 +1203,52 @@
 
 # 2026-02-26 10:48:25.064520
 +Update the diff.
+
+# 2026-02-26 10:57:57.275251
++File: app/connection-test/page.tsx (or the file that renders the connection test dashboard with System Connections and MQTT Brokers sections).
++
++Do these exact changes:
++
++1. Import MachineCard at the top:
++   import MachineCard from "@/components/MachineCard";
++
++2. Replace the status display in each card with <MachineCard status={...} />:
++   - Environment card: <MachineCard status="ok" /> (instead of plain "OK")
++   - Supabase card: <MachineCard status="connected" /> (instead of "Connected (auth OK)")
++   - Vercel card: <MachineCard status="not-detected" />
++   - Local Mosquitto card: <MachineCard status="disconnected" />
++   - HiveMQ Public card: <MachineCard status="disconnected" />
++
++3. Keep the existing layout, padding, shadows, etc. — only replace the status text/badge with MachineCard.
++
++4. Do NOT change anything else (no gap, no new classes, no logic).
++
++Show the diff only for app/connection-test/page.tsx (or the correct file name).
+
+# 2026-02-26 11:01:21.610902
++File: app/connection-test/page.tsx (the connection test dashboard page)
++
++Do NOT use the full <MachineCard /> component anywhere — it would nest cards incorrectly.
++
++Instead:
++
++1. Extract the status pill styling from src/components/MachineCard.tsx and apply it directly to the status Badge or span in each card.
++
++2. For each status (OK, Connected (auth OK), Not Detected, disconnected):
++   - Positive (OK, Connected, Detected): bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300
++   - Negative: bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300
++   - Use cn() from "@/lib/utils" and conditional class.
++
++3. No other layout changes — keep existing padding, gaps, shadows, etc.
++
++Show the diff only for app/connection-test/page.tsx.
+
+# 2026-02-26 11:03:30.386974
++Use this exact conditional class for every status Badge/span:
++cn(
++  "px-2 py-1 rounded-full text-xs font-medium",
++  isPositive ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
++)
++where isPositive = status.includes("OK") || status.includes("Connected") || status.includes("Detected")
++Apply to Environment, Supabase, Vercel, Mosquitto, HiveMQ statuses.
++Show updated diff.
