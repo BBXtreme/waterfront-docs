@@ -529,7 +529,7 @@ function TestConnectionsPage() {
           <h2 className="text-xl font-medium text-center mb-6">System Connections</h2>
           <div className="grid grid-cols-3 gap-2.5">
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Environment</CardTitle>
                   <Badge
@@ -552,7 +552,7 @@ function TestConnectionsPage() {
             </Card>
 
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Vercel</CardTitle>
                   <Badge
@@ -575,7 +575,7 @@ function TestConnectionsPage() {
             </Card>
 
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Supabase</CardTitle>
                   <Badge
@@ -606,7 +606,7 @@ function TestConnectionsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Local Mosquitto Card */}
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">MQTT - Local Mosquitto</CardTitle>
                   <Badge
@@ -650,7 +650,7 @@ function TestConnectionsPage() {
 
             {/* HiveMQ Public Card */}
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">MQTT - HiveMQ Public</CardTitle>
                   <Badge
@@ -691,7 +691,7 @@ function TestConnectionsPage() {
 
             {/* EMQX Public Card */}
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">MQTT - EMQX Public</CardTitle>
                   <Badge
@@ -732,7 +732,7 @@ function TestConnectionsPage() {
 
             {/* HiveMQ Cloud Card */}
             <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-2">
+              <CardHeader className="p-[15px] pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">MQTT - HiveMQ Cloud (Private)</CardTitle>
                   <Badge
