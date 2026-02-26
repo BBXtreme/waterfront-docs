@@ -519,7 +519,7 @@ function TestConnectionsPage() {
         {/* System Connections */}
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">System Connections</h2>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-2.5">
             <MachineCard
               title="Environment"
               status={envStatus.status}
