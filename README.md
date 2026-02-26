@@ -3,11 +3,7 @@
 
 Self-service, unmanned rental system with Next.js PWA, Supabase backend, BTCPay/Stripe payments, and ESP32-based smart locker control via MQTT.
 
-Live demo (Vercel): https://waterfront-[your-project-slug].vercel.app  
-
-[![Deployed with Vercel](https://therealsujitk-vercel-badge.vercel.app/api/BBXtreme/Waterfront?branch=main)](https://vercel.com/bbxtreme/waterfront-[your-project-slug])  
-
-<!-- Replace with your real Vercel project slug / badge link after connecting the repo -->
+Live demo (Vercel/Railway....tbd): https://waterfront-[your-project-slug].vercel.app  
 
 **Current status**: Early development – auth & local setup working, calendar & payments next
 
@@ -97,16 +93,6 @@ supabase start
 
 → Studio: [http://127.0.0.1:54323](http://127.0.0.1:54323/) Default login: postgres / postgres → Create tables / run migrations (see docs/ for schema)
 
-Add to waterfront-web/.env.local:
-
-env
-
-```
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJh...
-```
-
-Restart pnpm dev.
-
 ### 4. Local MQTT Broker (for ESP32 testing)
 
 Bash
@@ -122,45 +108,25 @@ docker compose up -d
 
 Open waterfront-esp32 folder in VS Code → use PlatformIO toolbar to build/upload.
 
-## Deployment – Vercel (waterfront-web only)
+## Deployment – (waterfront-web only)
 
-1. Go to [https://vercel.com](https://vercel.com/) → New Project → Import Git Repository
-2. Select this repo (BBXtreme/Waterfront)
-3. **Important**: Set **Root Directory** = waterfront-web
-4. Framework Preset: Next.js (auto-detected)
-5. Add environment variables in Vercel dashboard (see below)
-6. Deploy
-
-→ Every push to main auto-deploys. Preview branches work automatically.
-
-**Common monorepo fixes** (add to waterfront-web/next.config.mjs if build fails):
-
-JavaScript
-
-```
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // If you have shared/internal packages later
-  transpilePackages: [],
-
-  // Helps with monorepo tracing sometimes
-  experimental: {
-    outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
-  },
-};
-
-export default nextConfig;
-```
+tbd
 
 ## Environment Variables
 
 ### Local – waterfront-web/.env.local
 
-env
+Add to waterfront-web/.env.local:
 
 ```
-# Supabase local 
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0 
+# Local Supabase – API endpoint MUST be 54321 (Project URL)
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+
+# Use the Publishable key (this is your public/anon key for client-side)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ACJWlz.....
+
+# Optional: only if you do server-side admin operations (e.g. bypass RLS)
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_N7U........
 
 # MQTT (local dev) 
 MQTT_BROKER_URL=mqtt://localhost:1883 
@@ -170,17 +136,6 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_... 
 BTCPAY_URL=https://your-btcpay-server.com BTCPAY_API_KEY=...
 ```
-
-### Production – Vercel dashboard
-
-Add these keys (no .env file in git):
-
-env
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJh... NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... STRIPE_SECRET_KEY=sk_live_... BTCPAY_URL=https://your-btcpay-server.com BTCPAY_API_KEY=... # Optional – for admin/debug MQTT_BROKER_URL=wss://your-mosquitto-domain:8084/mqtt
-```
-
 **Rule of thumb**: NEXT_PUBLIC_ → client-side (browser), others → server/edge only.
 
 ## Useful Commands
