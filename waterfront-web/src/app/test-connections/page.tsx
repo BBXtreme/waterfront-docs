@@ -4,13 +4,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import mqtt from 'mqtt';
 import { useTheme } from 'next-themes';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Toggle } from '@/components/ui/toggle';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { toast, Toaster } from 'sonner';
+import MachineCard from '@/components/MachineCard';
 
 // Define types for status objects
 interface Status {
@@ -521,42 +520,27 @@ function TestConnectionsPage() {
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">System Connections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px]">
-                <CardTitle>Environment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <Badge variant={envStatus.status === 'OK' ? 'default' : 'destructive'}>{envStatus.status}</Badge>
-                </p>
-                <p className="text-sm text-muted-foreground">{envStatus.message}</p>
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="Environment"
+              status={envStatus.status}
+              message={envStatus.message}
+              isConnected={envStatus.status === 'OK'}
+            />
 
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px]">
-                <CardTitle>Vercel</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <Badge variant={vercelStatus.status === 'OK' ? 'default' : 'destructive'}>{vercelStatus.status}</Badge>
-                </p>
-                <p className="text-sm text-muted-foreground">{vercelStatus.message}</p>
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="Vercel"
+              status={vercelStatus.status}
+              message={vercelStatus.message}
+              isConnected={vercelStatus.status === 'OK'}
+            />
 
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px]">
-                <CardTitle>Supabase</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg">
-                  Status: <Badge variant={supabaseStatus.status.includes('Connected') ? 'default' : 'destructive'}>{supabaseStatus.status}</Badge>
-                </p>
-                <p className="text-sm text-muted-foreground">{supabaseStatus.message}</p>
-                {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="Supabase"
+              status={supabaseStatus.status}
+              message={supabaseStatus.message}
+              timestamp={supabaseStatus.timestamp}
+              isConnected={supabaseStatus.status.includes('Connected')}
+            />
           </div>
         </div>
 
@@ -565,151 +549,137 @@ function TestConnectionsPage() {
           <h2 className="text-xl font-medium text-center mb-6">MQTT Brokers</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Local Mosquitto Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px] flex justify-between items-center">
-                <CardTitle className="font-medium">MQTT - Local Mosquitto</CardTitle>
-                <Badge variant={getBadgeVariant(localStatus, localIsConnected)}>{localStatus.status}</Badge>
-              </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">{localStatus.message}</p>
-                  {localStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {localStatus.timestamp}</p>}
-                  <p className="text-destructive text-xs">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={localIsStarted ? stopLocal : startLocal}
-                    variant="outline"
-                    size="sm"
-                    className={localIsStarted ? 'text-destructive' : 'text-green-600'}
-                  >
-                    {localIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageLocal}
-                    disabled={!localIsConnected}
-                    size="sm"
-                  >
-                    Send Test Message
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="MQTT - Local Mosquitto"
+              status={localStatus.status}
+              message={localStatus.message}
+              timestamp={localStatus.timestamp}
+              isConnected={localIsConnected}
+            >
+              <div>
+                <p className="text-destructive text-xs">Warning: Local WS may fail on macOS Docker – use public for stable test</p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={localIsStarted ? stopLocal : startLocal}
+                  variant="outline"
+                  size="sm"
+                  className={localIsStarted ? 'text-destructive' : 'text-green-600'}
+                >
+                  {localIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageLocal}
+                  disabled={!localIsConnected}
+                  size="sm"
+                >
+                  Send Test Message
+                </Button>
+              </div>
+            </MachineCard>
 
             {/* HiveMQ Public Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px] flex justify-between items-center">
-                <CardTitle className="font-medium">MQTT - HiveMQ Public</CardTitle>
-                <Badge variant={getBadgeVariant(hivemqStatus, hivemqIsConnected)}>{hivemqStatus.status}</Badge>
-              </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">{hivemqStatus.message}</p>
-                  {hivemqStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqStatus.timestamp}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={hivemqIsStarted ? stopHivemq : startHivemq}
-                    variant="outline"
-                    size="sm"
-                    className={hivemqIsStarted ? 'text-destructive' : 'text-green-600'}
-                  >
-                    {hivemqIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageHivemq}
-                    disabled={!hivemqIsConnected}
-                    size="sm"
-                  >
-                    Send Test Message
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="MQTT - HiveMQ Public"
+              status={hivemqStatus.status}
+              message={hivemqStatus.message}
+              timestamp={hivemqStatus.timestamp}
+              isConnected={hivemqIsConnected}
+            >
+              <div className="flex gap-3">
+                <Button
+                  onClick={hivemqIsStarted ? stopHivemq : startHivemq}
+                  variant="outline"
+                  size="sm"
+                  className={hivemqIsStarted ? 'text-destructive' : 'text-green-600'}
+                >
+                  {hivemqIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageHivemq}
+                  disabled={!hivemqIsConnected}
+                  size="sm"
+                >
+                  Send Test Message
+                </Button>
+              </div>
+            </MachineCard>
 
             {/* EMQX Public Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px] flex justify-between items-center">
-                <CardTitle className="font-medium">MQTT - EMQX Public</CardTitle>
-                <Badge variant={getBadgeVariant(emqxStatus, emqxIsConnected)}>{emqxStatus.status}</Badge>
-              </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">{emqxStatus.message}</p>
-                  {emqxStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {emqxStatus.timestamp}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={emqxIsStarted ? stopEmqx : startEmqx}
-                    variant="outline"
-                    size="sm"
-                    className={emqxIsStarted ? 'text-destructive' : 'text-green-600'}
-                  >
-                    {emqxIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageEmqx}
-                    disabled={!emqxIsConnected}
-                    size="sm"
-                  >
-                    Send Test Message
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <MachineCard
+              title="MQTT - EMQX Public"
+              status={emqxStatus.status}
+              message={emqxStatus.message}
+              timestamp={emqxStatus.timestamp}
+              isConnected={emqxIsConnected}
+            >
+              <div className="flex gap-3">
+                <Button
+                  onClick={emqxIsStarted ? stopEmqx : startEmqx}
+                  variant="outline"
+                  size="sm"
+                  className={emqxIsStarted ? 'text-destructive' : 'text-green-600'}
+                >
+                  {emqxIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageEmqx}
+                  disabled={!emqxIsConnected}
+                  size="sm"
+                >
+                  Send Test Message
+                </Button>
+              </div>
+            </MachineCard>
 
             {/* HiveMQ Cloud Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="p-[25px] flex justify-between items-center">
-                <CardTitle className="font-medium">MQTT - HiveMQ Cloud (Private)</CardTitle>
-                <Badge variant={getBadgeVariant(hivemqCloudStatus, hivemqCloudIsConnected)}>{hivemqCloudStatus.status}</Badge>
-              </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-4 text-sm">
+            <MachineCard
+              title="MQTT - HiveMQ Cloud (Private)"
+              status={hivemqCloudStatus.status}
+              message={hivemqCloudStatus.message}
+              timestamp={hivemqCloudStatus.timestamp}
+              isConnected={hivemqCloudIsConnected}
+            >
+              <div className="space-y-2">
                 <div>
-                  <p className="text-muted-foreground">{hivemqCloudStatus.message}</p>
-                  {hivemqCloudStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {hivemqCloudStatus.timestamp}</p>}
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={cloudUsername}
+                    onChange={(e) => setCloudUsername(e.target.value)}
+                    placeholder="Enter username"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      value={cloudUsername}
-                      onChange={(e) => setCloudUsername(e.target.value)}
-                      placeholder="Enter username"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={cloudPassword}
-                      onChange={(e) => setCloudPassword(e.target.value)}
-                      placeholder="Enter password"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={cloudPassword}
+                    onChange={(e) => setCloudPassword(e.target.value)}
+                    placeholder="Enter password"
+                  />
                 </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
-                    variant="outline"
-                    size="sm"
-                    className={hivemqCloudIsStarted ? 'text-destructive' : 'text-green-600'}
-                  >
-                    {hivemqCloudIsStarted ? 'Stop' : 'Start'}
-                  </Button>
-                  <Button
-                    onClick={sendTestMessageHivemqCloud}
-                    disabled={!hivemqCloudIsConnected}
-                    size="sm"
-                  >
-                    Send Test Message
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
+                  variant="outline"
+                  size="sm"
+                  className={hivemqCloudIsStarted ? 'text-destructive' : 'text-green-600'}
+                >
+                  {hivemqCloudIsStarted ? 'Stop' : 'Start'}
+                </Button>
+                <Button
+                  onClick={sendTestMessageHivemqCloud}
+                  disabled={!hivemqCloudIsConnected}
+                  size="sm"
+                >
+                  Send Test Message
+                </Button>
+              </div>
+            </MachineCard>
           </div>
         </div>
 

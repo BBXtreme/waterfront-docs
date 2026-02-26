@@ -1,26 +1,49 @@
-// src/components/MachineCard.tsx
-import { cn } from "@/lib/utils";  // shadcn cn helper
+import { ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface MachineCardProps {
-  status?: string;
+  title: string;
+  status: string;
+  message: string;
+  timestamp?: string;
+  isConnected?: boolean;
+  children?: ReactNode;
 }
 
-export default function MachineCard({ status = "disconnected" }: MachineCardProps) {
+export default function MachineCard({
+  title,
+  status,
+  message,
+  timestamp,
+  isConnected = false,
+  children,
+}: MachineCardProps) {
   return (
-    <div className="p-6 bg-card rounded-lg shadow-sm border">
-      <div className="flex items-center gap-2">
-        <span>Status:</span>
-        <span
-          className={cn(
-  "px-2 py-1 rounded-full text-xs font-medium",
-  status === "connected"
-    ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"  // ← changed from 600 to 700
-    : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"
-)}
-        >
-          {status}
-        </span>
-      </div>
-    </div>
+    <Card className="m-4 shadow-sm rounded-lg overflow-hidden w-full bg-gradient-to-br from-card to-card/80">
+      <CardHeader className="p-6">
+        <div className="flex justify-between items-center">
+          <CardTitle className="font-medium">{title}</CardTitle>
+          <Badge
+            variant="default"
+            className={cn(
+              isConnected
+                ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300'
+                : ''
+            )}
+          >
+            {status}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 flex flex-col gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">{message}</p>
+          {timestamp && <p className="text-xs text-muted-foreground">Last checked: {timestamp}</p>}
+        </div>
+        {children}
+      </CardContent>
+    </Card>
   );
 }
