@@ -506,6 +506,7 @@ function TestConnectionsPage() {
       <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center shadow-lg rounded-lg mb-8">
         <h1 className="text-2xl font-semibold">Waterfront – Connection Test</h1>
         <Toggle
+          suppressHydrationWarning={true}
           pressed={theme === 'dark'}
           onPressedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
