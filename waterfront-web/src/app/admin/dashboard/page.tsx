@@ -19,7 +19,7 @@ export default function AdminDashboardPage() {
             isConnected={true}
           >
             <div className="flex gap-3">
-              <Button className="px-5 py-2.5">Action</Button>
+              <Button className="px-5 py-2.5 mr-2.5">Action</Button>
             </div>
           </MachineCard>
 
@@ -31,7 +31,7 @@ export default function AdminDashboardPage() {
             isConnected={false}
           >
             <div className="flex gap-3">
-              <Button className="px-5 py-2.5">Action</Button>
+              <Button className="px-5 py-2.5 mr-2.5">Action</Button>
             </div>
           </MachineCard>
 
@@ -43,7 +43,7 @@ export default function AdminDashboardPage() {
             isConnected={false}
           >
             <div className="flex gap-3">
-              <Button className="px-5 py-2.5">Action</Button>
+              <Button className="px-5 py-2.5 mr-2.5">Action</Button>
             </div>
           </MachineCard>
         </div>

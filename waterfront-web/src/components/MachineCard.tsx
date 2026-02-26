@@ -21,22 +21,22 @@ export default function MachineCard({
   children,
 }: MachineCardProps) {
   return (
-    <Card className="m-4 shadow-sm rounded-lg overflow-hidden w-full bg-card border border-border">
-      <CardHeader className="p-6">
+    <Card className="m-[15px] shadow-sm rounded-lg overflow-hidden w-full bg-card border border-border">
+      <CardHeader className="p-[25px]">
         <div className="flex justify-between items-center">
           <CardTitle className="font-medium">{title}</CardTitle>
           <Badge
             variant="outline"
             className={cn(
-              "font-medium",
-              isConnected && "text-green-600 dark:text-green-400 border-green-600 dark:border-green-400"
+              "font-medium px-2 py-1 mr-2",
+              isConnected && "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-600 dark:border-green-400"
             )}
           >
             {status}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="p-6 flex flex-col gap-4 text-sm">
+      <CardContent className="p-[25px] flex flex-col gap-4 text-sm">
         <div>
           <p className="text-muted-foreground">{message}</p>
           {timestamp && <p className="text-xs text-muted-foreground">Last checked: {timestamp}</p>}

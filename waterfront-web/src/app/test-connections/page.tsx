@@ -563,14 +563,14 @@ function TestConnectionsPage() {
                 <Button
                   onClick={localIsStarted ? stopLocal : startLocal}
                   variant="outline"
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   {localIsStarted ? 'Stop' : 'Start'}
                 </Button>
                 <Button
                   onClick={sendTestMessageLocal}
                   disabled={!localIsConnected}
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   Send Test Message
                 </Button>
@@ -589,14 +589,14 @@ function TestConnectionsPage() {
                 <Button
                   onClick={hivemqIsStarted ? stopHivemq : startHivemq}
                   variant="outline"
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   {hivemqIsStarted ? 'Stop' : 'Start'}
                 </Button>
                 <Button
                   onClick={sendTestMessageHivemq}
                   disabled={!hivemqIsConnected}
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   Send Test Message
                 </Button>
@@ -615,14 +615,14 @@ function TestConnectionsPage() {
                 <Button
                   onClick={emqxIsStarted ? stopEmqx : startEmqx}
                   variant="outline"
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   {emqxIsStarted ? 'Stop' : 'Start'}
                 </Button>
                 <Button
                   onClick={sendTestMessageEmqx}
                   disabled={!emqxIsConnected}
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   Send Test Message
                 </Button>
@@ -663,14 +663,14 @@ function TestConnectionsPage() {
                 <Button
                   onClick={hivemqCloudIsStarted ? stopHivemqCloud : startHivemqCloud}
                   variant="outline"
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   {hivemqCloudIsStarted ? 'Stop' : 'Start'}
                 </Button>
                 <Button
                   onClick={sendTestMessageHivemqCloud}
                   disabled={!hivemqCloudIsConnected}
-                  className="px-5 py-2.5"
+                  className="px-5 py-2.5 mr-2.5"
                 >
                   Send Test Message
                 </Button>
@@ -685,7 +685,7 @@ function TestConnectionsPage() {
             onClick={refreshStatuses}
             disabled={loading}
             variant="secondary"
-            className="px-5 py-2.5"
+            className="px-5 py-2.5 mr-2.5"
           >
             {loading ? 'Refreshing...' : 'Refresh All'}
           </Button>
