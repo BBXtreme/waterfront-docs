@@ -781,6 +781,11 @@ const debugMQTTConnection = async () => {
                 <div>
                   <p className="text-muted-foreground">{supabaseStatus.message}</p>
                   {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
+                  {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+                    <p className="text-xs text-muted-foreground">
+                      URL: <a href={process.env.NEXT_PUBLIC_SUPABASE_URL} target="_blank" rel="noopener noreferrer">{process.env.NEXT_PUBLIC_SUPABASE_URL}</a>
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <Button 
