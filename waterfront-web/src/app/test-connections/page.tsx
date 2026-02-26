@@ -30,6 +30,14 @@ function TestConnectionsPage() {
   const [envStatus, setEnvStatus] = useState<Status>({ status: 'Checking...', message: '' });
   const [supabaseStatus, setSupabaseStatus] = useState<Status>({ status: 'Checking...', message: '' });
   const [vercelStatus, setVercelStatus] = useState<Status>({ status: 'Checking...', message: '' });
+  
+  // State for payment gateway tests
+  const [stripeStatus, setStripeStatus] = useState<string>("Not Tested");
+  const [stripeResult, setStripeResult] = useState<string>("");
+  const [btcPayStatus, setBTCPayStatus] = useState<string>("Not Tested");
+  const [btcPayResult, setBTCPayResult] = useState<string>("");
+  const [supabaseDbStatus, setSupabaseDbStatus] = useState<string>("Not Tested");
+  const [supabaseDbResult, setSupabaseDbResult] = useState<string>("");
 
   // MQTT states for each broker
   const [localIsStarted, setLocalIsStarted] = useState(false);
@@ -467,6 +475,29 @@ function TestConnectionsPage() {
     }
   };
 
+  // Function to test connection
+  const testConnection = async (url: string, setStatus: (status: string) => void, setResult: (result: string) => void) => {
+    setStatus("Pending");
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.success) {
+        setStatus("OK");
+        setResult(`Last test: OK - just now`);
+      } else {
+        setStatus("Error");
+        setResult(`Failed: ${data.message || 'Connection error'}`);
+      }
+    } catch (error) {
+      setStatus("Error");
+      setResult(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+  
+  const testStripeConnection = () => testConnection('/api/test-stripe', setStripeStatus, setStripeResult);
+  const testBTCPayConnection = () => testConnection('/api/test-btcpay', setBTCPayStatus, setBTCPayResult);
+  const testSupabaseDbConnection = () => testConnection('/api/test-supabase', setSupabaseDbStatus, setSupabaseDbResult);
+
   // Function to refresh all statuses
   const refreshStatuses = async () => {
     setLoading(true);
@@ -522,6 +553,9 @@ function TestConnectionsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Connection & Payment Gateway Tests</h1>
+        <p className="text-muted-foreground mb-8">Test connectivity to payment providers and database. Click "Test" to check status.</p>
+        
         {loading && <p className="text-xl text-center">Loading...</p>}
 
         {/* System Connections */}
@@ -595,6 +629,93 @@ function TestConnectionsPage() {
                   <p className="text-muted-foreground">{supabaseStatus.message}</p>
                   {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        {/* Payment Gateway Tests */}
+        <div className="mb-12">
+          <h2 className="text-xl font-medium text-center mb-6">Payment Gateway Tests</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="max-w-xs">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-md font-medium">Stripe Connection Test</CardTitle>
+                <CardDescription>Check connection to Stripe API</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div 
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      stripeStatus === "OK" ? "bg-green-500" : stripeStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
+                    )}
+                  />
+                  <span className="text-sm">{stripeStatus}</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={testStripeConnection}
+                  disabled={stripeStatus === "Pending"}
+                >
+                  Test Connection
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">{stripeResult}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="max-w-xs">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-md font-medium">BTCPay/Lightning Connection Test</CardTitle>
+                <CardDescription>Check connection to BTCPay Server</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div 
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      btcPayStatus === "OK" ? "bg-green-500" : btcPayStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
+                    )}
+                  />
+                  <span className="text-sm">{btcPayStatus}</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={testBTCPayConnection}
+                  disabled={btcPayStatus === "Pending"}
+                >
+                  Test Connection
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">{btcPayResult}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="max-w-xs">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-md font-medium">Supabase Database Test</CardTitle>
+                <CardDescription>Check connection to Supabase</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div 
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      supabaseDbStatus === "OK" ? "bg-green-500" : supabaseDbStatus === "Pending" ? "bg-yellow-500" : "bg-red-500"
+                    )}
+                  />
+                  <span className="text-sm">{supabaseDbStatus}</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={testSupabaseDbConnection}
+                  disabled={supabaseDbStatus === "Pending"}
+                >
+                  Test Connection
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">{supabaseDbResult}</p>
               </CardContent>
             </Card>
           </div>
