@@ -134,8 +134,8 @@ export default function MqttTestPanel() {
   }, [client]);
 
   return (
-    <div className="p-6 bg-gray-900 text-gray-100 rounded-lg">
-      <h2 className="text-xl font-bold mb-6">MQTT Brokers – Test Connection</h2>
+    <div className="p-[25px] bg-gray-900 text-gray-100 rounded-lg">
+      <h2 className="text-xl font-bold mb-6">MQTT Brokers – Test Connection (Local, HiveMQ Public, HiveMQ Cloud)</h2>
 
       <div className="mb-6">
         <div className="flex gap-2 mb-2">
