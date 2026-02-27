@@ -1,5 +1,4 @@
 /*
-/*
  * Waterfront Kayak Rental Controller – Bremen, DE
  * MDB / vending protocol completely removed
  * Purpose: MQTT-based remote solenoid lock control + ultrasonic return sensor + battery monitoring
@@ -45,19 +44,4 @@ void app_main(void) {
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 
     //
-	button_receive_queue = xQueueCreate(1 /*queue-length*/, sizeof(uint8_t));
-
-	gpio_config_t io_conf = {
-			.intr_type = GPIO_INTR_NEGEDGE, // Borda de descida (pressionado)
-			.mode = GPIO_MODE_INPUT,
-			.pin_bit_mask = (1ULL << GPIO_NUM_0),
-			.pull_up_en = GPIO_PULLUP_ENABLE,
-			.pull_down_en = GPIO_PULLDOWN_DISABLE, };
-
-	gpio_config(&io_conf);
-
-	gpio_install_isr_service(0 /*default*/);
-	gpio_isr_handler_add(GPIO_NUM_0, button0_isr_handler, (void*) 0);
-
-	//
 }
