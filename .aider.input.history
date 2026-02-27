@@ -2194,3 +2194,44 @@
 +- Confirm if idf.py build succeeds (no MDB errors)
 +
 +Only delete/comment — no new code.
+
+# 2026-02-27 13:43:20.775474
++Fix build errors in waterfront-main.c (main source file in master-base/main/waterfront-main.c).
++
++Current errors from idf.py build:
++
++1. Line 2: error: "/*" within comment [-Werror=comment]
++   - Fix: Remove nested /* inside multi-line comment. Replace top comment block with clean single block:
++
++/*
++ * Waterfront Kayak Rental Controller – Bremen, DE
++ * MDB / vending protocol completely removed
++ * Purpose: MQTT-based remote solenoid lock control + ultrasonic return sensor + battery monitoring
++ * Original base: Nodestark/mdb-esp32-cashless master mode (adapted)
++ */
++
++2. Line 48: error: 'button_receive_queue' undeclared (first use in this function)
++   - Line 60: error: 'button0_isr_handler' undeclared
++   - These are leftover button/ISR code from Nodestark vending (physical button handling).
++   - Action: Completely remove or fully comment out:
++     - button_receive_queue declaration and xQueueCreate call
++     - gpio_isr_handler_add(GPIO_NUM_0, button0_isr_handler, ...)
++     - Any button task creation (xTaskCreate for button)
++     - The entire button0_isr_handler function if present
++     - Any #include or queue related to buttons if not used elsewhere
++
++3. General cleanup:
++   - Remove any remaining button-related variables, defines, or ISR code (search for "button", "isr", "GPIO_NUM_0")
++   - Keep WiFi/MQTT/BLE init code intact (search for "mqtt", "esp_mqtt", "wifi", "ble")
++   - Do NOT add new MQTT/relay code yet — only fix build
++
++4. After fixes:
++   - Show diff / summary of changes
++   - Run idf.py build again internally and report if it succeeds or new errors
++   - If build succeeds, confirm "Project build complete"
++
++Focus only on fixing these errors — no new features.
++Start editing waterfront-main.c now.
+
+# 2026-02-27 13:43:24.156742
++y
