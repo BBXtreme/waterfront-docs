@@ -17,6 +17,7 @@ export default function MqttTestPanel() {
   const [client, setClient] = useState<MqttClient | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showDeepDebug, setShowDeepDebug] = useState(false);
 
   const addLog = (msg: string) => {
     setLogs(prev => [...prev.slice(-15), `${new Date().toLocaleTimeString()} | ${msg}`]);
@@ -251,6 +252,12 @@ export default function MqttTestPanel() {
         >
           Clear Logs
         </button>
+        <button
+          onClick={() => setShowDeepDebug(!showDeepDebug)}
+          className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded disabled:opacity-50 text-white"
+        >
+          {showDeepDebug ? 'Hide Deep Debug' : 'Deep Debug'}
+        </button>
       </div>
 
       <div className="mb-6">
@@ -269,6 +276,32 @@ export default function MqttTestPanel() {
       <div className="bg-black p-3 rounded font-mono text-sm max-h-80 overflow-y-auto">
         {logs.length === 0 ? 'No logs yet...' : logs.map((log, i) => <div key={i} className="whitespace-pre-wrap break-words">{log}</div>)}
       </div>
+
+      {showDeepDebug && (
+        <div className="mt-6 p-4 bg-gray-800 border border-purple-600 rounded-lg text-sm font-mono">
+          <h3 className="text-purple-300 font-bold mb-2">Deep Debug Info</h3>
+          <pre className="whitespace-pre-wrap break-all">
+            Broker URL: {brokerUrl || '(none)'}
+            Status: {status}
+            Client ID: {client?.options.clientId || '(not connected)'}
+            Reconnect period: 10000ms
+            Last error: {logs[logs.length-1]?.includes('error') ? logs[logs.length-1] : 'None recent'}
+            Browser WS support: {window.WebSocket ? 'Yes' : 'No'}
+            Current time: {new Date().toISOString()}
+            Connection type: {navigator.connection ? navigator.connection.effectiveType : 'unknown'}
+          </pre>
+          <button
+            onClick={() => {
+              addLog('Deep debug snapshot taken at ' + new Date().toLocaleTimeString());
+              console.log('MQTT client state:', client);
+              console.log('Full logs:', logs);
+            }}
+            className="mt-3 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+          >
+            Log snapshot to console
+          </button>
+        </div>
+      )}
     </div>
   );
 }
