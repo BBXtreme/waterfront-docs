@@ -6,6 +6,8 @@ import mqtt, { MqttClient, IClientOptions } from 'mqtt'; // npm install mqtt
 
 const PUBLIC_BROKER = 'wss://broker.emqx.io:8084/mqtt'; // or wss://test.mosquitto.org:8081/mqtt
 const LOCAL_BROKER = 'ws://host.docker.internal:9001/mqtt';
+const HIVEMQ_PUBLIC_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+const HIVEMQ_CLOUD_BROKER = 'wss://8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud:8884/mqtt';
 const TEST_TOPIC = 'waterfront/test/debug';
 
 export default function MqttTestPanel() {
@@ -116,6 +118,16 @@ export default function MqttTestPanel() {
     localStorage.setItem('mqttBrokerUrl', LOCAL_BROKER);
   };
 
+  const setHivemqPublicBroker = () => {
+    setBrokerUrl(HIVEMQ_PUBLIC_BROKER);
+    localStorage.setItem('mqttBrokerUrl', HIVEMQ_PUBLIC_BROKER);
+  };
+
+  const setHivemqCloudBroker = () => {
+    setBrokerUrl(HIVEMQ_CLOUD_BROKER);
+    localStorage.setItem('mqttBrokerUrl', HIVEMQ_CLOUD_BROKER);
+  };
+
   const clearLogs = () => {
     setLogs([]);
   };
@@ -138,7 +150,7 @@ export default function MqttTestPanel() {
       <h2 className="text-xl font-bold mb-6">MQTT Brokers – Test Connection (Local, HiveMQ Public, HiveMQ Cloud)</h2>
 
       <div className="mb-6">
-        <div className="flex gap-2 mb-2">
+        <div className="flex gap-2 mb-2 flex-wrap">
           <button
             onClick={setPublicBroker}
             className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
@@ -146,8 +158,20 @@ export default function MqttTestPanel() {
             Use Public (stable)
           </button>
           <button
-            onClick={setLocalBroker}
+            onClick={setHivemqPublicBroker}
             className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-sm"
+          >
+            Use HiveMQ Public
+          </button>
+          <button
+            onClick={setHivemqCloudBroker}
+            className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-sm"
+          >
+            Use HiveMQ Cloud
+          </button>
+          <button
+            onClick={setLocalBroker}
+            className="px-3 py-1 bg-orange-700 hover:bg-orange-600 rounded text-sm"
           >
             Use Local Docker (macOS)
           </button>
