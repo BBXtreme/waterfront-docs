@@ -1,8 +1,8 @@
 /*
- * Waterfront Kayak Rental Adaptation
- * MDB protocol completely removed - no vending bus
- * Used for MQTT-based remote lock control + sensor feedback
- * Original base: Nodestark/mdb-esp32-cashless (master mode)
+ * Waterfront Kayak Rental Adaptation – Bremen, DE
+ * MDB / vending protocol completely removed
+ * Purpose: MQTT-based remote solenoid lock + ultrasonic return sensor
+ * Original base: Nodestark/mdb-esp32-cashless master mode
  */
 
 /*
@@ -35,6 +35,8 @@
 
 // Removed MDB-related defines, pins, enums, structs, functions
 
+// Commented out MDB functions
+/*
 void write_9(uint16_t nth9) {
     uint8_t ones = __builtin_popcount((uint8_t) nth9);
 
@@ -62,7 +64,10 @@ void write_payload_9(uint8_t *mdb_payload_tx, uint8_t mdb_length) {
 
 	write_9(checksum);
 }
+*/
 
+// Commented out MDB task
+/*
 void mdb_vmc_loop(void *pvParameters) {
 
 	uint8_t itemNumber = -1;
@@ -469,7 +474,10 @@ void mdb_vmc_loop(void *pvParameters) {
 		}
 	}
 }
+*/
 
+// Commented out EVA-DTS task
+/*
 void eva_dts_loop(void *pvParameters) {
 
 	// Initialize UART1 driver and configure TX/RX pins
@@ -616,7 +624,7 @@ void eva_dts_loop(void *pvParameters) {
 
 		// DLE ETX ->
 		uart_write_bytes(UART_NUM_1, "\x10\x03", 2);
-		// CRC-16
+		// CRC-16 ->
 		uart_write_bytes(UART_NUM_1, "\xff\xff", 2);
 
 		// DLE 0|1 <-
@@ -628,6 +636,7 @@ void eva_dts_loop(void *pvParameters) {
 		uart_write_bytes(UART_NUM_1, "\x04", 1);
 	}
 }
+*/
 
 void app_main(void) {
 
@@ -650,6 +659,8 @@ void app_main(void) {
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
 
     //--------------- MDB ---------------//
+	// Commented out MDB UART config
+	/*
 	uart_config_t uart_config_2 = {
         .baud_rate = 9600,
         .data_bits = UART_DATA_8_BITS,
@@ -660,6 +671,7 @@ void app_main(void) {
 	uart_param_config(UART_NUM_2, &uart_config_2);
 	uart_set_pin( UART_NUM_2, pin_mdb_tx, pin_mdb_rx, -1, -1);
 	uart_driver_install(UART_NUM_2, 256, 256, 0, (void*) 0, 0);
+	*/
 
 	//
 	button_receive_queue = xQueueCreate(1 /*queue-length*/, sizeof(uint8_t));
@@ -677,7 +689,8 @@ void app_main(void) {
 	gpio_isr_handler_add(GPIO_NUM_0, button0_isr_handler, (void*) 0);
 
 	//
-	xTaskCreate(mdb_vmc_loop, "vmc_loop", 6765, (void*) 0, 1, (void*) 0);
+	// Commented out MDB task creations
+	// xTaskCreate(mdb_vmc_loop, "vmc_loop", 6765, (void*) 0, 1, (void*) 0);
 
-	xTaskCreate(eva_dts_loop, "dex_loop", 6765, (void*) 0, 1, (void*) 0);
+	// xTaskCreate(eva_dts_loop, "dex_loop", 6765, (void*) 0, 1, (void*) 0);
 }
