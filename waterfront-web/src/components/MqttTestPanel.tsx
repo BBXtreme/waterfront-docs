@@ -155,7 +155,6 @@ export default function MqttTestPanel() {
 
   return (
     <div className="p-[25px] bg-gray-900 text-gray-100 rounded-lg">
-      <h2 className="text-xl font-bold mb-6">MQTT Brokers – Test Connection (Local, HiveMQ Public, HiveMQ Cloud)</h2>
 
       <div className="mb-6">
         <div className="flex gap-2 mb-2 flex-wrap">
@@ -260,18 +259,6 @@ export default function MqttTestPanel() {
         </button>
       </div>
 
-      <div className="mb-6">
-        Status:{' '}
-        <span
-          className={`text-lg font-semibold ${
-            status === 'connected' ? 'text-green-400' :
-            status === 'connecting' ? 'text-yellow-400' :
-            status === 'error' ? 'text-red-400' : 'text-gray-400'
-          }`}
-        >
-          {status.toUpperCase()}
-        </span>
-      </div>
 
       <div className="bg-black p-3 rounded font-mono text-sm max-h-80 overflow-y-auto">
         {logs.length === 0 ? 'No logs yet...' : logs.map((log, i) => <div key={i} className="whitespace-pre-wrap break-words">{log}</div>)}
