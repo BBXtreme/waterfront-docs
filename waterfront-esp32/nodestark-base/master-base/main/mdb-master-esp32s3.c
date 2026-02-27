@@ -1,4 +1,11 @@
 /*
+ * Waterfront Kayak Rental Adaptation
+ * MDB protocol completely removed - no vending bus
+ * Used for MQTT-based remote lock control + sensor feedback
+ * Original base: Nodestark/mdb-esp32-cashless (master mode)
+ */
+
+/*
  * VMflow.xyz
  *
  * mdb-master-esp32s3.c - Vending machine controller
@@ -21,84 +28,12 @@
 
 #include "led_strip.h"
 
-#define TAG "mdb_vmc"
+#define TAG "kayak_rental"
 
 #define pin_dex_rx  	GPIO_NUM_18
 #define pin_dex_tx      GPIO_NUM_17
-#define pin_mdb_rx  	GPIO_NUM_4  // Pin to receive data from MDB
-#define pin_mdb_tx  	GPIO_NUM_5  // Pin to transmit data to MDB
-#define pin_mdb_led 	GPIO_NUM_48 // LED to indicate MDB state
 
-// Functions for scale factor conversion
-#define TO_SCALE_FACTOR(p, scale_to, dec_to) (p / scale_to / pow(10, -(dec_to) ))               // Converts to scale factor
-#define FROM_SCALE_FACTOR(p, scale_from, dec_from) (p * scale_from * pow(10, -(dec_from) ))     // Converts from scale factor
-
-#define ACK 	0x00  // Acknowledgment / Checksum correct;
-#define RET 	0xAA  // Retransmit the previously sent data. Only the VMC can transmit this byte;
-#define NAK 	0xFF  // Negative acknowledge.
-
-#define BIT_MODE_SET 	0b100000000
-#define BIT_ADD_SET   	0b011111000
-#define BIT_CMD_SET   	0b000000111
-
-enum MDB_COMMAND {
-	RESET = 0x00,
-	SETUP = 0x01,
-	POLL = 0x02,
-	VEND = 0x03,
-	READER = 0x04,
-	EXPANSION = 0x07
-};
-
-typedef enum MACHINE_STATE {
-	INACTIVE_STATE, DISABLED_STATE, ENABLED_STATE, IDLE_STATE, VEND_STATE
-} machine_state_t;
-
-struct reader_t {
-	uint8_t featureLevel;
-	uint16_t countryCode;
-	uint16_t coinTypeRouting;
-	uint16_t tubeFullStatus;
-	uint8_t scaleFactor;
-	uint8_t decimalPlaces;
-	uint8_t responseTimeSec;
-	uint8_t tubeCounts[16];
-	uint8_t miscellaneous;
-
-	uint8_t poll_fail_count;
-
-	machine_state_t machineState;
-};
-struct reader_t reader0x08 = { .machineState = INACTIVE_STATE };
-struct reader_t reader0x10 = { .machineState = INACTIVE_STATE };
-struct reader_t reader0x60 = { .machineState = INACTIVE_STATE };
-
-/* PA102 - Product Price
- * PA201 - Number of Products Vended Since Initialisation
- * */
-typedef struct {
-    float pa102;
-    uint16_t pa201;
-} coil_t;
-
-coil_t coils[1] = {
-    {.pa102 = 1.25f, .pa201 = 0}
-};
-
-static QueueHandle_t button_receive_queue = (void*) 0;
-
-static volatile int64_t last_button_time = 0;
-
-static void IRAM_ATTR button0_isr_handler(void* arg) {
-
-	int64_t now = esp_timer_get_time();
-
-	if (now - last_button_time > 500000) { // 500ms debounce
-        uint8_t itemNumber = 0;
-        xQueueSendFromISR(button_receive_queue, &itemNumber, NULL);
-        last_button_time = now;
-    }
-}
+// Removed MDB-related defines, pins, enums, structs, functions
 
 void write_9(uint16_t nth9) {
     uint8_t ones = __builtin_popcount((uint8_t) nth9);
@@ -617,9 +552,9 @@ void eva_dts_loop(void *pvParameters) {
 		// DLE ETX ->
 		uart_write_bytes(UART_NUM_1, "\x10\x03", 2);
 		// CRC-16 ->
-		uart_write_bytes(UART_NUM_1, "\xFF\xFF", 2);
+		uart_write_bytes(UART_NUM_1, "\xff\xff", 2);
 
-		// DLE 1 <-
+		// DLE 0|1 <-
 		uart_read_bytes(UART_NUM_1, &data, 2, pdMS_TO_TICKS(100));
 		if (data[0] != 0x10 || data[1] != '1')
 			continue;
