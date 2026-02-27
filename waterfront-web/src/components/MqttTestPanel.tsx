@@ -162,7 +162,7 @@ export default function MqttTestPanel() {
             onClick={setPublicBroker}
             className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
           >
-            Use Public (stable)
+            Use EMQX Public
           </button>
           <button
             onClick={setHivemqPublicBroker}
