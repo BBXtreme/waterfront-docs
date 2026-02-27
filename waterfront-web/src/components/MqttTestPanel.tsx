@@ -15,6 +15,8 @@ export default function MqttTestPanel() {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [logs, setLogs] = useState<string[]>([]);
   const [client, setClient] = useState<MqttClient | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const addLog = (msg: string) => {
     setLogs(prev => [...prev.slice(-15), `${new Date().toLocaleTimeString()} | ${msg}`]);
@@ -36,6 +38,11 @@ export default function MqttTestPanel() {
       connectTimeout: 10000,
       keepalive: 60,
     };
+
+    if (brokerUrl === HIVEMQ_CLOUD_BROKER) {
+      if (username) options.username = username;
+      if (password) options.password = password;
+    }
 
     // If using local non-TLS (ws://), allow it only if not on https page
     if (brokerUrl.startsWith('ws://') && window.location.protocol === 'https:') {
@@ -184,6 +191,26 @@ export default function MqttTestPanel() {
           className={`w-full p-2 bg-gray-800 border border-gray-700 rounded ${brokerUrl.includes('host.docker.internal') ? 'border-red-500' : ''}`}
           placeholder="wss://broker.emqx.io:8084/mqtt"
         />
+        {brokerUrl === HIVEMQ_CLOUD_BROKER && (
+          <div className="mt-2 space-y-2">
+            <label className="block text-sm">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+              placeholder="Enter username"
+            />
+            <label className="block text-sm">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+              placeholder="Enter password"
+            />
+          </div>
+        )}
         {brokerUrl.includes('host.docker.internal') && (
           <div className="text-red-400 bg-red-950/30 p-2 rounded mt-1">
             Local Docker selected: ensure mosquitto.conf has "listener 9001" and "protocol websockets", docker-compose.yml has "9001:9001", and container is running. macOS Docker WS often fails — use public if issues.
