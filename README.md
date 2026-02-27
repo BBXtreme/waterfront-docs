@@ -1,77 +1,77 @@
-# Waterfront  
-**Kayak / SUP Rental Booking App + ESP32 MQTT Controller**
+# Waterfront – Self-Service Kayak & SUP Rental System
 
-Self-service, unmanned rental system with Next.js PWA, Supabase backend, BTCPay/Stripe payments, and ESP32-based smart locker control via MQTT.
-The Waterfront project (as detailed in the TSD and FSD) focuses on an ESP32-based controller for self-service kayak rental vending machines. It requires MQTT for real-time communication (e.g., unlock commands, status telemetry), WiFi with runtime provisioning, cellular (LTE) fallback, sensor-driven logic (e.g., kayak presence detection for auto-locking/return confirmation), relay control for locks, power optimization for solar/battery setups, offline fallbacks (e.g., local PIN validation), and integration with booking flows (e.g., handling JSON payloads with booking IDs, durations, and deposits)
+Unmanned, 24/7 kayak/SUP rental platform with **Next.js PWA**, **Supabase** backend, **Stripe + BTCPay** payments (fiat + Lightning/Liquid BTC), and **ESP32 MQTT** smart-locker control.
 
-Live demo (Vercel/Railway....tbd): https://waterfront-[your-project-slug].vercel.app  
+**Live demo (frontend only – Vercel)**: https://waterfront-[your-project-slug].vercel.app  
+**Current status**: Early development – auth, local Supabase, calendar skeleton & MQTT base working. Payments & ESP32 sensor logic next.
 
-**Current status**: Early development – auth & local setup working, calendar & payments next
+## Core Concept
 
-## Features (Current & Planned)
+Users book online → pay → receive PIN/QR → arrive at solar-powered locker → enter code / scan → take kayak → return to same bay → sensors confirm → deposit released automatically.
 
-- Guest booking (no login required for basic flow)
-- Calendar + time slot selection
-- Location / equipment selection
-- Real-time availability (Supabase Realtime)
-- Payments: Stripe (fiat) + BTCPay Server (Lightning / Liquid BTC)
-- Instant PIN + QR code confirmation (via email or on-screen)
-- ESP32 MQTT integration for locker unlock / sensor feedback (take/return events)
-- Admin dashboard (telemetry, bookings, payments, logs)
-- Offline-tolerant PWA (cached QR/PIN for poor connectivity)
+## Features – Status
+
+| Feature                               | Status    | Notes / Next                   |
+| ------------------------------------- | --------- | ------------------------------ |
+| Guest booking (no login required)     | ✅ Working | Calendar + time slots          |
+| Real-time availability                | 🟡 Partial | Supabase Realtime              |
+| Fiat payments (Stripe)                | 🚧 Planned | Checkout + webhook             |
+| Lightning / Liquid BTC (BTCPay)       | 🚧 Planned | Webhook → MQTT unlock          |
+| PIN/QR generation & delivery          | 🟡 Partial | Email / on-screen              |
+| ESP32 MQTT locker control             | ✅ Base    | Unlock command, status publish |
+| Kayak presence sensor (ultrasonic)    | 🚧 Planned | Taken / returned events        |
+| Deposit handling & auto-release       | 🚧 Planned | MQTT + backend logic           |
+| Admin dashboard (bookings, telemetry) | 🚧 Planned | Supabase + real-time           |
+| Offline-tolerant PWA                  | 🟡 Partial | QR/PIN caching                 |
 
 ## Tech Stack
 
-- **Frontend / PWA** — Next.js 16+, TypeScript, Tailwind CSS, shadcn/ui  
-- **Backend / Database** — Supabase (PostgreSQL + Auth + Realtime + Storage)  
-- **Payments** — Stripe + BTCPay Server (self-hosted)  
-- **IoT / Hardware** — ESP32 (Arduino framework + PlatformIO), PubSubClient (MQTT), TinyGSM (LTE fallback)  
-- **Infrastructure** — Docker + Mosquitto MQTT broker  
-- **Development** — pnpm, Aider (AI coding), GitHub  
-- **Deployment** — Vercel (frontend only)
+- **Frontend / PWA** — Next.js 15+, TypeScript, Tailwind CSS, shadcn/ui, Vercel deployment
+- **Backend / Database / Auth** — Supabase (PostgreSQL + Auth + Realtime + Storage)
+- **Payments** — Stripe Checkout + BTCPay Server (self-hosted, Lightning/Liquid)
+- **IoT Controller** — ESP32-S3 (ESP-IDF), MQTT (PubSubClient or esp-mqtt), TinyGSM (LTE fallback)
+- **MQTT Broker** — Mosquitto (Docker)
+- **Development** — pnpm, Aider (AI pair programming), PlatformIO, GitHub monorepo
+- **Deployment** — Vercel (frontend), Railway/Render/VPS (MQTT broker, future BTCPay)
 
 ## Project Structure (Monorepo)
 
 Waterfront/ 
 
-├── docs/                 # Specifications, screenshots, wireframes, FSD/TSD 
+├── docs/                   # Functional/Technical specs, wireframes, schemas 
 
-├── supabase-local/       # Local Supabase dev environment (CLI) 
+├── supabase-local/         # Local Supabase dev (CLI + migrations) 
 
-├── waterfront-web/       # Next.js PWA → deployed to Vercel 
+├── waterfront-web/         # Next.js PWA → deployed to Vercel 
 
-├── waterfront-infra/     # Docker Compose (MQTT broker, future BTCPay, etc.) 
+├── waterfront-esp32/       # ESP-IDF project (PlatformIO/VS Code) 
 
-├── waterfront-esp32/     # PlatformIO project (ESP32 firmware) 
-
-├── waterfront-backend/   # Optional Node.js/Edge Functions (if needed) 
+├── waterfront-infra/       # Docker Compose (Mosquitto, future BTCPay) 
 
 └── README.md
 
-**Note**: Only `waterfront-web` is deployed to Vercel. The rest (ESP32, infra, local Supabase) remain local/dev tools.
-
-## Quick Start – Development Setup
+## Quick Start – Local Development
 
 ### Prerequisites
 
-- Node.js 20+ (via nvm recommended)
+- Node.js 20+ (nvm recommended)
 - pnpm (`npm install -g pnpm`)
 - Docker Desktop
 - Supabase CLI (`brew install supabase/tap/supabase` or `npm install -g supabase`)
 - PlatformIO (VS Code extension)
-- GitHub account
+- Git
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/BBXtreme/Waterfront.git
+git clone https://github.com/[your-username]/Waterfront.git
 cd Waterfront
 
 cd waterfront-web
 pnpm install
 ```
 
-### 2. Run the PWA locally
+### 2. Run the PWA
 
 Bash
 
@@ -82,19 +82,19 @@ pnpm dev
 
 → [http://localhost:3000](http://localhost:3000/)
 
-### 3. Local Supabase (Database + Auth + Realtime)
+### 3. Start Local Supabase
 
 Bash
 
 ```
 cd ../supabase-local
-supabase init    # only first time
+supabase init     # only first time
 supabase start
 ```
 
-→ Studio: [http://127.0.0.1:54323](http://127.0.0.1:54323/) Default login: postgres / postgres → Create tables / run migrations (see docs/ for schema)
+→ Studio: [http://127.0.0.1:54323](http://127.0.0.1:54323/) Login: postgres / postgres
 
-### 4. Local MQTT Broker (for ESP32 testing)
+### 4. Start Local MQTT Broker
 
 Bash
 
@@ -103,62 +103,78 @@ cd ../waterfront-infra
 docker compose up -d
 ```
 
-→ Mosquitto at mqtt://localhost:1883 (anonymous)
+→ mqtt://localhost:1883 (anonymous)
 
-### 5. ESP32 Firmware (PlatformIO)
+### 5. Build & Flash ESP32 Firmware
 
-Open waterfront-esp32 folder in VS Code → use PlatformIO toolbar to build/upload.
+Open waterfront-esp32 folder in VS Code (with PlatformIO extension).
 
-## Deployment – (waterfront-web only)
-
-tbd
+- Build: PlatformIO → Build
+- Upload: PlatformIO → Upload
+- Monitor: PlatformIO → Serial Monitor
 
 ## Environment Variables
 
-### Local – waterfront-web/.env.local
+### waterfront-web/.env.local (local dev)
 
-Add to waterfront-web/.env.local:
+env
 
 ```
-# Local Supabase – API endpoint MUST be 54321 (Project URL)
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# Supabase local (MUST use port 54321) 
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... 
 
-# Use the Publishable key (this is your public/anon key for client-side)
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ACJWlz.....
-
-# Optional: only if you do server-side admin operations (e.g. bypass RLS)
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_N7U........
-
-# MQTT (local dev) 
+# MQTT broker (local) 
 MQTT_BROKER_URL=mqtt://localhost:1883 
 
-# Payments (add when ready) 
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... 
-STRIPE_SECRET_KEY=sk_test_... 
-BTCPAY_URL=https://your-btcpay-server.com BTCPAY_API_KEY=...
+# Payments (add later) 
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... STRIPE_SECRET_KEY=sk_test_... BTCPAY_URL=https://your-btcpay-server.com BTCPAY_API_KEY=...
 ```
-**Rule of thumb**: NEXT_PUBLIC_ → client-side (browser), others → server/edge only.
+
+**Rule**: NEXT_PUBLIC_ → client-side only. Server secrets stay out of git.
 
 ## Useful Commands
 
-| Task                 | Command                                     |
-| -------------------- | ------------------------------------------- |
-| Run PWA              | cd waterfront-web && pnpm dev               |
-| Start local Supabase | cd supabase-local && supabase start         |
-| Start MQTT broker    | cd waterfront-infra && docker compose up -d |
-| Stop MQTT            | cd waterfront-infra && docker compose down  |
-| Open whole project   | code . (from root)                          |
+Bash
+
+```
+# PWA dev server
+cd waterfront-web && pnpm dev
+
+# Local Supabase
+cd supabase-local && supabase start
+
+# MQTT broker
+cd waterfront-infra && docker compose up -d
+
+# Stop everything
+cd waterfront-infra && docker compose down
+
+# Open entire repo in VS Code
+code .
+```
 
 ## Development Guidelines
 
-- Use Aider: aider --model xai/grok-code-fast-1
-- Commit often, small & clear messages
-- Keep waterfront-web as priority until PWA flow is complete
-- Document decisions & schemas in docs/
-- Feature branches: git checkout -b feat/calendar-availability
+- Use **Aider** for code generation/refactoring:
+
+  Bash
+
+  ```
+  aider --model xai/grok-code-fast-1
+  ```
+
+- Small, focused commits
+
+- Branch naming: feat/calendar-availability, fix/mqtt-reconnect, refactor/remove-mdb
+
+- Document schemas/decisions in docs/
+
+- Keep waterfront-web as priority until booking/payment flow is complete
 
 ## License
 
 MIT License (to be confirmed)
 
-Happy building! Questions → open an Issue
+Questions, ideas or help needed? Open an Issue or DM on X @BangLee8888.
+
+Happy building!
