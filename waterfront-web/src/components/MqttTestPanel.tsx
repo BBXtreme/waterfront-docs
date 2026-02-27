@@ -30,7 +30,7 @@ export default function MqttTestPanel() {
     const options: IClientOptions = {
       clientId: `test-pwa-${Math.random().toString(16).slice(3)}`,
       clean: true,
-      reconnectPeriod: 3000,       // auto-reconnect
+      reconnectPeriod: 8000,       // auto-reconnect
       connectTimeout: 10000,
       keepalive: 60,
     };
@@ -58,7 +58,7 @@ export default function MqttTestPanel() {
     });
 
     mqttClient.on('error', err => {
-      addLog(`Connection error: ${err.message || err}`);
+      addLog(`Error: ${err.message || 'Unknown'} – check browser console for WS details`);
       setStatus('error');
     });
 
@@ -77,9 +77,9 @@ export default function MqttTestPanel() {
     // Timeout check for slow connections
     setTimeout(() => {
       if (status === 'connecting') {
-        addLog('Warning: Connection taking >8s — try public broker or verify Docker config...');
+        addLog('Warning: Still connecting after 10s – check Docker logs, mosquitto.conf websockets listener, port mapping 9001:9001');
       }
-    }, 8000);
+    }, 10000);
   };
 
   const sendTestMessage = () => {
@@ -116,6 +116,10 @@ export default function MqttTestPanel() {
     localStorage.setItem('mqttBrokerUrl', LOCAL_BROKER);
   };
 
+  const clearLogs = () => {
+    setLogs([]);
+  };
+
   useEffect(() => {
     const savedUrl = localStorage.getItem('mqttBrokerUrl');
     if (savedUrl) {
@@ -130,10 +134,10 @@ export default function MqttTestPanel() {
   }, [client]);
 
   return (
-    <div className="p-4 bg-gray-900 text-gray-100 rounded-lg">
-      <h2 className="text-xl font-bold mb-4">MQTT Brokers – Test Connection</h2>
+    <div className="p-6 bg-gray-900 text-gray-100 rounded-lg">
+      <h2 className="text-xl font-bold mb-6">MQTT Brokers – Test Connection</h2>
 
-      <div className="mb-4">
+      <div className="mb-6">
         <div className="flex gap-2 mb-2">
           <button
             onClick={setPublicBroker}
@@ -153,24 +157,28 @@ export default function MqttTestPanel() {
           type="text"
           value={brokerUrl}
           onChange={e => setBrokerUrl(e.target.value)}
-          className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+          className={`w-full p-2 bg-gray-800 border border-gray-700 rounded ${brokerUrl.includes('host.docker.internal') ? 'border-red-500' : ''}`}
           placeholder="wss://broker.emqx.io:8084/mqtt"
         />
-        <p className={`text-sm mt-1 ${brokerUrl.includes('host.docker.internal') ? 'text-red-400' : 'text-yellow-400'}`}>
-          {brokerUrl.includes('host.docker.internal')
-            ? 'Local Docker selected: ensure mosquitto.conf has "listener 9001" and "protocol websockets", docker-compose.yml has "9001:9001", and container is running. macOS Docker WS often fails — use public if issues.'
-            : 'macOS Docker local Mosquitto WS often fails — use public broker (above) for stable test'
-          }
-        </p>
+        {brokerUrl.includes('host.docker.internal') && (
+          <div className="text-red-400 bg-red-950/30 p-2 rounded mt-1">
+            Local Docker selected: ensure mosquitto.conf has "listener 9001" and "protocol websockets", docker-compose.yml has "9001:9001", and container is running. macOS Docker WS often fails — use public if issues.
+          </div>
+        )}
+        {!brokerUrl.includes('host.docker.internal') && (
+          <p className="text-sm text-yellow-400 mt-1">
+            macOS Docker local Mosquitto WS often fails — use public broker (above) for stable test
+          </p>
+        )}
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-6">
         <button
           onClick={connect}
           disabled={status === 'connecting'}
           className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded disabled:opacity-50"
         >
-          Start / Reconnect
+          Start/Reconnect
         </button>
         <button
           onClick={disconnect}
@@ -186,12 +194,18 @@ export default function MqttTestPanel() {
         >
           Send Test Message
         </button>
+        <button
+          onClick={clearLogs}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          Clear Logs
+        </button>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-6">
         Status:{' '}
         <span
-          className={`font-bold ${
+          className={`text-lg font-semibold ${
             status === 'connected' ? 'text-green-400' :
             status === 'connecting' ? 'text-yellow-400' :
             status === 'error' ? 'text-red-400' : 'text-gray-400'
@@ -201,8 +215,8 @@ export default function MqttTestPanel() {
         </span>
       </div>
 
-      <div className="bg-black p-3 rounded font-mono text-sm max-h-60 overflow-y-auto">
-        {logs.length === 0 ? 'No logs yet...' : logs.map((log, i) => <div key={i}>{log}</div>)}
+      <div className="bg-black p-3 rounded font-mono text-sm max-h-80 overflow-y-auto">
+        {logs.length === 0 ? 'No logs yet...' : logs.map((log, i) => <div key={i} className="whitespace-pre-wrap break-words">{log}</div>)}
       </div>
     </div>
   );
