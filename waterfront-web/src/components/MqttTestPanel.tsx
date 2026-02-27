@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt'; // npm install mqtt
 
 const PUBLIC_BROKER = 'wss://broker.emqx.io:8084/mqtt'; // or wss://test.mosquitto.org:8081/mqtt
+const LOCAL_BROKER = 'ws://host.docker.internal:9001/mqtt';
 const TEST_TOPIC = 'waterfront/test/debug';
 
 export default function MqttTestPanel() {
@@ -72,6 +73,13 @@ export default function MqttTestPanel() {
     });
 
     setClient(mqttClient);
+
+    // Timeout check for slow connections
+    setTimeout(() => {
+      if (status === 'connecting') {
+        addLog('Warning: Connection taking >8s — try public broker or verify Docker config...');
+      }
+    }, 8000);
   };
 
   const sendTestMessage = () => {
@@ -98,6 +106,23 @@ export default function MqttTestPanel() {
     }
   };
 
+  const setPublicBroker = () => {
+    setBrokerUrl(PUBLIC_BROKER);
+    localStorage.setItem('mqttBrokerUrl', PUBLIC_BROKER);
+  };
+
+  const setLocalBroker = () => {
+    setBrokerUrl(LOCAL_BROKER);
+    localStorage.setItem('mqttBrokerUrl', LOCAL_BROKER);
+  };
+
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('mqttBrokerUrl');
+    if (savedUrl) {
+      setBrokerUrl(savedUrl);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (client) client.end();
@@ -109,6 +134,20 @@ export default function MqttTestPanel() {
       <h2 className="text-xl font-bold mb-4">MQTT Brokers – Test Connection</h2>
 
       <div className="mb-4">
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={setPublicBroker}
+            className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-sm"
+          >
+            Use Public (stable)
+          </button>
+          <button
+            onClick={setLocalBroker}
+            className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-sm"
+          >
+            Use Local Docker (macOS)
+          </button>
+        </div>
         <label className="block mb-1">Broker URL (ws:// or wss://)</label>
         <input
           type="text"
@@ -117,8 +156,11 @@ export default function MqttTestPanel() {
           className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
           placeholder="wss://broker.emqx.io:8084/mqtt"
         />
-        <p className="text-sm text-yellow-400 mt-1">
-          macOS Docker local Mosquitto WS often fails – use public broker (above) for stable test
+        <p className={`text-sm mt-1 ${brokerUrl.includes('host.docker.internal') ? 'text-red-400' : 'text-yellow-400'}`}>
+          {brokerUrl.includes('host.docker.internal')
+            ? 'Local Docker selected: ensure mosquitto.conf has "listener 9001" and "protocol websockets", docker-compose.yml has "9001:9001", and container is running. macOS Docker WS often fails — use public if issues.'
+            : 'macOS Docker local Mosquitto WS often fails — use public broker (above) for stable test'
+          }
         </p>
       </div>
 
