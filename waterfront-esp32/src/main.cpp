@@ -26,7 +26,7 @@ void setup() {
 
     // Load runtime config
     if (!loadConfig()) {
-        ESP_LOGW("MAIN", "Using default config");
+        ESP_LOGW("MAIN", "Using defaults");
     }
 
     // Initialize compartment manager (now uses loaded config)
