@@ -29,6 +29,7 @@ int activeSlots[MAX_SLOTS] = {1, 2, 3};  // Example: slots 1,2,3 active; load fr
 void mqtt_init() {
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setCallback(mqtt_callback);
+    gate_init();  // Initialize gate control
     ESP_LOGI("MQTT", "Initialized with broker %s:%d", MQTT_SERVER, MQTT_PORT);
 }
 
@@ -36,7 +37,7 @@ void mqtt_init() {
 bool mqtt_connect() {
     if (mqttClient.connected()) return true;
     ESP_LOGI("MQTT", "Connecting...");
-    // Set last-will
+    // Set last-will (PubSubClient syntax: connect(clientId, willTopic, willQoS, willRetain, willMessage))
     if (mqttClient.connect("KayakClient", MQTT_LAST_WILL_TOPIC, MQTT_QOS_STATUS, MQTT_RETAIN_STATUS, MQTT_LAST_WILL_MESSAGE)) {
         ESP_LOGI("MQTT", "Connected");
         mqtt_subscribe();
@@ -91,24 +92,35 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     if (sscanf(topic, MQTT_BASE_TOPIC "/slots/%d/status", &slotId) == 1) {
         // Handle status message (retained sync)
         DynamicJsonDocument doc(512);
-        deserializeJson(doc, msg);
+        DeserializationError error = deserializeJson(doc, msg);
+        if (error) {
+            ESP_LOGE("MQTT", "JSON parse failed for status");
+            return;
+        }
         bool booked = doc["booked"];
         const char* gateState = doc["gateState"];
+        ESP_LOGI("MQTT", "Slot %d: booked=%d, gateState=%s", slotId, booked, gateState);
         if (booked && strcmp(gateState, "locked") == 0) {
             openGateServo(slotId);
             mqtt_publish_ack(slotId, "gate_opened");
         }
-        // TODO: Update 7-segment/LED matrix with booking info
     } else if (sscanf(topic, MQTT_BASE_TOPIC "/slots/%d/command", &slotId) == 1) {
         // Handle command message
+        ESP_LOGI("MQTT", "Slot %d command: %s", slotId, msg.c_str());
         if (msg == "open_gate") {
             openGateServo(slotId);
             mqtt_publish_ack(slotId, "gate_opened");
         } else if (msg == "close_gate") {
             closeGateServo(slotId);
             mqtt_publish_ack(slotId, "gate_closed");
+        } else if (msg == "query_state") {
+            const char* state = getGateState(slotId);
+            char payload[64];
+            snprintf(payload, sizeof(payload), "{\"slotId\":%d,\"gateState\":\"%s\"}", slotId, state);
+            char topic[64];
+            snprintf(topic, sizeof(topic), MQTT_SLOT_ACK_TOPIC, slotId);
+            mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
         }
-        // Add more commands as needed
     }
 }
 

@@ -15,6 +15,7 @@
 #include "relay_handler.h"
 #include "return_sensor.h"
 #include "deposit_logic.h"
+#include "gate_control.h"
 
 static const char *TAG = "MAIN";
 
@@ -89,6 +90,9 @@ void app_main() {
         } else {
             ESP_LOGI(TAG, "Kayak not present");
         }
+
+        // Handle gate tasks
+        gate_task();
 
         vTaskDelay(pdMS_TO_TICKS(SENSOR_POLL_INTERVAL_MS));
     }
