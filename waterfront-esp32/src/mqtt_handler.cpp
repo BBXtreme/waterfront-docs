@@ -2,10 +2,13 @@
 // This file manages MQTT connections, subscriptions, publishing, and callbacks.
 // It integrates with the main loop for reliable IoT communication.
 // Uses PubSubClient for Arduino compatibility.
+// Updated for retained MQTT topics: subscribes to slot status/command, publishes acks.
+// Handles real-time slot booking sync and gate control.
 
 #include "mqtt_handler.h"
+#include "mqtt_topics.h"
+#include "gate_control.h"
 #include "config.h"
-#include "relay_handler.h"  // Added to declare relay_unlock()
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -13,28 +16,30 @@
 // External references
 extern PubSubClient mqttClient;
 extern WiFiClient wifiClient;
-extern bool provisioningActive;
 
-// MQTT topics (defined in config.h)
-#define MQTT_UNLOCK_TOPIC "/kayak/" MACHINE_ID "/unlock"
-#define MQTT_STATUS_TOPIC "/kayak/" MACHINE_ID "/status"
-#define MQTT_PROVISION_TOPIC "/kayak/" MACHINE_ID "/provision/start"
+// Slot configuration (assume up to 10 slots; adjust as needed)
+#define MAX_SLOTS 10
+int activeSlots[MAX_SLOTS] = {1, 2, 3};  // Example: slots 1,2,3 active; load from config
+
+// Last-will topic and message for disconnect handling
+#define MQTT_LAST_WILL_TOPIC MQTT_BASE_TOPIC "/esp32/disconnect"
+#define MQTT_LAST_WILL_MESSAGE "{\"status\":\"disconnected\"}"
 
 // Initialize MQTT handler
 void mqtt_init() {
-    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setCallback(mqtt_callback);
-    ESP_LOGI("MQTT", "Initialized with broker %s:%d", MQTT_BROKER, MQTT_PORT);
+    ESP_LOGI("MQTT", "Initialized with broker %s:%d", MQTT_SERVER, MQTT_PORT);
 }
 
-// Connect to MQTT broker
+// Connect to MQTT broker with last-will
 bool mqtt_connect() {
     if (mqttClient.connected()) return true;
     ESP_LOGI("MQTT", "Connecting...");
-    if (mqttClient.connect(MACHINE_ID)) {
+    // Set last-will
+    if (mqttClient.connect("KayakClient", MQTT_LAST_WILL_TOPIC, MQTT_QOS_STATUS, MQTT_RETAIN_STATUS, MQTT_LAST_WILL_MESSAGE)) {
         ESP_LOGI("MQTT", "Connected");
         mqtt_subscribe();
-        mqtt_publish_status();
         return true;
     } else {
         ESP_LOGE("MQTT", "Failed, rc=%d", mqttClient.state());
@@ -42,46 +47,68 @@ bool mqtt_connect() {
     }
 }
 
-// Subscribe to topics
+// Subscribe to slot topics
 void mqtt_subscribe() {
-    mqttClient.subscribe(MQTT_UNLOCK_TOPIC);
-    mqttClient.subscribe(MQTT_PROVISION_TOPIC);
-    ESP_LOGI("MQTT", "Subscribed to topics");
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        if (activeSlots[i] > 0) {
+            char topic[64];
+            snprintf(topic, sizeof(topic), MQTT_SLOT_STATUS_TOPIC, activeSlots[i]);
+            mqttClient.subscribe(topic, MQTT_QOS_STATUS);
+            ESP_LOGI("MQTT", "Subscribed to %s", topic);
+            snprintf(topic, sizeof(topic), MQTT_SLOT_COMMAND_TOPIC, activeSlots[i]);
+            mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
+            ESP_LOGI("MQTT", "Subscribed to %s", topic);
+        }
+    }
 }
 
-// Publish status
-void mqtt_publish_status() {
-    DynamicJsonDocument doc(256);
-    doc["wifiState"] = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
-    doc["ssid"] = WiFi.SSID();
-    doc["ip"] = WiFi.localIP().toString();
-    doc["rssi"] = WiFi.RSSI();
-    String msg;
-    serializeJson(doc, msg);
-    mqttClient.publish(MQTT_STATUS_TOPIC, msg.c_str());
-    ESP_LOGI("MQTT", "Published status");
+// Publish retained status (for backend to sync)
+void mqtt_publish_retained_status(int slotId, const char* jsonPayload) {
+    char topic[64];
+    snprintf(topic, sizeof(topic), MQTT_SLOT_STATUS_TOPIC, slotId);
+    mqttClient.publish(topic, jsonPayload, MQTT_RETAIN_STATUS);
+    ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, jsonPayload);
+}
+
+// Publish ack (not retained)
+void mqtt_publish_ack(int slotId, const char* action) {
+    char topic[64];
+    snprintf(topic, sizeof(topic), MQTT_SLOT_ACK_TOPIC, slotId);
+    char payload[128];
+    snprintf(payload, sizeof(payload), "{\"slotId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", slotId, action, millis());
+    mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
+    ESP_LOGI("MQTT", "Published ack to %s: %s", topic, payload);
 }
 
 // MQTT callback for incoming messages
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     String msg;
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
-    ESP_LOGI("MQTT", "Received on %s: %s", topic, msg.c_str());
+    ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg.c_str(), millis());
 
-    if (strcmp(topic, MQTT_UNLOCK_TOPIC) == 0) {
-        // Parse unlock command
-        DynamicJsonDocument doc(256);
+    // Parse topic to extract slotId
+    int slotId = -1;
+    if (sscanf(topic, MQTT_BASE_TOPIC "/slots/%d/status", &slotId) == 1) {
+        // Handle status message (retained sync)
+        DynamicJsonDocument doc(512);
         deserializeJson(doc, msg);
-        String pin = doc["pin"];
-        if (pin == "1234") {  // TODO: Secure validation
-            relay_unlock();
-            ESP_LOGI("MQTT", "Unlock command processed");
-        } else {
-            ESP_LOGW("MQTT", "Invalid PIN");
+        bool booked = doc["booked"];
+        const char* gateState = doc["gateState"];
+        if (booked && strcmp(gateState, "locked") == 0) {
+            openGateServo(slotId);
+            mqtt_publish_ack(slotId, "gate_opened");
         }
-    } else if (strcmp(topic, MQTT_PROVISION_TOPIC) == 0) {
-        provisioningActive = true;
-        ESP_LOGI("MQTT", "Provisioning triggered");
+        // TODO: Update 7-segment/LED matrix with booking info
+    } else if (sscanf(topic, MQTT_BASE_TOPIC "/slots/%d/command", &slotId) == 1) {
+        // Handle command message
+        if (msg == "open_gate") {
+            openGateServo(slotId);
+            mqtt_publish_ack(slotId, "gate_opened");
+        } else if (msg == "close_gate") {
+            closeGateServo(slotId);
+            mqtt_publish_ack(slotId, "gate_closed");
+        }
+        // Add more commands as needed
     }
 }
 
@@ -91,15 +118,4 @@ void mqtt_loop() {
         mqtt_connect();
     }
     mqttClient.loop();
-}
-
-// Publish event (e.g., sensor or deposit)
-void mqtt_publish_event(const char* event, const char* details) {
-    DynamicJsonDocument doc(256);
-    doc["event"] = event;
-    doc["details"] = details;
-    String msg;
-    serializeJson(doc, msg);
-    mqttClient.publish("/kayak/" MACHINE_ID "/event", msg.c_str());
-    ESP_LOGI("MQTT", "Published event: %s", event);
 }
