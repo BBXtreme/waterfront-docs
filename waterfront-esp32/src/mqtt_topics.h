@@ -1,6 +1,6 @@
 // mqtt_topics.h - Central definitions for MQTT topics and QoS settings
 // This header defines all MQTT topics used in the Waterfront system.
-// Topics are structured for compartment-based booking sync and gate control.
+// Topics are structured hierarchically for location-based booking sync and gate control.
 // All status topics use QoS 1 and retained=true for real-time sync.
 
 #ifndef MQTT_TOPICS_H
@@ -9,18 +9,16 @@
 // Base topic prefix
 #define MQTT_BASE_TOPIC "waterfront"
 
-// Compartment-specific topics (use compartmentId in placeholders)
-// Retained status: published by backend on booking changes
-#define MQTT_COMPARTMENT_STATUS_TOPIC MQTT_BASE_TOPIC "/locations/%s/compartments/%d/status"  // Retained JSON status
+// Hierarchical topic formats (use snprintf for building)
+// Format: waterfront/locations/{locationCode}/compartments/{compartmentId}/...
+#define MQTT_COMPARTMENT_STATUS_FMT MQTT_BASE_TOPIC "/locations/%s/compartments/%d/status"  // Retained JSON status
+#define MQTT_COMPARTMENT_COMMAND_FMT MQTT_BASE_TOPIC "/locations/%s/compartments/%d/command"  // Commands like open_gate, close_gate
+#define MQTT_COMPARTMENT_ACK_FMT MQTT_BASE_TOPIC "/locations/%s/compartments/%d/ack"  // Confirmation messages
+#define MQTT_COMPARTMENT_EVENT_FMT MQTT_BASE_TOPIC "/locations/%s/compartments/%d/event"  // Taken/returned events
 
-// Commands: from backend to ESP32
-#define MQTT_COMPARTMENT_COMMAND_TOPIC MQTT_BASE_TOPIC "/locations/%s/compartments/%d/command"  // Commands like open_gate, close_gate
-
-// Acknowledgments: from ESP32 back to backend (not retained)
-#define MQTT_COMPARTMENT_ACK_TOPIC MQTT_BASE_TOPIC "/locations/%s/compartments/%d/ack"  // Confirmation messages
-
-// Events: from ESP32 to backend
-#define MQTT_COMPARTMENT_EVENT_TOPIC MQTT_BASE_TOPIC "/locations/%s/compartments/%d/event"  // Taken/returned events
+// Wildcard patterns for subscription (match this locationCode)
+#define MQTT_COMPARTMENT_STATUS_WILDCARD MQTT_BASE_TOPIC "/locations/%s/compartments/+/status"
+#define MQTT_COMPARTMENT_COMMAND_WILDCARD MQTT_BASE_TOPIC "/locations/%s/compartments/+/command"
 
 // QoS settings
 #define MQTT_QOS_STATUS 1  // QoS 1 for status (at least once)

@@ -25,6 +25,10 @@
 extern PubSubClient mqttClient;
 extern WiFiClient wifiClient;
 
+// Globals for location hierarchy
+const char* LOCATION_TYPE = "locations";  // Fixed as "locations"
+const char* LOCATION_CODE = "bremen-harbor-01";  // Load from config or NVS
+
 // Compartment configuration (assume up to 10 compartments; adjust as needed)
 #define MAX_COMPARTMENTS 10
 int activeCompartments[MAX_COMPARTMENTS] = {1, 2, 3};  // Example: compartments 1,2,3 active; load from config
@@ -62,20 +66,18 @@ bool mqtt_connect() {
 }
 
 /**
- * @brief Subscribes to compartment-specific MQTT topics.
+ * @brief Subscribes to compartment-specific MQTT topics using wildcards.
  */
 void mqtt_subscribe() {
-    for (int i = 0; i < MAX_COMPARTMENTS; i++) {
-        if (activeCompartments[i] > 0) {
-            char topic[64];
-            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_TOPIC, LOCATION_CODE, activeCompartments[i]);
-            mqttClient.subscribe(topic, MQTT_QOS_STATUS);
-            ESP_LOGI("MQTT", "Subscribed to %s", topic);
-            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_COMMAND_TOPIC, LOCATION_CODE, activeCompartments[i]);
-            mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
-            ESP_LOGI("MQTT", "Subscribed to %s", topic);
-        }
-    }
+    char topic[96];
+    // Subscribe to status wildcard for this location
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_WILDCARD, LOCATION_CODE);
+    mqttClient.subscribe(topic, MQTT_QOS_STATUS);
+    ESP_LOGI("MQTT", "Subscribed to %s", topic);
+    // Subscribe to command wildcard for this location
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_COMMAND_WILDCARD, LOCATION_CODE);
+    mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
+    ESP_LOGI("MQTT", "Subscribed to %s", topic);
 }
 
 /**
@@ -84,8 +86,8 @@ void mqtt_subscribe() {
  * @param jsonPayload The JSON payload to publish.
  */
 void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
-    char topic[64];
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_TOPIC, LOCATION_CODE, compartmentId);
+    char topic[96];
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_FMT, LOCATION_CODE, compartmentId);
     mqttClient.publish(topic, jsonPayload, MQTT_RETAIN_STATUS);
     ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, jsonPayload);
 }
@@ -96,8 +98,8 @@ void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
  * @param action The action performed (e.g., "gate_opened").
  */
 void mqtt_publish_ack(int compartmentId, const char* action) {
-    char topic[64];
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_TOPIC, LOCATION_CODE, compartmentId);
+    char topic[96];
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
     char payload[128];
     snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", compartmentId, action, millis());
     mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
@@ -117,8 +119,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
 
     // Parse topic to extract compartmentId using sscanf for efficiency
     int compartmentId = -1;
-    char locationCode[32];
-    if (sscanf(topic, MQTT_BASE_TOPIC "/locations/%31[^/]/compartments/%d/status", locationCode, &compartmentId) == 2) {
+    char locationType[16], locationCode[32];
+    if (sscanf(topic, MQTT_BASE_TOPIC "/%15[^/]/%31[^/]/compartments/%d/status", locationType, locationCode, &compartmentId) == 3) {
         // Handle status message (retained sync)
         DynamicJsonDocument doc(512);
         DeserializationError error = deserializeJson(doc, msg);
@@ -133,7 +135,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             openCompartmentGate(compartmentId);
             mqtt_publish_ack(compartmentId, "gate_opened");
         }
-    } else if (sscanf(topic, MQTT_BASE_TOPIC "/locations/%31[^/]/compartments/%d/command", locationCode, &compartmentId) == 2) {
+    } else if (sscanf(topic, MQTT_BASE_TOPIC "/%15[^/]/%31[^/]/compartments/%d/command", locationType, locationCode, &compartmentId) == 3) {
         // Handle command message
         ESP_LOGI("MQTT", "Compartment %d command: %s", compartmentId, msg.c_str());
         if (msg == "open_gate") {
@@ -146,8 +148,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             const char* state = getCompartmentGateState(compartmentId);
             char payload[64];
             snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"gateState\":\"%s\"}", compartmentId, state);
-            char topic[64];
-            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_TOPIC, LOCATION_CODE, compartmentId);
+            char topic[96];
+            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
             mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
         }
     }
