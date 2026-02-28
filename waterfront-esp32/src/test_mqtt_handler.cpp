@@ -5,7 +5,7 @@
 // Run tests with PlatformIO: pio test
 
 #define CATCH_CONFIG_MAIN  // Catch2 main entry point
-#include <catch2/catch.hpp>  // Catch2 header (add to lib_deps in platformio.ini: "catchorg/Catch2@^3.4.0")
+#include <catch2/catch_test_macros.hpp>  // Catch2 header (add to lib_deps in platformio.ini: "catchorg/Catch2@^3.4.0")
 
 // Include headers under test
 #include "mqtt_topics.h"
