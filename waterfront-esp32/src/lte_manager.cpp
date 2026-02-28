@@ -1,77 +1,72 @@
-// lte_manager.cpp - LTE cellular fallback implementation using TinyGSM
+// lte_manager.cpp - LTE cellular fallback management using TinyGSM
 // This file manages the LTE modem for cellular connectivity as a WiFi fallback.
 // It uses TinyGSM library to control the modem, connect to GPRS, and provide TCP client for MQTT.
 // Power management is included to conserve battery in solar-powered setups.
 
-#include "lte_manager.h"      // Header for LTE functions
-#include "config.h"           // Configuration constants
-#include <PubSubClient.h>     // MQTT client
+#include "lte_manager.h"
+#include "config.h"
+#include <TinyGsmClient.h>
+#include <HardwareSerial.h>
+#include <PubSubClient.h>
 
-// External references from main.cpp
-extern PubSubClient mqttClient;  // MQTT client instance
-extern ConnectivityState currentConn;  // Current connectivity state
-extern void reconnectMQTT();     // Function to reconnect MQTT
+// External references
+extern PubSubClient mqttClient;
 
-// TinyGSM setup for SIM7600/SIM7000 modem
-HardwareSerial SerialAT(2);      // Use UART2 for modem communication
-TinyGsm modem(SerialAT);         // Modem instance
-TinyGsmClient lteClient(modem);  // TCP client over LTE
+// TinyGSM setup
+HardwareSerial SerialAT(2);
+TinyGsm modem(SerialAT);
+TinyGsmClient lteClient(modem);
 
 // Initialize LTE modem
-// Sets up serial communication and configures PWRKEY pin.
-void initLTE() {
-    // Initialize UART2 with modem baud rate
+void lte_init() {
     SerialAT.begin(LTE_MODEM_BAUD, SERIAL_8N1, LTE_MODEM_RX_PIN, LTE_MODEM_TX_PIN);
-    // Configure PWRKEY pin as output (for power control)
     pinMode(LTE_MODEM_PWRKEY_PIN, OUTPUT);
-    digitalWrite(LTE_MODEM_PWRKEY_PIN, LOW);  // Start powered off
-    Serial.println("LTE modem initialized (powered off)");
-}
-
-// Power up the modem and establish connection
-// Sends PWRKEY pulse, waits for boot, restarts modem, and connects to GPRS.
-void powerUpModem() {
-    // PWRKEY pulse to turn on modem
-    digitalWrite(LTE_MODEM_PWRKEY_PIN, HIGH);
-    delay(1000);  // Hold for 1 second
     digitalWrite(LTE_MODEM_PWRKEY_PIN, LOW);
-    Serial.println("LTE modem powered up");
-    // Wait for modem to boot (may take time)
+    ESP_LOGI("LTE", "Initialized (powered off)");
+}
+
+// Power up and connect modem
+void lte_power_up() {
+    digitalWrite(LTE_MODEM_PWRKEY_PIN, HIGH);
+    delay(1000);
+    digitalWrite(LTE_MODEM_PWRKEY_PIN, LOW);
     delay(10000);
-    // Restart modem to ensure clean state
     modem.restart();
-    // Connect to GPRS with APN (adjust for SIM provider)
-    modem.gprsConnect(LTE_APN, "", "");  // Username/password empty for many providers
-    Serial.println("LTE GPRS connected");
+    modem.gprsConnect(LTE_APN, "", "");
+    ESP_LOGI("LTE", "Powered up and connected to GPRS");
 }
 
-// Power down the modem
-// Uses TinyGSM poweroff and sets PWRKEY low.
-void powerDownModem() {
-    modem.poweroff();  // Graceful shutdown
-    digitalWrite(LTE_MODEM_PWRKEY_PIN, LOW);  // Ensure off
-    Serial.println("LTE modem powered down");
+// Power down modem
+void lte_power_down() {
+    modem.poweroff();
+    digitalWrite(LTE_MODEM_PWRKEY_PIN, LOW);
+    ESP_LOGI("LTE", "Powered down");
 }
 
-// Switch to LTE connectivity
-// Powers up modem, changes MQTT client to LTE, updates state, and reconnects.
-void switchToLTE() {
-    powerUpModem();  // Power and connect modem
-    // Switch MQTT client to use LTE TCP client
+// Switch MQTT to LTE
+void lte_switch_to_lte() {
+    lte_power_up();
     mqttClient.setClient(lteClient);
-    currentConn = LTE;  // Update connectivity state
-    Serial.println("Switched to LTE connectivity");
-    // Reconnect MQTT over LTE
-    reconnectMQTT();
+    if (mqttClient.connect(MACHINE_ID)) {
+        ESP_LOGI("LTE", "MQTT switched to LTE");
+    } else {
+        ESP_LOGE("LTE", "MQTT connect failed over LTE");
+    }
 }
 
-// Switch back to WiFi connectivity
-// Changes MQTT client to WiFi, updates state, and reconnects.
-void switchToWiFi() {
-    // Switch MQTT client back to WiFi TCP client
+// Switch MQTT back to WiFi
+void lte_switch_to_wifi() {
     mqttClient.setClient(wifiClient);
-    currentConn = WIFI;  // Update connectivity state
-    Serial.println("Switched to WiFi connectivity");
-    // Reconnect MQTT over WiFi
-    reconnectMQTT();
+    ESP_LOGI("LTE", "MQTT switched back to WiFi");
+    lte_power_down();
+}
+
+// Check LTE signal
+int lte_get_signal() {
+    return modem.getSignalQuality();
+}
+
+// Is LTE connected
+bool lte_is_connected() {
+    return modem.isGprsConnected();
 }
