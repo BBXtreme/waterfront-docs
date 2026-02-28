@@ -4,6 +4,10 @@ import MachineCard from '@/components/MachineCard';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
+/**
+ * AdminDashboardPage component for displaying the admin overview.
+ * @returns {JSX.Element} The rendered admin dashboard page.
+ */
 export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/10 p-[50px]">
