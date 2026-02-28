@@ -1,3 +1,11 @@
+/**
+ * @file main.cpp
+ * @brief Main entry point for WATERFRONT ESP32 Kayak Rental Controller.
+ * @author BBXtreme + Grok
+ * @date 2026-02-28
+ * @note Initializes all components, runs FreeRTOS tasks, and handles main loop for sensor monitoring and gate control.
+ */
+
 // main.cpp - Main entry point for WATERFRONT ESP32 Kayak Rental Controller
 // This file initializes the ESP32, sets up WiFi, MQTT, and provisioning, and runs the main loop.
 // It integrates all modules: WiFi/MQTT connectivity, provisioning, LTE fallback, and hardware control.
@@ -21,6 +29,11 @@ static const char *TAG = "MAIN";
 
 static char current_booking_id[32] = {0};
 
+/**
+ * @brief FreeRTOS task for monitoring kayak presence via ultrasonic sensor.
+ * @param pvParameters Unused parameter for FreeRTOS task.
+ * @note Polls sensor every 500ms, detects state changes, and publishes MQTT events.
+ */
 void sensor_monitor_task(void *pvParameters) {
     bool last_present = false;
     while (1) {
@@ -55,6 +68,10 @@ void sensor_monitor_task(void *pvParameters) {
     }
 }
 
+/**
+ * @brief Main application entry point.
+ * @note Initializes NVS, event loop, components, and starts tasks. Runs main loop for periodic polling.
+ */
 void app_main() {
     ESP_LOGI(TAG, "WATERFRONT ESP32 starting...");
 

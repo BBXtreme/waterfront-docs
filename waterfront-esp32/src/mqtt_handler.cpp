@@ -1,3 +1,11 @@
+/**
+ * @file mqtt_handler.cpp
+ * @brief Handles all MQTT subscriptions and callbacks for multi-slot Waterfront booking system.
+ * @author BBXtreme + Grok
+ * @date 2026-02-28
+ * @note Uses retained topics for real-time slot status sync.
+ */
+
 // mqtt_handler.cpp - MQTT client handling for WATERFRONT ESP32
 // This file manages MQTT connections, subscriptions, publishing, and callbacks.
 // It integrates with the main loop for reliable IoT communication.
@@ -25,7 +33,9 @@ int activeSlots[MAX_SLOTS] = {1, 2, 3};  // Example: slots 1,2,3 active; load fr
 #define MQTT_LAST_WILL_TOPIC MQTT_BASE_TOPIC "/esp32/disconnect"
 #define MQTT_LAST_WILL_MESSAGE "{\"status\":\"disconnected\"}"
 
-// Initialize MQTT handler
+/**
+ * @brief Initializes MQTT handler and gate control.
+ */
 void mqtt_init() {
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setCallback(mqtt_callback);
@@ -33,7 +43,10 @@ void mqtt_init() {
     ESP_LOGI("MQTT", "Initialized with broker %s:%d", MQTT_SERVER, MQTT_PORT);
 }
 
-// Connect to MQTT broker with last-will
+/**
+ * @brief Attempts to connect to MQTT broker with last-will.
+ * @return True if connected, false otherwise.
+ */
 bool mqtt_connect() {
     if (mqttClient.connected()) return true;
     ESP_LOGI("MQTT", "Connecting...");
@@ -48,7 +61,9 @@ bool mqtt_connect() {
     }
 }
 
-// Subscribe to slot topics
+/**
+ * @brief Subscribes to slot-specific MQTT topics.
+ */
 void mqtt_subscribe() {
     for (int i = 0; i < MAX_SLOTS; i++) {
         if (activeSlots[i] > 0) {
@@ -63,7 +78,11 @@ void mqtt_subscribe() {
     }
 }
 
-// Publish retained status (for backend to sync)
+/**
+ * @brief Publishes retained status for a slot.
+ * @param slotId The slot ID to publish for.
+ * @param jsonPayload The JSON payload to publish.
+ */
 void mqtt_publish_retained_status(int slotId, const char* jsonPayload) {
     char topic[64];
     snprintf(topic, sizeof(topic), MQTT_SLOT_STATUS_TOPIC, slotId);
@@ -71,7 +90,11 @@ void mqtt_publish_retained_status(int slotId, const char* jsonPayload) {
     ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, jsonPayload);
 }
 
-// Publish ack (not retained)
+/**
+ * @brief Publishes acknowledgment for a slot action.
+ * @param slotId The slot ID.
+ * @param action The action performed (e.g., "gate_opened").
+ */
 void mqtt_publish_ack(int slotId, const char* action) {
     char topic[64];
     snprintf(topic, sizeof(topic), MQTT_SLOT_ACK_TOPIC, slotId);
@@ -81,13 +104,18 @@ void mqtt_publish_ack(int slotId, const char* action) {
     ESP_LOGI("MQTT", "Published ack to %s: %s", topic, payload);
 }
 
-// MQTT callback for incoming messages
+/**
+ * @brief MQTT callback for processing incoming messages.
+ * @param topic The MQTT topic.
+ * @param payload The message payload.
+ * @param length The payload length.
+ */
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     String msg;
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
     ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg.c_str(), millis());
 
-    // Parse topic to extract slotId
+    // Parse topic to extract slotId using sscanf for efficiency
     int slotId = -1;
     if (sscanf(topic, MQTT_BASE_TOPIC "/slots/%d/status", &slotId) == 1) {
         // Handle status message (retained sync)
@@ -124,7 +152,9 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
-// Keep MQTT connection alive
+/**
+ * @brief Maintains MQTT connection and processes messages.
+ */
 void mqtt_loop() {
     if (!mqttClient.connected()) {
         mqtt_connect();

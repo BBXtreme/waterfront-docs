@@ -1,3 +1,11 @@
+/**
+ * @file config.h
+ * @brief Central configuration header for WATERFRONT ESP32 Kayak Rental Controller.
+ * @author BBXtreme + Grok
+ * @date 2026-02-28
+ * @note Contains all global constants, pin definitions, and settings for easy maintenance and adaptation.
+ */
+
 #ifndef CONFIG_H
 #define CONFIG_H
 
