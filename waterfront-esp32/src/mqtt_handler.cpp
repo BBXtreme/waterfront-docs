@@ -77,9 +77,9 @@ void mqtt_subscribe() {
     mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
     ESP_LOGI("MQTT", "Subscribed to %s", topic);
     // Subscribe to config update
-    snprintf(topic, sizeof(topic), "/waterfront/%s/%s/config/update", g_config.location.slug.c_str(), g_config.location.code.c_str());
-    mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
-    ESP_LOGI("MQTT", "Subscribed to %s", topic);
+    std::string configTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/config/update";
+    mqttClient.subscribe(configTopic.c_str(), MQTT_QOS_COMMAND);
+    ESP_LOGI("MQTT", "Subscribed to %s", configTopic.c_str());
 }
 
 // Publish retained status for a compartment with CRC32
@@ -121,11 +121,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg.c_str(), millis());
 
     // Check if config update
-    std::string configTopic = "/waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/config/update";
+    std::string configTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/config/update";
     if (strcmp(topic, configTopic.c_str()) == 0) {
         ESP_LOGI("MQTT", "Config update received");
         if (updateConfigFromJson(msg.c_str())) {
             ESP_LOGI("MQTT", "Config updated, restarting ESP");
+            delay(5000);
             ESP.restart();
         } else {
             ESP_LOGE("MQTT", "Failed to update config");
