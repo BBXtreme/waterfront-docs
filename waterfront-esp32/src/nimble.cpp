@@ -90,25 +90,25 @@ void ble_init(const char* deviceName) {
     pServer->setCallbacks(new MyServerCallbacks());  // Set event callbacks
 
     // Create GATT service for provisioning (custom UUID)
-    BLEService *pService = pServer->createService("12345678-1234-1234-1234-123456789abc");
+    BLEService *pService = pServer->createService(g_config.ble.serviceUuid.c_str());
 
     // Characteristic for SSID (write-only)
     pSSIDCharacteristic = pService->createCharacteristic(
-        "87654321-4321-4321-4321-cba987654321",  // Custom UUID
+        g_config.ble.ssidCharUuid.c_str(),  // Custom UUID
         BLECharacteristic::PROPERTY_WRITE       // Allow writes
     );
     pSSIDCharacteristic->setCallbacks(new ProvisioningCallbacks());  // Attach callbacks
 
     // Characteristic for password (write-only)
     pPassCharacteristic = pService->createCharacteristic(
-        "87654321-4321-4321-4321-dba987654321",  // Custom UUID
+        g_config.ble.passCharUuid.c_str(),  // Custom UUID
         BLECharacteristic::PROPERTY_WRITE       // Allow writes
     );
     pPassCharacteristic->setCallbacks(new ProvisioningCallbacks());  // Attach callbacks
 
     // Characteristic for status (read and notify)
     pStatusCharacteristic = pService->createCharacteristic(
-        "87654321-4321-4321-4321-eba987654321",  // Custom UUID
+        g_config.ble.statusCharUuid.c_str(),  // Custom UUID
         BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY  // Read and notify
     );
     pStatusCharacteristic->addDescriptor(new BLE2902());  // Enable notifications
@@ -118,7 +118,7 @@ void ble_init(const char* deviceName) {
 
     // Setup advertising
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-    pAdvertising->addServiceUUID("12345678-1234-1234-1234-123456789abc");  // Advertise service
+    pAdvertising->addServiceUUID(g_config.ble.serviceUuid.c_str());  // Advertise service
     pAdvertising->setScanResponse(true);  // Allow scan responses
     pAdvertising->setMinPreferred(0x06);  // iPhone compatibility
     pAdvertising->setMinPreferred(0x12);

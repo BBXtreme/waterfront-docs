@@ -38,6 +38,13 @@ struct LteConfig {
     int dataUsageAlertLimitKb;
 };
 
+struct BleConfig {
+    String serviceUuid;
+    String ssidCharUuid;
+    String passCharUuid;
+    String statusCharUuid;
+};
+
 struct CompartmentConfig {
     int number;
     int servoPin;
@@ -67,6 +74,7 @@ struct GlobalConfig {
     Location location;
     WifiProvisioningConfig wifiProvisioning;
     LteConfig lte;
+    BleConfig ble;
     std::vector<CompartmentConfig> compartments;
     SystemConfig system;
     OtherConfig other;

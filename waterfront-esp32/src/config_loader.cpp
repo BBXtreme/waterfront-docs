@@ -88,6 +88,15 @@ bool loadConfig() {
         g_config.lte.dataUsageAlertLimitKb = lte["dataUsageAlertLimitKb"];
     }
 
+    // Parse BLE
+    if (doc.containsKey("ble")) {
+        JsonObject ble = doc["ble"];
+        g_config.ble.serviceUuid = ble["serviceUuid"].as<String>();
+        g_config.ble.ssidCharUuid = ble["ssidCharUuid"].as<String>();
+        g_config.ble.passCharUuid = ble["passCharUuid"].as<String>();
+        g_config.ble.statusCharUuid = ble["statusCharUuid"].as<String>();
+    }
+
     // Parse compartments
     if (doc.containsKey("compartments")) {
         JsonArray comps = doc["compartments"];
@@ -190,6 +199,10 @@ GlobalConfig getDefaultConfig() {
     def.lte.simPin = "";
     def.lte.rssiThreshold = -70;
     def.lte.dataUsageAlertLimitKb = 100000;
+    def.ble.serviceUuid = "12345678-1234-1234-1234-123456789abc";
+    def.ble.ssidCharUuid = "87654321-4321-4321-4321-cba987654321";
+    def.ble.passCharUuid = "87654321-4321-4321-4321-dba987654321";
+    def.ble.statusCharUuid = "87654321-4321-4321-4321-eba987654321";
     def.compartments = {
         {1, 12, 13, 14, 15, 16, 17}
     };

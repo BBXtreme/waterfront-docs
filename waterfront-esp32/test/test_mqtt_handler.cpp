@@ -5,7 +5,7 @@
 // Run tests with PlatformIO: pio test
 
 #define CATCH_CONFIG_MAIN  // Catch2 main entry point
-#include <catch2/catch_test_macros.hpp>  // Catch2 header (add to lib_deps in platformio.ini)
+#include <catch2/catch_test_macros.hpp>  // Catch2 header (add to lib_deps in platformio.ini: "catchorg/Catch2@^3.4.0")
 
 // Include headers under test
 #include "mqtt_topics.h"
@@ -86,7 +86,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     // Simple logic for testing: if topic contains "status" and booked=true, publish ack
     if (strstr(topic, "status") != nullptr && doc["booked"] == true) {
         char ackTopic[96];
-        snprintf(ackTopic, sizeof(ackTopic), "waterfront/locations/bremen-harbor-01/compartments/1/ack");
+        snprintf(ackTopic, sizeof(ackTopic), "waterfront/%s/%s/compartments/1/ack", g_config.location.slug.c_str(), g_config.location.code.c_str());
         char ackPayload[128];
         snprintf(ackPayload, sizeof(ackPayload), "{\"action\":\"gate_opened\"}");
         mqttClient.publish(ackTopic, ackPayload, false);
@@ -102,7 +102,7 @@ TEST_CASE("Simulate Retained Status Payload and Verify Ack Publish", "[mqtt]") {
     mockMqttClient.lastPublishedRetained = false;
 
     // Simulate incoming retained status message for compartment 1
-    const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/status";
+    const char* topic = "waterfront/bremen/harbor-01/compartments/1/status";
     const char* payload = "{\"booked\":true,\"gateState\":\"locked\",\"crc\":1234567890}";
     unsigned int length = strlen(payload);
 
@@ -111,7 +111,7 @@ TEST_CASE("Simulate Retained Status Payload and Verify Ack Publish", "[mqtt]") {
 
     // Verify: Ack should be published for gate_opened
     REQUIRE(mockMqttClient.publishCount == 1);
-    REQUIRE(mockMqttClient.lastPublishedTopic == "waterfront/locations/bremen-harbor-01/compartments/1/ack");
+    REQUIRE(mockMqttClient.lastPublishedTopic == "waterfront/bremen/harbor-01/compartments/1/ack");
     REQUIRE(mockMqttClient.lastPublishedRetained == false);  // Acks not retained
     // Check payload contains action
     REQUIRE(mockMqttClient.lastPublishedPayload.indexOf("\"action\":\"gate_opened\"") != -1);
@@ -126,7 +126,7 @@ TEST_CASE("Simulate Command Payload and Verify Ack", "[mqtt]") {
     mockMqttClient.lastPublishedRetained = false;
 
     // Simulate command message
-    const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/command";
+    const char* topic = "waterfront/bremen/harbor-01/compartments/1/command";
     const char* payload = "\"open_gate\"";  // Simple string command
     unsigned int length = strlen(payload);
 
@@ -135,7 +135,7 @@ TEST_CASE("Simulate Command Payload and Verify Ack", "[mqtt]") {
 
     // Verify ack published
     REQUIRE(mockMqttClient.publishCount == 1);
-    REQUIRE(mockMqttClient.lastPublishedTopic == "waterfront/locations/bremen-harbor-01/compartments/1/ack");
+    REQUIRE(mockMqttClient.lastPublishedTopic == "waterfront/bremen/harbor-01/compartments/1/ack");
     REQUIRE(mockMqttClient.lastPublishedPayload.indexOf("\"action\":\"gate_opened\"") != -1);
 }
 
@@ -144,7 +144,7 @@ TEST_CASE("CRC Validation Failure", "[mqtt]") {
     // Reset mock state
     mockMqttClient.publishCount = 0;
 
-    const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/status";
+    const char* topic = "waterfront/bremen/harbor-01/compartments/1/status";
     const char* payload = "{\"booked\":true,\"crc\":999999999}";  // Invalid CRC
     unsigned int length = strlen(payload);
 

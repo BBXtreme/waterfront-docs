@@ -1,5 +1,5 @@
 #include "wifi_manager.h"
-#include "config.h"
+#include "config_loader.h"
 #include <ESPmDNS.h>
 #include <WebServer.h>
 
@@ -8,7 +8,7 @@ void wifi_event_handler(WiFiEvent_t event) {
     switch (event) {
         case WIFI_EVENT_STA_START:
             ESP_LOGI("WiFi", "STA started, connecting...");
-            WiFi.begin(WIFI_SSID, WIFI_PASS);
+            WiFi.begin(g_config.wifiProvisioning.fallbackSsid.c_str(), g_config.wifiProvisioning.fallbackPass.c_str());
             break;
         case WIFI_EVENT_STA_CONNECTED:
             ESP_LOGI("WiFi", "Connected to AP");
@@ -24,5 +24,5 @@ void wifi_event_handler(WiFiEvent_t event) {
 
 void wifi_init() {
     WiFi.onEvent(wifi_event_handler);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    WiFi.begin(g_config.wifiProvisioning.fallbackSsid.c_str(), g_config.wifiProvisioning.fallbackPass.c_str());
 }
