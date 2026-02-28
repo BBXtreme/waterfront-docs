@@ -11,15 +11,21 @@
 #include "config_loader.h"
 #include "compartment_manager.h"
 #include "mqtt_handler.h"
+#include <esp_task_wdt.h>
+#include "error_handler.h"
 // Include other headers as needed
 
 void setup() {
     Serial.begin(115200);
     ESP_LOGI("MAIN", "WATERFRONT starting...");
 
+    // Initialize task watchdog timer for stability
+    esp_task_wdt_init(15, true);  // 15s timeout, panic/restart on timeout
+    esp_task_wdt_add(NULL);       // Subscribe main task
+
     // Initialize LittleFS early
     if (!LittleFS.begin()) {
-        ESP_LOGE("MAIN", "LittleFS mount failed");
+        fatal_error("LittleFS mount failed");
     } else {
         ESP_LOGI("MAIN", "LittleFS mounted");
     }
@@ -45,4 +51,7 @@ void loop() {
 
     // Other loop tasks
     // ...
+
+    // Reset watchdog every loop iteration
+    esp_task_wdt_reset();
 }
