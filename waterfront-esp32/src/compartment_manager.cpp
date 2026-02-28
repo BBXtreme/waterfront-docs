@@ -91,4 +91,3 @@ void compartment_init() {
     load_compartments();
     ESP_LOGI("COMPARTMENT", "Initialized with %d compartments", compartments.size());
 }
-```
