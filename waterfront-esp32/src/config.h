@@ -37,7 +37,7 @@
 #define PROVISIONING_BUTTON_PIN 4         // GPIO pin for provisioning button (debounced long-press)
 #define STATUS_LED_PIN 2                  // GPIO pin for status LED (blinks during provisioning)
 #define RELAY_PIN 23                      // GPIO pin for relay control (lock solenoid)
-#define SLOT_ID "bremen-harbor-01"         // Unique slot ID for MQTT topics and identification
+#define MACHINE_ID "bremen-harbor-01"      // Unique machine ID for MQTT topics and identification
 #define MQTT_BROKER "broker.emqx.io"      // MQTT broker address (consistent with MQTT_SERVER)
 #define RELAY_PULSE_DURATION_MS 1500      // Duration to pulse relay for unlock (in milliseconds)
 #define SENSOR_POLL_INTERVAL_MS 10000     // Interval to poll sensors (in milliseconds)

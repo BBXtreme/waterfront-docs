@@ -58,7 +58,9 @@ class ProvisioningCallbacks : public BLECharacteristicCallbacks {
             doc["ip"] = WiFi.localIP().toString();
             String msg;
             serializeJson(doc, msg);
-            mqttClient.publish("waterfront/machine/" SLOT_ID "/status", msg.c_str(), true);  // Retained publish for machine status
+            char topic[64];
+            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
+            mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
         }
     }
 };
