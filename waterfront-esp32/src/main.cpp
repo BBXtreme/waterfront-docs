@@ -13,7 +13,16 @@
 #include "mqtt_handler.h"
 #include <esp_task_wdt.h>
 #include "error_handler.h"
+#include "deposit_logic.h"
 // Include other headers as needed
+
+// Overdue check task
+void overdue_check_task(void *pvParameters) {
+    while (1) {
+        checkOverdue();
+        vTaskDelay(pdMS_TO_TICKS(10000));  // Check every 10 seconds
+    }
+}
 
 void setup() {
     Serial.begin(115200);
@@ -40,6 +49,15 @@ void setup() {
 
     // Initialize MQTT handler
     mqtt_init();
+
+    // Initialize deposit logic
+    deposit_init();
+
+    // Create overdue check task
+    BaseType_t task_ret = xTaskCreate(overdue_check_task, "overdue", 2048, NULL, 4, NULL);
+    if (task_ret != pdPASS) {
+        fatal_error("Failed to create overdue task");
+    }
 
     // Other initializations (WiFi, sensors, etc.)
     // ...

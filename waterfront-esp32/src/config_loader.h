@@ -48,6 +48,19 @@ struct CompartmentConfig {
     int weightSensorPin;
 };
 
+struct SystemConfig {
+    int maxCompartments;
+    bool debugMode;
+    int gracePeriodSec;
+    int batteryLowThresholdPercent;
+    float solarVoltageMin;
+};
+
+struct OtherConfig {
+    int offlinePinTtlSec;
+    int depositHoldAmountFallback;
+};
+
 // Global config struct (central place for ALL config)
 struct GlobalConfig {
     Mqtt mqtt;
