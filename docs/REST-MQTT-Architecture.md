@@ -19,7 +19,7 @@ In the **Waterfront Kayak Rental Application and Control System**, REST and MQTT
 
 They work together:  
 1. User books & pays via PWA → REST API call to backend.  
-2. Backend confirms payment (Stripe/BTCPay webhook) → publishes MQTT message to `/kayak/{machineId}/unlock`.  
+2. Backend confirms payment (Stripe/BTCPay webhook) → publishes MQTT message to `/waterfront/{machineId}/unlock`.  
 3. ESP32 (subscribed to that topic) receives message → opens lock → publishes status/event back via MQTT.  
 4. Admin dashboard reads real-time telemetry from MQTT or queries historical data via REST.
 
@@ -62,3 +62,6 @@ PWA (Next.js) ── REST/HTTPS ── Backend (Node.js/Supabase) ── MQTT (p
 - Use **MQTT** for low-latency, low-power, real-time machine events and commands.
 
 This separation keeps the system clean, scalable, and power-efficient — exactly what the TSD and FSD aim for in a solar-powered, unmanned kayak vending setup in Bremen. If you'd like code examples (Express endpoint + MQTT publish on webhook, or ESP32 MQTT subscribe logic), just let me know which part to focus on next.
+```
+
+docs/TSD.md
