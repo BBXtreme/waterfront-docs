@@ -123,6 +123,15 @@ void app_main() {
 
     // Main loop (simple polling for now; can be replaced with tasks)
     while (1) {
+        // Check battery voltage
+        float voltage = analogRead(BATTERY_ADC_PIN) * (3.3 / 4095.0) * 2;  // Assuming divider
+        if (voltage < 3.3) {
+            ESP_LOGW(TAG, "Low battery: %.2f V, skipping non-essential tasks", voltage);
+            // Skip sensor polling, gate tasks, provisioning
+            vTaskDelay(pdMS_TO_TICKS(SENSOR_POLL_INTERVAL_MS));
+            continue;
+        }
+
         // Poll sensor periodically
         if (sensor_is_kayak_present()) {
             ESP_LOGI(TAG, "Kayak present");
