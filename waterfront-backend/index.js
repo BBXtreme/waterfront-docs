@@ -36,13 +36,13 @@ async function handlePaymentSuccess(bookingId, paymentId) {
     // Query Supabase for booking details
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
-      .select('*')
+      .select('location_slug, location_code, compartment_number')
       .eq('id', bookingId)
       .single();
 
     if (fetchError || !booking) {
       console.error('Booking not found:', fetchError);
-      throw new Error('Booking not found');
+      return; // Don't throw, just log and skip publishing
     }
 
     // Update booking status in Supabase
@@ -57,7 +57,7 @@ async function handlePaymentSuccess(bookingId, paymentId) {
     }
 
     // Publish MQTT unlock message
-    const topic = `waterfront/${booking.location}/${booking.locationCode}/compartments/${booking.compartmentNumber}/unlock`;
+    const topic = `waterfront/${booking.location_slug}/${booking.location_code}/compartments/${booking.compartment_number}/unlock`;
     const payload = JSON.stringify({ bookingId, durationSec: 7200 });
     mqttClient.publish(topic, payload);
 
