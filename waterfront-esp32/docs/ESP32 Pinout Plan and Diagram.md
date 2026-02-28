@@ -128,4 +128,4 @@ Once these are confirmed, we can:
 - **SoftAP Fallback**: Temporary AP mode; no extra pins, but LED (GPIO 2) can blink to indicate password (e.g., number of blinks = password length).
 - **NVS Storage**: Credentials saved in "wifi" namespace; no pin conflicts.
 - **Power Impact**: Provisioning is short-lived; deep sleep unaffected.
-- **Testing**: See updated test checklist in docs/ESP32 Firmware Test Checklist.md for nRF Connect steps.
+- **Testing**: See updated test checklist in docs/ESP32 Firmware Test Checklist.md for nRF Connect steps.Ok. The code has been reviewed and debugged. Main issues were ESP_LOGI calls in Arduino framework, which have been replaced with Serial.println. The code should now compile in PlatformIO with Arduino framework. Test by flashing to ESP32 and checking Serial output for provisioning and MQTT connection. If issues persist, provide Serial logs for further debugging.

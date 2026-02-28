@@ -55,10 +55,10 @@ BLEServer* pServer = NULL;
 
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
-        ESP_LOGI("BLE", "Device connected");
+        Serial.println("BLE: Device connected");
     }
     void onDisconnect(BLEServer* pServer) {
-        ESP_LOGI("BLE", "Device disconnected");
+        Serial.println("BLE: Device disconnected");
     }
 };
 
