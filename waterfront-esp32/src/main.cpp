@@ -24,6 +24,8 @@
 #include "return_sensor.h"
 #include "deposit_logic.h"
 #include "gate_control.h"
+#include "nimble.h"  // For provisioning_task
+#include "webui_server.h"  // For provisioning_task
 
 static const char *TAG = "MAIN";
 
@@ -110,6 +112,9 @@ void app_main() {
 
         // Handle gate tasks
         gate_task();
+
+        // Handle provisioning tasks
+        provisioning_task();
 
         vTaskDelay(pdMS_TO_TICKS(SENSOR_POLL_INTERVAL_MS));
     }

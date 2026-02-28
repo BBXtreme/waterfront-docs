@@ -13,6 +13,7 @@
 #include <WiFi.h>             // WiFi library for connection
 #include <PubSubClient.h>     // MQTT client
 #include <ArduinoJson.h>      // JSON for status publishing
+#include <Preferences.h>      // For persistent WiFi credentials
 
 // External references to global variables from main.cpp
 extern PubSubClient mqttClient;  // MQTT client instance
@@ -24,6 +25,15 @@ BLECharacteristic *pSSIDCharacteristic;    // Characteristic for SSID input
 BLECharacteristic *pPassCharacteristic;    // Characteristic for password input
 BLECharacteristic *pStatusCharacteristic;  // Characteristic for status notifications
 
+// Provisioning state machine
+enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED };
+ProvState provState = PROV_IDLE;
+unsigned long provStartTime = 0;
+#define PROV_TIMEOUT_MS 30000  // 30 seconds timeout
+
+// Preferences for storing WiFi credentials
+Preferences preferences;
+
 // Callback class for handling writes to characteristics
 // Inherits from BLECharacteristicCallbacks to override onWrite method.
 class ProvisioningCallbacks : public BLECharacteristicCallbacks {
@@ -32,35 +42,25 @@ class ProvisioningCallbacks : public BLECharacteristicCallbacks {
         // Get the written value as a string
         std::string value = pCharacteristic->getValue();
         if (pCharacteristic == pSSIDCharacteristic) {
-            // SSID received: store temporarily (in production, save to NVS)
+            // SSID received: store in Preferences
+            preferences.begin("wifi", false);
+            preferences.putString("ssid", value.c_str());
+            preferences.end();
             Serial.printf("Received SSID: %s\n", value.c_str());
-            // Note: Actual storage should use Preferences or NVS for persistence
         } else if (pCharacteristic == pPassCharacteristic) {
-            // Password received: attempt WiFi connection
+            // Password received: store in Preferences and start connecting
+            preferences.begin("wifi", false);
+            preferences.putString("pass", value.c_str());
+            preferences.end();
             Serial.printf("Received Password: %s\n", value.c_str());
-            // Connect to WiFi using received SSID and password
-            WiFi.begin(value.c_str(), pSSIDCharacteristic->getValue().c_str());
-            // Wait for connection
-            while (WiFi.status() != WL_CONNECTED) {
-                delay(500);
-            }
-            Serial.println("WiFi connected via BLE provisioning");
-            // Notify BLE app of success
-            pStatusCharacteristic->setValue("Connected");
-            pStatusCharacteristic->notify();
-            // Stop provisioning
-            provisioningActive = false;
-            BLEDevice::deinit();  // Clean up BLE to save power
-            // Publish WiFi connection status via MQTT
-            DynamicJsonDocument doc(256);
-            doc["wifiState"] = "connected";
-            doc["ssid"] = WiFi.SSID();
-            doc["ip"] = WiFi.localIP().toString();
-            String msg;
-            serializeJson(doc, msg);
-            char topic[64];
-            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
-            mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
+            // Start non-blocking WiFi connection
+            provState = PROV_CONNECTING;
+            provStartTime = millis();
+            // Blocking version commented out for reference:
+            // WiFi.begin(value.c_str(), pSSIDCharacteristic->getValue().c_str());
+            // while (WiFi.status() != WL_CONNECTED) {
+            //     delay(500);
+            // }
         }
     }
 };
@@ -131,6 +131,44 @@ void ble_init(const char* deviceName) {
 void ble_set_device_name(const char* deviceName) {
     if (pServer) {
         pServer->setDeviceName(deviceName);
+    }
+}
+
+// Provisioning task (call from main loop)
+void provisioning_task() {
+    if (provState == PROV_CONNECTING) {
+        if (WiFi.status() == WL_CONNECTED) {
+            // Success
+            provState = PROV_SUCCESS;
+            Serial.println("WiFi connected via BLE provisioning");
+            // Notify BLE app of success
+            pStatusCharacteristic->setValue("Connected");
+            pStatusCharacteristic->notify();
+            // Stop provisioning
+            provisioningActive = false;
+            BLEDevice::deinit();  // Clean up BLE to save power
+            // Publish WiFi connection status via MQTT
+            DynamicJsonDocument doc(256);
+            doc["wifiState"] = "connected";
+            doc["ssid"] = WiFi.SSID();
+            doc["ip"] = WiFi.localIP().toString();
+            String msg;
+            serializeJson(doc, msg);
+            char topic[64];
+            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
+            mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
+            // Reconnect MQTT if needed
+            mqtt_connect();
+        } else if (millis() - provStartTime > PROV_TIMEOUT_MS) {
+            // Timeout
+            provState = PROV_FAILED;
+            Serial.println("WiFi connection failed via BLE provisioning");
+            // Notify BLE app of failure
+            pStatusCharacteristic->setValue("Failed");
+            pStatusCharacteristic->notify();
+            // Reset state
+            provState = PROV_IDLE;
+        }
     }
 }
 

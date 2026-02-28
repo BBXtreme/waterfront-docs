@@ -10,6 +10,7 @@
 #include <WebServer.h>         // Arduino web server library
 #include <PubSubClient.h>      // MQTT client for status publishing
 #include <ArduinoJson.h>       // JSON for status messages
+#include <Preferences.h>       // For persistent WiFi credentials
 
 // External references from main.cpp
 extern PubSubClient mqttClient;  // MQTT client instance
@@ -17,6 +18,15 @@ extern bool provisioningActive;  // Provisioning state flag
 
 // Global web server instance on port 80
 WebServer server(80);
+
+// Provisioning state machine
+enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED };
+ProvState provState = PROV_IDLE;
+unsigned long provStartTime = 0;
+#define PROV_TIMEOUT_MS 30000  // 30 seconds timeout
+
+// Preferences for storing WiFi credentials
+Preferences preferences;
 
 // Handler for root GET request: serves the WiFi setup form
 void handleRoot() {
@@ -31,29 +41,30 @@ void handleSet() {
     String pass = server.arg("pass");
     // Log received credentials (for debugging)
     Serial.printf("Received SSID: %s, Pass: %s\n", ssid.c_str(), pass.c_str());
-    // Attempt WiFi connection
-    WiFi.begin(ssid.c_str(), pass.c_str());
-    // Wait for connection
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-    }
-    Serial.println("WiFi connected via SoftAP provisioning");
-    // Send success response to client
-    server.send(200, "text/plain", "WiFi set, rebooting...");
-    // Stop provisioning
-    provisioningActive = false;
-    // Publish connection status via MQTT
-    DynamicJsonDocument doc(256);
-    doc["wifiState"] = "connected";
-    doc["ssid"] = WiFi.SSID();
-    doc["ip"] = WiFi.localIP().toString();
-    String msg;
-    serializeJson(doc, msg);
-    char topic[64];
-    snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
-    mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
-    // Restart ESP32 to apply changes
-    ESP.restart();
+    // Store in Preferences and start connecting
+    preferences.begin("wifi", false);
+    preferences.putString("ssid", ssid.c_str());
+    preferences.putString("pass", pass.c_str());
+    preferences.end();
+    // Start non-blocking WiFi connection
+    provState = PROV_CONNECTING;
+    provStartTime = millis();
+    // Blocking version commented out for reference:
+    // WiFi.begin(ssid.c_str(), pass.c_str());
+    // while (WiFi.status() != WL_CONNECTED) {
+    //     delay(500);
+    // }
+    // Serial.println("WiFi connected via SoftAP provisioning");
+    // server.send(200, "text/plain", "WiFi set, rebooting...");
+    // provisioningActive = false;
+    // DynamicJsonDocument doc(256);
+    // doc["wifiState"] = "connected";
+    // doc["ssid"] = WiFi.SSID();
+    // doc["ip"] = WiFi.localIP().toString();
+    // String msg;
+    // serializeJson(doc, msg);
+    // mqttClient.publish("waterfront/machine/" SLOT_ID "/status", msg.c_str(), true);
+    // ESP.restart();
 }
 
 // Start SoftAP mode with provisioning SSID and password
@@ -72,6 +83,43 @@ void start_rest_server() {
     server.on("/set", HTTP_POST, handleSet);
     // Start server
     server.begin();
+}
+
+// Provisioning task (call from main loop)
+void provisioning_task() {
+    if (provState == PROV_CONNECTING) {
+        if (WiFi.status() == WL_CONNECTED) {
+            // Success
+            provState = PROV_SUCCESS;
+            Serial.println("WiFi connected via SoftAP provisioning");
+            // Send success response to client
+            server.send(200, "text/plain", "WiFi set, rebooting...");
+            // Stop provisioning
+            provisioningActive = false;
+            // Publish WiFi connection status via MQTT
+            DynamicJsonDocument doc(256);
+            doc["wifiState"] = "connected";
+            doc["ssid"] = WiFi.SSID();
+            doc["ip"] = WiFi.localIP().toString();
+            String msg;
+            serializeJson(doc, msg);
+            char topic[64];
+            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
+            mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
+            // Reconnect MQTT if needed
+            mqtt_connect();
+            // Restart ESP32 to apply changes
+            ESP.restart();
+        } else if (millis() - provStartTime > PROV_TIMEOUT_MS) {
+            // Timeout
+            provState = PROV_FAILED;
+            Serial.println("WiFi connection failed via SoftAP provisioning");
+            // Send failure response
+            server.send(200, "text/plain", "WiFi connection failed, try again");
+            // Reset state
+            provState = PROV_IDLE;
+        }
+    }
 }
 
 // Start SoftAP provisioning
