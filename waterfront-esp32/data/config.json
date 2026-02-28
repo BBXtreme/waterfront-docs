@@ -1,0 +1,24 @@
+{
+  "mqtt": {
+    "broker": "192.168.178.50",
+    "port": 1883,
+    "username": "",
+    "password": ""
+  },
+  "wifiLte": {
+    "apn": "internet.t-mobile.de",
+    "simPin": "",
+    "rssiThreshold": -70
+  },
+  "location": {
+    "slug": "bremen-harbor",
+    "code": "harbor-01"
+  },
+  "compartments": [
+    {"number":1, "servoPin":12, "limitOpenPin":13, "limitClosePin":14, "sensorPin":18},
+    {"number":2, "servoPin":15, "limitOpenPin":16, "limitClosePin":17, "sensorPin":19}
+  ],
+  "maxCompartments": 8,
+  "debugMode": false,
+  "gracePeriodSec": 3600
+}

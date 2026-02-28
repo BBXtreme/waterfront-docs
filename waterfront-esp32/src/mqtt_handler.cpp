@@ -17,7 +17,7 @@
 #include "mqtt_handler.h"
 #include "mqtt_topics.h"
 #include "gate_control.h"
-#include "config.h"
+#include "config_loader.h"
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -38,37 +38,19 @@ uint32_t computeCRC32(const char* data, size_t length) {
 extern PubSubClient mqttClient;
 extern WiFiClient wifiClient;
 
-// Globals for location hierarchy
-const char* LOCATION_TYPE = "locations";  // Fixed as "locations"
-const char* LOCATION_CODE = "bremen-harbor-01";  // Load from config or NVS
-
-// Compartment configuration (assume up to 10 compartments; adjust as needed)
-#define MAX_COMPARTMENTS 10
-int activeCompartments[MAX_COMPARTMENTS] = {1, 2, 3};  // Example: compartments 1,2,3 active; load from config
-
 // Last-will topic and message for disconnect handling
 #define MQTT_LAST_WILL_TOPIC MQTT_BASE_TOPIC "/esp32/disconnect"
 #define MQTT_LAST_WILL_MESSAGE "{\"status\":\"disconnected\"}"
 
-// Dual-SIM redundancy for LTE (if >1 location, switch SIMs on failure)
-#define MAX_SIMS 2
-int currentSim = 0;  // 0 or 1
-// Note: Implement SIM switching logic in lte_manager.cpp if needed
-
-/**
- * @brief Initializes MQTT handler and gate control.
- */
+// Initialize MQTT handler
 void mqtt_init() {
-    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+    mqttClient.setServer(globalConfig.mqtt.broker.c_str(), globalConfig.mqtt.port);
     mqttClient.setCallback(mqtt_callback);
     gate_init();  // Initialize gate control
-    ESP_LOGI("MQTT", "Initialized with broker %s:%d", MQTT_SERVER, MQTT_PORT);
+    ESP_LOGI("MQTT", "Initialized with broker %s:%d", globalConfig.mqtt.broker.c_str(), globalConfig.mqtt.port);
 }
 
-/**
- * @brief Attempts to connect to MQTT broker with last-will.
- * @return True if connected, false otherwise.
- */
+// Attempt to connect to MQTT broker with last-will
 bool mqtt_connect() {
     if (mqttClient.connected()) return true;
     ESP_LOGI("MQTT", "Connecting...");
@@ -83,26 +65,24 @@ bool mqtt_connect() {
     }
 }
 
-/**
- * @brief Subscribes to compartment-specific MQTT topics using wildcards.
- */
+// Subscribe to compartment-specific MQTT topics using wildcards
 void mqtt_subscribe() {
     char topic[96];
     // Subscribe to status wildcard for this location
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_WILDCARD, LOCATION_CODE);
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_WILDCARD, globalConfig.location.slug.c_str(), globalConfig.location.code.c_str());
     mqttClient.subscribe(topic, MQTT_QOS_STATUS);
     ESP_LOGI("MQTT", "Subscribed to %s", topic);
     // Subscribe to command wildcard for this location
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_COMMAND_WILDCARD, LOCATION_CODE);
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_COMMAND_WILDCARD, globalConfig.location.slug.c_str(), globalConfig.location.code.c_str());
+    mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
+    ESP_LOGI("MQTT", "Subscribed to %s", topic);
+    // Subscribe to config update
+    snprintf(topic, sizeof(topic), "/waterfront/%s/%s/config/update", globalConfig.location.slug.c_str(), globalConfig.location.code.c_str());
     mqttClient.subscribe(topic, MQTT_QOS_COMMAND);
     ESP_LOGI("MQTT", "Subscribed to %s", topic);
 }
 
-/**
- * @brief Publishes retained status for a compartment with CRC32.
- * @param compartmentId The compartment ID to publish for.
- * @param jsonPayload The JSON payload to publish.
- */
+// Publish retained status for a compartment with CRC32
 void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, jsonPayload);
@@ -115,16 +95,12 @@ void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
     String updatedPayload;
     serializeJson(doc, updatedPayload);
     char topic[96];
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_FMT, LOCATION_CODE, compartmentId);
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_FMT, globalConfig.location.slug.c_str(), globalConfig.location.code.c_str(), compartmentId);
     mqttClient.publish(topic, updatedPayload.c_str(), MQTT_RETAIN_STATUS);
     ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, updatedPayload.c_str());
 }
 
-/**
- * @brief Publishes acknowledgment for a compartment action with CRC32.
- * @param compartmentId The compartment ID.
- * @param action The action performed (e.g., "gate_opened").
- */
+// Publish acknowledgment for a compartment action with CRC32
 void mqtt_publish_ack(int compartmentId, const char* action) {
     char payload[128];
     snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", compartmentId, action, millis());
@@ -133,23 +109,31 @@ void mqtt_publish_ack(int compartmentId, const char* action) {
     snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
     fullPayload[strlen(fullPayload) - 1] = '}';  // Fix JSON
     char topic[96];
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, globalConfig.location.slug.c_str(), globalConfig.location.code.c_str(), compartmentId);
     mqttClient.publish(topic, fullPayload, MQTT_RETAIN_ACK);
     ESP_LOGI("MQTT", "Published ack to %s: %s", topic, fullPayload);
 }
 
-/**
- * @brief MQTT callback for processing incoming messages with CRC validation.
- * @param topic The MQTT topic.
- * @param payload The message payload.
- * @param length The payload length.
- */
+// MQTT callback for processing incoming messages with CRC validation
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     String msg;
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
     ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg.c_str(), millis());
 
-    // Validate CRC
+    // Check if config update
+    std::string configTopic = "/waterfront/" + globalConfig.location.slug + "/" + globalConfig.location.code + "/config/update";
+    if (strcmp(topic, configTopic.c_str()) == 0) {
+        ESP_LOGI("MQTT", "Config update received");
+        if (saveConfig(msg.c_str())) {
+            ESP_LOGI("MQTT", "Config saved, restarting ESP");
+            ESP.restart();
+        } else {
+            ESP_LOGE("MQTT", "Failed to save config");
+        }
+        return;
+    }
+
+    // Validate CRC for other messages
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, msg);
     if (error) {
@@ -199,15 +183,13 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
             fullPayload[strlen(fullPayload) - 1] = '}';  // Fix JSON
             char topic[96];
-            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
+            snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, globalConfig.location.slug.c_str(), globalConfig.location.code.c_str(), compartmentId);
             mqttClient.publish(topic, fullPayload, MQTT_RETAIN_ACK);
         }
     }
 }
 
-/**
- * @brief Maintains MQTT connection and processes messages.
- */
+// Maintain MQTT connection and process messages
 void mqtt_loop() {
     if (!mqttClient.connected()) {
         mqtt_connect();

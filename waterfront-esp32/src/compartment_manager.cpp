@@ -1,74 +1,56 @@
 /**
  * @file compartment_manager.cpp
- * @brief Manages compartments using std::vector<Compartment> loaded from config.
+ * @brief Manages compartments using std::vector<Compartment> loaded from runtime config.
  * @author BBXtreme + Grok
  * @date 2026-02-28
- * @note Loads compartment data from LittleFS config.json and provides access.
+ * @note Loads compartment data from runtime config (LittleFS), provides access.
  */
 
 // compartment_manager.cpp - Compartment management with std::vector
 // This file defines a Compartment struct and manages a vector of compartments.
-// Loads from config.json on startup; used for multi-compartment operations.
+// Loads from runtime config; used for multi-compartment operations.
 // Supports wildcards for MQTT subscriptions to test multi-compartment handling.
 
 #include "compartment_manager.h"
-#include "config.h"
+#include "config_loader.h"
 #include <vector>
 #include <string>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 
-// Compartment struct
+// Compartment struct (updated to match config)
 struct Compartment {
     int id;
-    int pin;
+    int servoPin;
+    int limitOpenPin;
+    int limitClosePin;
+    int sensorPin;
     std::string name;
 };
 
 // Vector of compartments
 std::vector<Compartment> compartments;
 
-// Load compartments from config.json
+// Load compartments from runtime config
 void load_compartments() {
-    if (!LittleFS.begin()) {
-        ESP_LOGE("COMPARTMENT", "Failed to mount LittleFS");
-        return;
+    compartments.clear();
+    for (const auto& comp : globalConfig.compartments) {
+        Compartment c;
+        c.id = comp.number;
+        c.servoPin = comp.servoPin;
+        c.limitOpenPin = comp.limitOpenPin;
+        c.limitClosePin = comp.limitClosePin;
+        c.sensorPin = comp.sensorPin;
+        c.name = "Compartment " + std::to_string(c.id);
+        compartments.push_back(c);
     }
-    File configFile = LittleFS.open("/config.json", "r");
-    if (!configFile) {
-        ESP_LOGW("COMPARTMENT", "config.json not found, using defaults");
-        // Add default compartments
-        compartments.push_back({1, SERVO_PIN_1, "Compartment 1"});
-        compartments.push_back({2, SERVO_PIN_2, "Compartment 2"});
-        compartments.push_back({3, SERVO_PIN_3, "Compartment 3"});
-        return;
-    }
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, configFile);
-    if (error) {
-        ESP_LOGE("COMPARTMENT", "Failed to parse config.json: %s", error.c_str());
-        configFile.close();
-        return;
-    }
-    configFile.close();
-    // Load compartments array
-    if (doc.containsKey("compartments")) {
-        JsonArray comps = doc["compartments"];
-        compartments.clear();
-        for (JsonObject comp : comps) {
-            Compartment c;
-            c.id = comp["id"];
-            c.pin = comp["pin"];
-            c.name = comp["name"].as<std::string>();
-            compartments.push_back(c);
-        }
-        ESP_LOGI("COMPARTMENT", "Loaded %d compartments from config", compartments.size());
-    } else {
+    if (compartments.empty()) {
         ESP_LOGW("COMPARTMENT", "No compartments in config, using defaults");
-        compartments.push_back({1, SERVO_PIN_1, "Compartment 1"});
-        compartments.push_back({2, SERVO_PIN_2, "Compartment 2"});
-        compartments.push_back({3, SERVO_PIN_3, "Compartment 3"});
+        compartments.push_back({1, SERVO_PIN_1, 13, 14, 18, "Compartment 1"});
+        compartments.push_back({2, SERVO_PIN_2, 16, 17, 19, "Compartment 2"});
+        compartments.push_back({3, SERVO_PIN_3, 20, 21, 22, "Compartment 3"});
     }
+    ESP_LOGI("COMPARTMENT", "Loaded %d compartments from config", compartments.size());
 }
 
 // Get compartment by ID
