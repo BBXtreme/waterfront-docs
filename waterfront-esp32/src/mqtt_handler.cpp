@@ -105,7 +105,11 @@ void mqtt_subscribe() {
  */
 void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
     DynamicJsonDocument doc(512);
-    deserializeJson(doc, jsonPayload);  // Parse to add CRC
+    DeserializationError error = deserializeJson(doc, jsonPayload);
+    if (error) {
+        ESP_LOGE("MQTT", "Failed to parse JSON for status publish: %s", error.c_str());
+        return;  // Discard bad message
+    }
     uint32_t crc = computeCRC32(jsonPayload, strlen(jsonPayload));
     doc["crc"] = crc;
     String updatedPayload;
@@ -149,8 +153,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, msg);
     if (error) {
-        ESP_LOGE("MQTT", "JSON parse failed for status");
-        return;
+        ESP_LOGE("MQTT", "JSON parse failed for status: %s", error.c_str());
+        return;  // Discard bad message
     }
     uint32_t receivedCrc = doc["crc"];
     doc.remove("crc");  // Remove for recompute
@@ -159,7 +163,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     uint32_t computedCrc = computeCRC32(cleanMsg.c_str(), cleanMsg.length());
     if (receivedCrc != computedCrc) {
         ESP_LOGE("MQTT", "CRC mismatch: received %lu, computed %lu", receivedCrc, computedCrc);
-        return;
+        return;  // Discard bad message
     }
 
     // Log full JSON for debugging

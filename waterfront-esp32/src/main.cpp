@@ -111,6 +111,9 @@ void debug_task(void *pvParameters) {
 void app_main() {
     ESP_LOGI(TAG, "WATERFRONT ESP32 starting...");
 
+    // Initialize task watchdog timer for stability
+    esp_task_wdt_init(10, true);  // 10-second timeout, panic on timeout
+
     // Initialize NVS with error handling
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
