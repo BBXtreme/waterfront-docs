@@ -57,7 +57,7 @@ CREATE INDEX idx_bookings_compartment_id ON bookings(compartment_id);
 -- Example: Allow authenticated users to read locations
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Locations are viewable by authenticated users" ON locations
-FOR SELECT USING (auth.role() = 'authenticated');
+FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Similarly for other tables (add as needed for your app's auth model)
 
