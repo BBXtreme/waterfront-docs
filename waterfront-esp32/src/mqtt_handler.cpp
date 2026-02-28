@@ -3,7 +3,7 @@
  * @brief Handles all MQTT subscriptions and callbacks for multi-compartment Waterfront booking system.
  * @author BBXtreme + Grok
  * @date 2026-02-28
- * @note Uses retained topics for real-time compartment status sync.
+ * @note Uses retained topics for real-time compartment status sync with CRC32 checksums.
  */
 
 // mqtt_handler.cpp - MQTT client handling for WATERFRONT ESP32
@@ -12,6 +12,7 @@
 // Uses PubSubClient for Arduino compatibility.
 // Updated for retained MQTT topics: subscribes to compartment status/command, publishes acks.
 // Handles real-time compartment booking sync and gate control.
+// Added CRC32 checksums for payload integrity.
 
 #include "mqtt_handler.h"
 #include "mqtt_topics.h"
@@ -20,6 +21,18 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+
+// CRC32 implementation (simple polynomial)
+uint32_t computeCRC32(const char* data, size_t length) {
+    uint32_t crc = 0xFFFFFFFF;
+    for (size_t i = 0; i < length; i++) {
+        crc ^= (uint8_t)data[i];
+        for (int j = 0; j < 8; j++) {
+            crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+        }
+    }
+    return ~crc;
+}
 
 // External references
 extern PubSubClient mqttClient;
@@ -36,6 +49,11 @@ int activeCompartments[MAX_COMPARTMENTS] = {1, 2, 3};  // Example: compartments 
 // Last-will topic and message for disconnect handling
 #define MQTT_LAST_WILL_TOPIC MQTT_BASE_TOPIC "/esp32/disconnect"
 #define MQTT_LAST_WILL_MESSAGE "{\"status\":\"disconnected\"}"
+
+// Dual-SIM redundancy for LTE (if >1 location, switch SIMs on failure)
+#define MAX_SIMS 2
+int currentSim = 0;  // 0 or 1
+// Note: Implement SIM switching logic in lte_manager.cpp if needed
 
 /**
  * @brief Initializes MQTT handler and gate control.
@@ -81,33 +99,43 @@ void mqtt_subscribe() {
 }
 
 /**
- * @brief Publishes retained status for a compartment.
+ * @brief Publishes retained status for a compartment with CRC32.
  * @param compartmentId The compartment ID to publish for.
  * @param jsonPayload The JSON payload to publish.
  */
 void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
+    DynamicJsonDocument doc(512);
+    deserializeJson(doc, jsonPayload);  // Parse to add CRC
+    uint32_t crc = computeCRC32(jsonPayload, strlen(jsonPayload));
+    doc["crc"] = crc;
+    String updatedPayload;
+    serializeJson(doc, updatedPayload);
     char topic[96];
     snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_STATUS_FMT, LOCATION_CODE, compartmentId);
-    mqttClient.publish(topic, jsonPayload, MQTT_RETAIN_STATUS);
-    ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, jsonPayload);
+    mqttClient.publish(topic, updatedPayload.c_str(), MQTT_RETAIN_STATUS);
+    ESP_LOGI("MQTT", "Published retained status to %s: %s", topic, updatedPayload.c_str());
 }
 
 /**
- * @brief Publishes acknowledgment for a compartment action.
+ * @brief Publishes acknowledgment for a compartment action with CRC32.
  * @param compartmentId The compartment ID.
  * @param action The action performed (e.g., "gate_opened").
  */
 void mqtt_publish_ack(int compartmentId, const char* action) {
-    char topic[96];
-    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
     char payload[128];
     snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", compartmentId, action, millis());
-    mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
-    ESP_LOGI("MQTT", "Published ack to %s: %s", topic, payload);
+    uint32_t crc = computeCRC32(payload, strlen(payload));
+    char fullPayload[256];
+    snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
+    fullPayload[strlen(fullPayload) - 1] = '}';  // Fix JSON
+    char topic[96];
+    snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
+    mqttClient.publish(topic, fullPayload, MQTT_RETAIN_ACK);
+    ESP_LOGI("MQTT", "Published ack to %s: %s", topic, fullPayload);
 }
 
 /**
- * @brief MQTT callback for processing incoming messages.
+ * @brief MQTT callback for processing incoming messages with CRC validation.
  * @param topic The MQTT topic.
  * @param payload The message payload.
  * @param length The payload length.
@@ -117,17 +145,28 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
     ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg.c_str(), millis());
 
+    // Validate CRC
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error) {
+        ESP_LOGE("MQTT", "JSON parse failed for status");
+        return;
+    }
+    uint32_t receivedCrc = doc["crc"];
+    doc.remove("crc");  // Remove for recompute
+    String cleanMsg;
+    serializeJson(doc, cleanMsg);
+    uint32_t computedCrc = computeCRC32(cleanMsg.c_str(), cleanMsg.length());
+    if (receivedCrc != computedCrc) {
+        ESP_LOGE("MQTT", "CRC mismatch: received %lu, computed %lu", receivedCrc, computedCrc);
+        return;
+    }
+
     // Parse topic to extract compartmentId using sscanf for efficiency
     int compartmentId = -1;
     char locationType[16], locationCode[32];
     if (sscanf(topic, MQTT_BASE_TOPIC "/%15[^/]/%31[^/]/compartments/%d/status", locationType, locationCode, &compartmentId) == 3) {
         // Handle status message (retained sync)
-        DynamicJsonDocument doc(512);
-        DeserializationError error = deserializeJson(doc, msg);
-        if (error) {
-            ESP_LOGE("MQTT", "JSON parse failed for status");
-            return;
-        }
         bool booked = doc["booked"];
         const char* gateState = doc["gateState"];
         ESP_LOGI("MQTT", "Compartment %d: booked=%d, gateState=%s", compartmentId, booked, gateState);
@@ -148,9 +187,13 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             const char* state = getCompartmentGateState(compartmentId);
             char payload[64];
             snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"gateState\":\"%s\"}", compartmentId, state);
+            uint32_t crc = computeCRC32(payload, strlen(payload));
+            char fullPayload[128];
+            snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
+            fullPayload[strlen(fullPayload) - 1] = '}';  // Fix JSON
             char topic[96];
             snprintf(topic, sizeof(topic), MQTT_COMPARTMENT_ACK_FMT, LOCATION_CODE, compartmentId);
-            mqttClient.publish(topic, payload, MQTT_RETAIN_ACK);
+            mqttClient.publish(topic, fullPayload, MQTT_RETAIN_ACK);
         }
     }
 }
