@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 const mqtt = require('mqtt');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
 
 // Initialize Express app
 const app = express();
@@ -98,6 +99,75 @@ app.post('/webhook/stripe', async (req, res) => {
   }
 
   res.json({ received: true });
+});
+
+// BTCPay webhook handler
+app.post('/webhook/btcpay', async (req, res) => {
+  const sig = req.headers['btcpay-sig'];
+  const webhookSecret = process.env.BTCPAY_WEBHOOK_SECRET;
+
+  if (!sig || !webhookSecret) {
+    console.error('BTCPay webhook: Missing signature or secret');
+    return res.status(400).send('Missing signature or secret');
+  }
+
+  // Verify signature
+  const expectedSig = crypto.createHmac('sha256', webhookSecret).update(req.rawBody).digest('hex');
+  if (sig !== expectedSig) {
+    console.error('BTCPay webhook signature verification failed');
+    return res.status(400).send('Invalid signature');
+  }
+
+  // Handle the event
+  if (req.body.type === 'InvoicePaid' || req.body.type === 'InvoiceSettled') {
+    const invoice = req.body.invoice;
+    const bookingId = invoice.metadata.bookingId;
+
+    if (!bookingId) {
+      console.error('No bookingId in invoice metadata');
+      return res.status(400).send('Missing bookingId');
+    }
+
+    try {
+      // Query Supabase for booking details
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchError || !booking) {
+        console.error('Booking not found:', fetchError);
+        return res.status(400).send('Booking not found');
+      }
+
+      // Update booking status in Supabase
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({ status: 'paid', payment_id: invoice.id })
+        .eq('id', bookingId);
+
+      if (updateError) {
+        console.error('Failed to update booking:', updateError);
+        return res.status(500).send('Failed to update booking');
+      }
+
+      // Publish MQTT unlock message
+      const topic = `waterfront/${booking.location}/${booking.locationCode}/compartments/${booking.compartmentNumber}/unlock`;
+      const payload = JSON.stringify({ bookingId, durationSec: 7200 });
+      mqttClient.publish(topic, payload);
+
+      console.log(`Published MQTT unlock for booking ${bookingId} to ${topic}`);
+    } catch (err) {
+      console.error('Error processing BTCPay webhook:', err);
+      return res.status(500).send('Internal server error');
+    }
+  } else {
+    console.log(`Unhandled BTCPay event type: ${req.body.type}`);
+    return res.status(400).send('Unhandled event type');
+  }
+
+  res.status(200).json({ received: true });
 });
 
 // Start server
