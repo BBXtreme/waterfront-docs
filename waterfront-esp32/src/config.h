@@ -28,4 +28,13 @@
 #define RELAY_PULSE_DURATION_MS 1500
 #define SENSOR_POLL_INTERVAL_MS 10000
 
+// LTE settings
+#define LTE_MODEM_TX_PIN 17         // ESP TX to modem RX
+#define LTE_MODEM_RX_PIN 16         // ESP RX to modem TX
+#define LTE_MODEM_PWRKEY_PIN 25     // GPIO for PWRKEY control (MOSFET)
+#define LTE_MODEM_BAUD 115200
+#define LTE_APN "internet.t-mobile.de"  // Example for DE; adjust per SIM
+#define LTE_MODEM_MODEL "SIM7600"    // or "SIM7000"
+#define WIFI_FAILOVER_TIMEOUT_MS 30000  // 30s to try WiFi before LTE
+
 #endif // CONFIG_H

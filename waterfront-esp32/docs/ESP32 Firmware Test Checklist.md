@@ -54,7 +54,18 @@ Example:
 - NVS issues: Erase flash if stuck (idf.py erase-flash).
 - MQTT reconnect: Ensure broker is reachable after WiFi change.
 
+**Test Steps for LTE Failover (New)**:
+1. Flash firmware with LTE hardware connected (SIM7600 on UART2, PWRKEY on GPIO25).
+2. Insert SIM card with data plan (APN: internet.t-mobile.de for DE).
+3. Boot ESP32: Should connect to WiFi first.
+4. Disconnect WiFi router: ESP32 should detect failure after 30s, power up modem, connect to LTE.
+5. Check Serial for "Switched to LTE connectivity" and GPRS connect.
+6. Publish MQTT unlock command: Should arrive via LTE.
+7. Reconnect WiFi: Should switch back to WiFi, power down modem.
+8. Monitor status publishes: Include connType, rssi, dataKB.
 
-
-
-
+**Debug Tips for LTE**:
+- Modem not responding: Check UART pins, baud rate, PWRKEY pulse.
+- GPRS fail: Wrong APN, no SIM signal, PIN lock.
+- MQTT over LTE: Ensure TinyGSM client is set correctly.
+- Power: Use multimeter to verify PWRKEY control.

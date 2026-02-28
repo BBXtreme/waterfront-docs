@@ -5,11 +5,16 @@
 #include "config.h"
 #include "provisioning.h"
 #include "webui_server.h"
+#include "lte_manager.h"
 
 // Global MQTT client
 PubSubClient mqttClient(wifiClient);
 WiFiClient wifiClient;
 bool provisioningActive = false;
+
+// Connectivity state
+enum ConnectivityState { WIFI, LTE, OFFLINE };
+ConnectivityState currentConn = WIFI;
 
 // Function prototypes
 void setupWiFi();
@@ -18,6 +23,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 void reconnectMQTT();
 void publishStatus();
 void checkProvisioningButton();
+void checkConnectivity();
 
 // Tasks
 TaskHandle_t mqttTaskHandle;
@@ -31,6 +37,9 @@ void setup() {
   pinMode(STATUS_LED_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
+
+  // Initialize LTE modem (power off initially)
+  initLTE();
 
   // Check if WiFi provisioned (simplified, check NVS or hardcoded)
   if (WiFi.SSID() == "") {  // Not provisioned
@@ -49,6 +58,7 @@ void loop() {
     // Handle SoftAP server if active
     server.handleClient();
   }
+  checkConnectivity();
   delay(100);
 }
 
@@ -60,6 +70,7 @@ void setupWiFi() {
     delay(500);
   }
   Serial.println("WiFi connected");
+  currentConn = WIFI;
 }
 
 // MQTT setup
@@ -118,6 +129,9 @@ void publishStatus() {
   doc["wifiState"] = "connected";
   doc["ssid"] = WiFi.SSID();
   doc["ip"] = WiFi.localIP().toString();
+  doc["connType"] = (currentConn == WIFI) ? "WiFi" : (currentConn == LTE) ? "LTE" : "offline";
+  doc["rssi"] = WiFi.RSSI();
+  doc["dataKB"] = 0;  // Placeholder for data usage
   String msg;
   serializeJson(doc, msg);
   mqttClient.publish(MQTT_STATUS_TOPIC, msg.c_str());
@@ -137,5 +151,31 @@ void checkProvisioningButton() {
     }
   } else {
     pressed = false;
+  }
+}
+
+// Connectivity check and failover
+void checkConnectivity() {
+  static unsigned long wifiCheckStart = 0;
+  if (currentConn == WIFI) {
+    if (WiFi.status() != WL_CONNECTED) {
+      if (wifiCheckStart == 0) {
+        wifiCheckStart = millis();
+        Serial.println("WiFi disconnected, starting failover timer...");
+      } else if (millis() - wifiCheckStart > WIFI_FAILOVER_TIMEOUT_MS) {
+        Serial.println("WiFi failover timeout, switching to LTE...");
+        switchToLTE();
+      }
+    } else {
+      wifiCheckStart = 0;
+      // Power down modem if on WiFi
+      powerDownModem();
+    }
+  } else if (currentConn == LTE) {
+    // Check if WiFi is back
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("WiFi back, switching from LTE...");
+      switchToWiFi();
+    }
   }
 }
