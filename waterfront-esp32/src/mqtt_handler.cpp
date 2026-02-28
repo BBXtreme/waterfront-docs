@@ -5,6 +5,7 @@
 
 #include "mqtt_handler.h"
 #include "config.h"
+#include "relay_handler.h"  // Added to declare relay_unlock()
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
