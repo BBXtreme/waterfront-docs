@@ -49,7 +49,7 @@ void handleSet() {
     doc["ip"] = WiFi.localIP().toString();
     String msg;
     serializeJson(doc, msg);
-    mqttClient.publish("waterfront/slots/" SLOT_ID "/status", msg.c_str());
+    mqttClient.publish("waterfront/slots/" SLOT_ID "/status", msg.c_str(), true);  // Retained publish
     // Restart ESP32 to apply changes
     ESP.restart();
 }

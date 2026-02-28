@@ -38,5 +38,5 @@ void mqtt_publish_status() {
     doc["connType"] = "wifi";
     String payload;
     serializeJson(doc, payload);
-    mqttClient.publish("waterfront/slots/" SLOT_ID "/status", payload.c_str());
+    mqttClient.publish("waterfront/slots/" SLOT_ID "/status", payload.c_str(), true);  // Retained publish
 }
