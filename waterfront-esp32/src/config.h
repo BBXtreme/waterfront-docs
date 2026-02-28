@@ -11,16 +11,9 @@
 
 // BLE settings (from nimble.h and bleprph.h)
 #define BLE_DEVICE_NAME "KayakDevice"
-#define MAX_DEVICES 1024
-#define PAX_REPORT_INTERVAL_SEC (60*60)  // 1 hour
-#define PAX_SCAN_DURATION_SEC 7
-#define PAX_SCAN_INTERVAL_US (5*60*1000000ULL)  // 5 minutes
+#define MAX_DEVICES 100
 
 // GPIO pins (example, adjust as needed)
 #define PIN_LED 2
-
-// Other defines from original
-#define AP_SSID "VMflow"
-#define AP_PASS "12345678"
 
 #endif // CONFIG_H
