@@ -2,10 +2,15 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 const mqtt = require('mqtt');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Initialize Express app
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Initialize Supabase client with env vars
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -27,6 +32,72 @@ mqttClient.on('error', (err) => {
 // Basic route for testing
 app.get('/', (req, res) => {
   res.send('Waterfront Backend is running');
+});
+
+// Stripe webhook handler
+app.post('/webhook/stripe', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const bookingId = session.metadata.bookingId;
+
+    if (!bookingId) {
+      console.error('No bookingId in session metadata');
+      return res.status(400).send('Missing bookingId');
+    }
+
+    try {
+      // Query Supabase for booking details
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .single();
+
+      if (fetchError || !booking) {
+        console.error('Booking not found:', fetchError);
+        return res.status(400).send('Booking not found');
+      }
+
+      // Update booking status in Supabase
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({ status: 'paid', payment_id: session.id })
+        .eq('id', bookingId);
+
+      if (updateError) {
+        console.error('Failed to update booking:', updateError);
+        return res.status(500).send('Failed to update booking');
+      }
+
+      // Publish MQTT unlock message
+      const topic = `waterfront/${booking.location}/${booking.locationCode}/compartments/${booking.compartmentNumber}/unlock`;
+      const payload = JSON.stringify({ bookingId, durationSec: 7200 });
+      mqttClient.publish(topic, payload);
+
+      console.log(`Published MQTT unlock for booking ${bookingId} to ${topic}`);
+    } catch (err) {
+      console.error('Error processing webhook:', err);
+      return res.status(500).send('Internal server error');
+    }
+  } else {
+    console.log(`Unhandled event type: ${event.type}`);
+    return res.status(400).send('Unhandled event type');
+  }
+
+  res.json({ received: true });
 });
 
 // Start server
