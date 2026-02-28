@@ -20,7 +20,7 @@ extern bool provisioningActive;  // Provisioning state flag
 WebServer server(80);
 
 // Provisioning state machine
-enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED };
+enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED, PROV_TIMEOUT };
 ProvState provState = PROV_IDLE;
 unsigned long provStartTime = 0;
 #define PROV_TIMEOUT_MS 30000  // 30 seconds timeout
@@ -67,24 +67,6 @@ void handleSet() {
     // ESP.restart();
 }
 
-// Start SoftAP mode with provisioning SSID and password
-void start_softap() {
-    // Configure AP with fixed SSID/password (for demo; randomize in production)
-    WiFi.softAP("WATERFRONT-PROV", "password123");
-    Serial.println("SoftAP started: WATERFRONT-PROV, password: password123");
-    // In production, blink LED or display password on hardware
-}
-
-// Start the REST server and define routes
-void start_rest_server() {
-    // Route for root page (form)
-    server.on("/", handleRoot);
-    // Route for form submission
-    server.on("/set", HTTP_POST, handleSet);
-    // Start server
-    server.begin();
-}
-
 // Provisioning task (call from main loop)
 void provisioning_task() {
     if (provState == PROV_CONNECTING) {
@@ -111,15 +93,57 @@ void provisioning_task() {
             // Restart ESP32 to apply changes
             ESP.restart();
         } else if (millis() - provStartTime > PROV_TIMEOUT_MS) {
-            // Timeout
-            provState = PROV_FAILED;
-            Serial.println("WiFi connection failed via SoftAP provisioning");
-            // Send failure response
-            server.send(200, "text/plain", "WiFi connection failed, try again");
-            // Reset state
-            provState = PROV_IDLE;
+            // Timeout: fallback to previous creds or error publish
+            provState = PROV_TIMEOUT;
+            Serial.println("WiFi connection timeout via SoftAP provisioning, falling back to previous credentials");
+            // Load previous credentials from NVS
+            preferences.begin("wifi", true);  // Read-only
+            String prevSSID = preferences.getString("ssid", "");
+            String prevPass = preferences.getString("pass", "");
+            preferences.end();
+            if (prevSSID.length() > 0 && prevPass.length() > 0) {
+                Serial.printf("Trying previous creds: SSID=%s\n", prevSSID.c_str());
+                WiFi.begin(prevSSID.c_str(), prevPass.c_str());
+                provState = PROV_CONNECTING;  // Retry with previous
+                provStartTime = millis();
+            } else {
+                // No previous creds, fail
+                provState = PROV_FAILED;
+                Serial.println("No previous credentials, provisioning failed");
+                // Send failure response
+                server.send(200, "text/plain", "WiFi connection failed, try again");
+                // Publish error via MQTT
+                DynamicJsonDocument doc(256);
+                doc["wifiState"] = "failed";
+                doc["error"] = "timeout_no_fallback";
+                String msg;
+                serializeJson(doc, msg);
+                char topic[64];
+                snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
+                mqttClient.publish(topic, msg.c_str(), true);
+                // Reset state
+                provState = PROV_IDLE;
+            }
         }
     }
+}
+
+// Start SoftAP mode with provisioning SSID and password
+void start_softap() {
+    // Configure AP with fixed SSID/password (for demo; randomize in production)
+    WiFi.softAP("WATERFRONT-PROV", "password123");
+    Serial.println("SoftAP started: WATERFRONT-PROV, password: password123");
+    // In production, blink LED or display password on hardware
+}
+
+// Start the REST server and define routes
+void start_rest_server() {
+    // Route for root page (form)
+    server.on("/", handleRoot);
+    // Route for form submission
+    server.on("/set", HTTP_POST, handleSet);
+    // Start server
+    server.begin();
 }
 
 // Start SoftAP provisioning

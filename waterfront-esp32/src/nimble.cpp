@@ -26,7 +26,7 @@ BLECharacteristic *pPassCharacteristic;    // Characteristic for password input
 BLECharacteristic *pStatusCharacteristic;  // Characteristic for status notifications
 
 // Provisioning state machine
-enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED };
+enum ProvState { PROV_IDLE, PROV_CONNECTING, PROV_SUCCESS, PROV_FAILED, PROV_TIMEOUT };
 ProvState provState = PROV_IDLE;
 unsigned long provStartTime = 0;
 #define PROV_TIMEOUT_MS 30000  // 30 seconds timeout
@@ -160,14 +160,38 @@ void provisioning_task() {
             // Reconnect MQTT if needed
             mqtt_connect();
         } else if (millis() - provStartTime > PROV_TIMEOUT_MS) {
-            // Timeout
-            provState = PROV_FAILED;
-            Serial.println("WiFi connection failed via BLE provisioning");
-            // Notify BLE app of failure
-            pStatusCharacteristic->setValue("Failed");
-            pStatusCharacteristic->notify();
-            // Reset state
-            provState = PROV_IDLE;
+            // Timeout: fallback to previous creds or error publish
+            provState = PROV_TIMEOUT;
+            Serial.println("WiFi connection timeout via BLE provisioning, falling back to previous credentials");
+            // Load previous credentials from NVS
+            preferences.begin("wifi", true);  // Read-only
+            String prevSSID = preferences.getString("ssid", "");
+            String prevPass = preferences.getString("pass", "");
+            preferences.end();
+            if (prevSSID.length() > 0 && prevPass.length() > 0) {
+                Serial.printf("Trying previous creds: SSID=%s\n", prevSSID.c_str());
+                WiFi.begin(prevSSID.c_str(), prevPass.c_str());
+                provState = PROV_CONNECTING;  // Retry with previous
+                provStartTime = millis();
+            } else {
+                // No previous creds, fail
+                provState = PROV_FAILED;
+                Serial.println("No previous credentials, provisioning failed");
+                // Notify BLE app of failure
+                pStatusCharacteristic->setValue("Failed");
+                pStatusCharacteristic->notify();
+                // Publish error via MQTT
+                DynamicJsonDocument doc(256);
+                doc["wifiState"] = "failed";
+                doc["error"] = "timeout_no_fallback";
+                String msg;
+                serializeJson(doc, msg);
+                char topic[64];
+                snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", MACHINE_ID);
+                mqttClient.publish(topic, msg.c_str(), true);
+                // Reset state
+                provState = PROV_IDLE;
+            }
         }
     }
 }

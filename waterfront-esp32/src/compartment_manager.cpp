@@ -92,5 +92,3 @@ void compartment_init() {
     ESP_LOGI("COMPARTMENT", "Initialized with %d compartments", compartments.size());
 }
 ```
-
-waterfront-esp32/src/compartment_manager.h
