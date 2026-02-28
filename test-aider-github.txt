@@ -1,1 +1,1 @@
-Aider GitHub check 2026
+/add /docs
