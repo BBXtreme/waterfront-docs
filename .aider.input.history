@@ -2418,3 +2418,298 @@
 
 # 2026-02-27 13:59:50.435208
 +all
+
+# 2026-02-27 14:05:04.800155
++In waterfront-web/src/app/test-connections/page.tsx:
++- Make sure it imports MqttTestPanel from '@/components/MqttTestPanel'
++- Render it as the main content, e.g.:
++  import MqttTestPanel from '@/components/MqttTestPanel'
++
++  export default function TestConnectionsPage() {
++    return (
++      <div className="container mx-auto py-8">
++        <h1 className="text-3xl font-bold mb-6">Connection Diagnostics</h1>
++        <MqttTestPanel />
++        {/* Optionally add other test cards: Supabase, Stripe test, etc. */}
++      </div>
++    )
++  }
++- Add dark-mode friendly wrapper if needed.
++Commit: "Wire MqttTestPanel into test-connections page"; --- consider check and output info in card for: Mosquitto has websockets enabled
++Port mapped correctly
++You're using ws://host.docker.internal:9001/mqtt (not localhost on macOS)
+
+# 2026-02-27 14:06:06.822341
++/ undo
+
+# 2026-02-27 14:06:24.825308
++/undo
+
+# 2026-02-27 14:07:33.438202
++Focus exclusively on the frontend test-connection component: waterfront-web/src/components/MqttTestPanel.tsx
++Do NOT touch waterfront-web/src/app/test-connections/page.tsx or any other files/cards (e.g. Supabase, Stripe, backend tests) — only update this MQTT panel to better support local Mosquitto on macOS Docker without breaking the rest of the page.
++
++Goals:
++- Add two preset buttons above the broker URL input: "Use Public (stable)" and "Use Local Docker (macOS)"
++- Clicking "Public" sets brokerUrl to 'wss://broker.emqx.io:8084/mqtt'
++- Clicking "Local" sets brokerUrl to 'ws://host.docker.internal:9001/mqtt' (correct macOS Docker host alias — not localhost)
++- Strengthen the macOS/Docker warning: make it more visible (e.g. red text if local selected) and add tip: "For local Mosquitto: ensure mosquitto.conf has 'listener 9001' and 'protocol websockets', ports - '9001:9001' in docker-compose.yml, and container is running."
++- If user tries local and connection doesn't succeed within ~8 seconds (add timeout check), auto-log suggestion: "Local WS slow/failing — common on macOS Docker. Switch to public broker or check mosquitto.conf + port mapping."
++- Keep existing behavior: auto-reconnect, logs, QoS 1 test publish, mixed-content block prevention.
++- Optional: persist last brokerUrl in localStorage so it remembers choice on reload.
++- Do not affect layout/styling of other potential cards on the page.
++
++Current code is already good — build on it by adding:
++
++- Preset buttons in the UI (e.g. in flex row before input)
++- onClick handlers to setBrokerUrl
++- Enhanced warning paragraph (conditional class if brokerUrl includes 'host.docker.internal' → text-red-400)
++- In connect(): add a setTimeout(8000, () => { if (status === 'connecting') addLog('Warning: Connection taking >8s — try public broker or verify Docker config...') })
++
++After edits, suggest manual test steps:
++1. docker compose up in waterfront-infra/ → check logs for "Opening websocket listen socket on port 9001"
++2. In browser console: ws://host.docker.internal:9001/mqtt should attempt connect
++3. If still glacial: share browser console WS errors + mosquitto.conf content.
++
++Commit message: "Enhance MqttTestPanel local Docker support: presets, host.docker.internal, better macOS warnings"
+
+# 2026-02-27 14:07:37.182353
++all
+
+# 2026-02-27 14:10:36.833187
++Focus on wiring the existing MqttTestPanel into the test-connections page: edit ONLY waterfront-web/src/app/test-connections/page.tsx
++Do NOT touch waterfront-web/src/components/MqttTestPanel.tsx or any other files/cards (e.g., Supabase, Stripe).
++
++Goals:
++- Import MqttTestPanel: add "import MqttTestPanel from '@/components/MqttTestPanel'" (adjust alias if needed for App Router).
++- Replace the existing MQTT Brokers card/section with <MqttTestPanel /> — keep the rest of the page intact (e.g., container, h1, other diagnostics cards).
++- If the page has a simple card (e.g., with "disconnected" text), swap it out directly; preserve dark theme and layout.
++- Add a brief comment: "// Enhanced MQTT test panel with logs and presets for stable dev"
++
++After edit, suggest test:
++1. npm run dev
++2. Visit /test-connections → expect new panel with broker input (default public), buttons, status, logs.
++3. Click Start → should connect green/fast to public.
++4. Switch to local preset → test ws://host.docker.internal:9001/mqtt; check logs for errors.
++
++Commit message: "Integrate MqttTestPanel into test-connections page for improved MQTT diagnostics"
+
+# 2026-02-27 14:13:05.198572
++/undo
+
+# 2026-02-27 14:14:09.988698
++Edit ONLY waterfront-web/src/app/test-connections/page.tsx
++
++Do NOT touch waterfront-web/src/components/MqttTestPanel.tsx or ANY other files.
++
++Strict rules to follow exactly:
++- ONLY replace the existing "MQTT - Local Mosquitto" card/section (the one showing "disconnected", "Offline – reconnecting...", "Last checked: ...", red warning about macOS Docker, and buttons [Stop] [Send Test Message] [Deep Debug]).
++- Replace that specific card's content with a single <MqttTestPanel /> component render.
++- Keep EVERYTHING ELSE on the page 100% untouched: layout wrapper, other diagnostic cards (e.g. Supabase, Stripe, backend, auth tests), headings, imports (unless adding the MqttTestPanel import is required), page-level state/logic, any timers/polling for "Last checked", or unrelated buttons.
++- If the MQTT card is inside a grid/flex/container with multiple cards, only swap the inner content of the local Mosquitto card — do not change card titles, borders, classes, or surrounding structure.
++- Add the necessary import at the top if missing: import MqttTestPanel from '@/components/MqttTestPanel' (adjust path/alias if your tsconfig uses different @ alias).
++- Add a small comment above the replacement: {/* Replaced old local Mosquitto card with enhanced MqttTestPanel – only affects this MQTT section */}
++- Do not add new state, useEffect, or handlers at page level.
++- Preserve dark theme classes (bg-gray-900 etc.) where the old card was.
++
++Goal: After this change, the page should look almost identical except the local Mosquitto card now shows the dynamic broker input, colored status, real-time logs, Start/Reconnect/Disconnect/Send Test Message buttons, and public/local presets from MqttTestPanel. All other cards remain exactly as before with their original disconnected/offline logic if any.
++
++After edit, suggest immediate test:
++1. cd waterfront-web && npm run dev
++2. Visit http://localhost:3000/test-connections
++3. Confirm: only the MQTT-Local-Mosquitto card changed → now has broker URL field (default public), status colored, logs area, etc.
++4. Other cards (if any) still show their original content/status.
++5. Test public broker connect → should go green fast with logs.
++6. Switch to ws://host.docker.internal:9001/mqtt → observe logs for connection attempts/errors.
++
++Commit message: "Replace only local Mosquitto card in test-connections page with MqttTestPanel – no changes to other cards or page logic"
+
+# 2026-02-27 14:14:27.622565
++all
+
+# 2026-02-27 14:19:05.544310
++Edit ONLY waterfront-web/src/components/MqttTestPanel.tsx
++
++Goals – improve UX, padding, readability and reconnect stability:
++
++1. Increase overall padding: change outer div to p-6, inner sections mb-6 instead of mb-4
++2. Make logs area taller (max-h-80), add whitespace-pre-wrap break-words to each log line for no horizontal scroll
++3. Buttons: fix capitalization → "Start/Reconnect", "Disconnect", "Send Test Message", add "Clear Logs" button next to them
++4. Status text: make bolder/larger, e.g. text-lg font-semibold
++5. When local URL selected (includes "host.docker.internal"), add red border to input + stronger warning text (text-red-400 bg-red-950/30 p-2 rounded)
++6. In connect(): add setTimeout(10000, () => { if (status === 'connecting') addLog('Warning: Still connecting after 10s – check Docker logs, mosquitto.conf websockets listener, port mapping 9001:9001') })
++7. Increase reconnectPeriod to 8000 (less spam in logs during failure)
++8. In 'error' handler: addLog(`Error: ${err.message || 'Unknown'} – check browser console for WS details`)
++9. Add Clear Logs button: onClick={() => setLogs([])}
++10. Keep presets, dark theme, mqtt.js logic intact – only enhance visuals & debug hints
++
++Do NOT touch page.tsx or other files. Preserve existing structure.
++
++After edit suggest test: reload page, select local → Start → watch for clearer error in logs, better spacing.
++Commit: "Polish MqttTestPanel: better padding, log wrapping, reconnect tuning, local warning UX"
+
+# 2026-02-27 14:21:47.550747
++add MQTT - HiveMQ Public; MQTT - HiveMQ Cloud (Private); to the MQTT Broker - Test Connection Card. Also adapt inner card padding like all other cards.
+
+# 2026-02-27 14:24:30.809642
++add functionality as well by adding a button also for HiveMQ puplic and cloud next to Use Puplic (stable) button, which is for EMQX actually.
+
+# 2026-02-27 14:26:19.339435
++for HiveMQ Cloud, add also inout fields for username and password 
+
+# 2026-02-27 14:27:45.951046
++rename button label Use Puplic (stable) to Use EMQX Public
+
+# 2026-02-27 14:28:32.541103
++add Deep Debug button and functionality as done for the other cards
+
+# 2026-02-27 14:29:12.562311
++try again
+
+# 2026-02-27 14:31:24.759874
++/exit
+
+# 2026-02-27 14:31:34.509450
++y
+
+# 2026-02-27 14:33:08.366385
++n
+
+# 2026-02-27 14:33:13.223937
++y
+
+# 2026-02-27 14:44:39.025157
++n
+
+# 2026-02-27 14:46:10.022939
++Only edit waterfront-web/src/components/MqttTestPanel.tsx
++
++Apply these focused changes to make local connection debugging much clearer:
++
++1. Change reconnectPeriod from 3000 to 10000 (far less log spam during failure loops)
++
++2. In the connect() function, right after the line that creates mqttClient (mqtt.connect(...)) add this timeout logic:
++
++   const timeoutId = setTimeout(() => {
++     if (status === 'connecting') {
++       addLog('Connection attempt >12 seconds – probable WebSocket handshake failure on macOS Docker.');
++       addLog('Immediate checks:');
++       addLog('• Use ws://host.docker.internal:9001 (try without /mqtt)');
++       addLog('• docker compose logs mosquitto | grep websocket – expect "Opening websocket listen socket on port 9001"');
++       addLog('• mosquitto.conf requires:');
++       addLog('  listener 9001');
++       addLog('  protocol websockets');
++       addLog('  allow_anonymous true   # for testing');
++       addLog('• DevTools: Cmd+Opt+I → Network tab → WS filter → trigger connect → note status code / reason');
++     }
++   }, 12000);
++
++   mqttClient.on('connect', () => clearTimeout(timeoutId));
++   mqttClient.on('error',   () => clearTimeout(timeoutId));
++   mqttClient.on('close',   () => clearTimeout(timeoutId));
++
++3. Enhance the 'error' handler (mqttClient.on('error', err => { ... })):
++
++   addLog(`MQTT connection error: ${err.message || err.toString()}. Open DevTools Network → WS tab for full handshake info (status, headers, error).`);
++
++Do not change presets, styling classes, log slicing, or any other logic.
++
++Commit message: "Add detailed macOS Docker WS timeout warning and browser debug guidance for local Mosquitto"
+
+# 2026-02-27 14:46:13.244695
++all
+
+# 2026-02-27 14:49:26.749654
++Only edit waterfront-web/src/components/MqttTestPanel.tsx
++
++Add a "Deep Debug" button and functionality similar to the old MQTT cards:
++
++1. Add a new state variable:
++   const [showDeepDebug, setShowDeepDebug] = useState(false);
++
++2. In the buttons row (where Start/Reconnect, Disconnect, Send Test Message are), add:
++   <button
++     onClick={() => setShowDeepDebug(!showDeepDebug)}
++     className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded disabled:opacity-50 text-white"
++   >
++     {showDeepDebug ? 'Hide Deep Debug' : 'Deep Debug'}
++   </button>
++
++3. Below the logs div, conditionally render a deep debug panel when showDeepDebug is true:
++
++   {showDeepDebug && (
++     <div className="mt-6 p-4 bg-gray-800 border border-purple-600 rounded-lg text-sm font-mono">
++       <h3 className="text-purple-300 font-bold mb-2">Deep Debug Info</h3>
++       <pre className="whitespace-pre-wrap break-all">
++         Broker URL: {brokerUrl || '(none)'}
++         Status: {status}
++         Client ID: {client?.options.clientId || '(not connected)'}
++         Reconnect period: 10000ms
++         Last error: {logs[logs.length-1]?.includes('error') ? logs[logs.length-1] : 'None recent'}
++         Browser WS support: {window.WebSocket ? 'Yes' : 'No'}
++         Current time: {new Date().toISOString()}
++         Connection type: {navigator.connection ? navigator.connection.effectiveType : 'unknown'}
++       </pre>
++       <button
++         onClick={() => {
++           addLog('Deep debug snapshot taken at ' + new Date().toLocaleTimeString());
++           console.log('MQTT client state:', client);
++           console.log('Full logs:', logs);
++         }}
++         className="mt-3 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
++       >
++         Log snapshot to console
++       </button>
++     </div>
++   )}
++
++4. Keep all existing logic, styling (dark theme bg-gray-900 etc.), presets, timeout warnings, and error handling unchanged.
++
++5. Make sure the deep debug panel is collapsible (toggle via button) and does not break layout.
++
++Commit message: "Add Deep Debug button + info panel to MqttTestPanel (similar to old MQTT cards)"
+
+# 2026-02-27 14:50:31.845557
++remove headline and status text: MQTT - Local Mosquitto
++disconnected
+
+# 2026-02-27 14:51:37.321711
++chang eheadline "MQTT - Local Mosquitto" to MQTT Broker Connections
+
+# 2026-02-27 14:56:31.298927
++Only edit waterfront-web/src/components/MqttTestPanel.tsx
++Do NOT touch any other files (page.tsx, layout, etc.)
++
++Make these clean, focused improvements to the MQTT panel card:
++
++1. Change any remaining old title "MQTT - Local Mosquitto" to "MQTT Broker Connections"  
++   (look for <h2> or similar heading containing "Local Mosquitto" and update it)
++
++2. Remove any duplicate "MQTT Broker Connections" heading or subtitle that appears twice  
++   (keep only one clean main title at the top)
++
++3. Make the top-right status indicator functional and nicer:
++   - Move or style the status text (currently probably "disconnected" / "connected") to be in the top-right corner
++   - Use conditional classes: green-400 for 'connected', red-400 for 'disconnected'/'error', yellow-400 for 'connecting'
++   - Make it bolder, larger (text-lg font-semibold), with a small status dot:
++     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
++       ${status === 'connected' ? 'bg-green-900/50 text-green-400 border border-green-600' :
++         status === 'connecting' ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-600' :
++         'bg-red-900/50 text-red-400 border border-red-600'}`}>
++       <span className="w-2 h-2 rounded-full mr-2 
++         ${status === 'connected' ? 'bg-green-400 animate-pulse' :
++           status === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'}"></span>
++       {status.toUpperCase()}
++     </span>
++   - Place it in the header area (next to or inside the main title div, floated right)
++
++4. Improve overall readability and spacing:
++   - Increase outer padding: p-4 → p-6 lg:p-8
++   - Buttons row: gap-3 → gap-4, py-2 → py-3, text-sm → text-base
++   - Labels (Broker URL, warning text): text-sm → text-base, add mb-3
++   - Logs area: text-sm → text-base, leading-6, max-h-64 → max-h-80, add p-4 bg-gray-950/80
++   - All text: ensure good contrast (text-gray-100 / gray-200)
++
++5. Keep presets buttons, Deep Debug toggle, timeout warnings, error handling, dark theme classes unchanged.
++
++Commit message: "Refine MQTT panel layout: fix duplicate titles, make top-right status pill functional & colored, improve fonts + padding for readability"
