@@ -14,6 +14,10 @@
 #include <esp_task_wdt.h>
 #include "error_handler.h"
 #include "deposit_logic.h"
+#include <esp_ota_ops.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+
 // Include other headers as needed
 
 // Overdue check task
@@ -21,6 +25,29 @@ void overdue_check_task(void *pvParameters) {
     while (1) {
         checkOverdue();
         vTaskDelay(pdMS_TO_TICKS(10000));  // Check every 10 seconds
+    }
+}
+
+// Debug task for OTA-friendly logging
+void debug_task(void *pvParameters) {
+    while (1) {
+        if (g_config.debugMode) {
+            // Publish debug telemetry
+            DynamicJsonDocument doc(512);
+            doc["uptime"] = millis() / 1000;  // Uptime in seconds
+            doc["freeHeap"] = ESP.getFreeHeap();
+            doc["minFreeHeap"] = ESP.getMinFreeHeap();
+            doc["wifiRSSI"] = WiFi.RSSI();
+            doc["mqttConnected"] = mqttClient.connected();
+            doc["otaPartition"] = esp_ota_get_running_partition()->label;
+            String payload;
+            serializeJson(doc, payload);
+            char topic[96];
+            snprintf(topic, sizeof(topic), "waterfront/%s/%s/debug", g_config.location.slug.c_str(), g_config.location.code.c_str());
+            mqttClient.publish(topic, payload.c_str(), false);  // Not retained
+            ESP_LOGI("DEBUG", "Published debug telemetry: %s", payload.c_str());
+        }
+        vTaskDelay(pdMS_TO_TICKS(60000));  // Every 60 seconds
     }
 }
 
@@ -57,6 +84,16 @@ void setup() {
     BaseType_t task_ret = xTaskCreate(overdue_check_task, "overdue", 2048, NULL, 4, NULL);
     if (task_ret != pdPASS) {
         fatal_error("Failed to create overdue task");
+    }
+
+    // Create debug task if debugMode enabled
+    if (g_config.debugMode) {
+        task_ret = xTaskCreate(debug_task, "debug", 4096, NULL, 1, NULL);  // Low priority
+        if (task_ret != pdPASS) {
+            ESP_LOGE("MAIN", "Failed to create debug task");
+        } else {
+            ESP_LOGI("MAIN", "Debug task started");
+        }
     }
 
     // Other initializations (WiFi, sensors, etc.)
