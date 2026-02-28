@@ -24,9 +24,6 @@ struct Compartment {
     int servoPin;
     int limitOpenPin;
     int limitClosePin;
-    int ultrasonicTriggerPin;
-    int ultrasonicEchoPin;
-    int weightSensorPin;
     std::string name;
 };
 
@@ -42,15 +39,12 @@ void load_compartments() {
         c.servoPin = comp.servoPin;
         c.limitOpenPin = comp.limitOpenPin;
         c.limitClosePin = comp.limitClosePin;
-        c.ultrasonicTriggerPin = comp.ultrasonicTriggerPin;
-        c.ultrasonicEchoPin = comp.ultrasonicEchoPin;
-        c.weightSensorPin = comp.weightSensorPin;
         c.name = "Compartment " + std::to_string(c.id);
         compartments.push_back(c);
     }
     if (compartments.empty()) {
         ESP_LOGW("COMPARTMENT", "No compartments in config, using defaults");
-        compartments.push_back({1, 12, 13, 14, 15, 16, 17, "Compartment 1"});
+        compartments.push_back({1, 12, 13, 14, "Compartment 1"});
     }
     ESP_LOGI("COMPARTMENT", "Loaded %d compartments from config", compartments.size());
 }

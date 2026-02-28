@@ -17,13 +17,13 @@ GlobalConfig g_config;
 bool loadConfig() {
     if (!LittleFS.begin()) {
         ESP_LOGE("CONFIG", "Failed to mount LittleFS");
-        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true};  // Defaults
+        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true, {}};  // Defaults
         return false;
     }
     File configFile = LittleFS.open("/config.json", "r");
     if (!configFile) {
         ESP_LOGW("CONFIG", "config.json not found, using defaults");
-        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true};  // Defaults
+        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true, {}};  // Defaults
         return false;
     }
     DynamicJsonDocument doc(1024);
@@ -31,7 +31,7 @@ bool loadConfig() {
     if (error) {
         ESP_LOGE("CONFIG", "Failed to parse config.json: %s, using defaults", error.c_str());
         configFile.close();
-        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true};  // Defaults
+        g_config = {{"192.168.178.50", 1883}, {"bremen", "harbor-01"}, 10, true, {}};  // Defaults
         return false;
     }
     configFile.close();
@@ -59,6 +59,23 @@ bool loadConfig() {
     // Parse others
     g_config.maxCompartments = doc["maxCompartments"] | 10;
     g_config.debugMode = doc["debugMode"] | true;
+
+    // Parse compartments array
+    if (doc.containsKey("compartments")) {
+        JsonArray comps = doc["compartments"];
+        g_config.compartments.clear();
+        for (JsonObject comp : comps) {
+            CompartmentPin c;
+            c.number = comp["number"];
+            c.servoPin = comp["servoPin"];
+            c.limitOpenPin = comp["limitOpenPin"];
+            c.limitClosePin = comp["limitClosePin"];
+            g_config.compartments.push_back(c);
+        }
+    } else {
+        // Default compartments if not present
+        g_config.compartments = {{1, 12, 13, 14}};
+    }
 
     ESP_LOGI("CONFIG", "Loaded config from LittleFS");
     return true;

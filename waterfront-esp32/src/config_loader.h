@@ -22,12 +22,20 @@ struct Location {
     String code;
 };
 
+struct CompartmentPin {
+    int number;
+    int servoPin;
+    int limitOpenPin;
+    int limitClosePin;
+};
+
 // Global config struct (central place for ALL config)
 struct GlobalConfig {
     Mqtt mqtt;
     Location location;
     int maxCompartments;
     bool debugMode;
+    std::vector<CompartmentPin> compartments;
 };
 
 // Global config instance
