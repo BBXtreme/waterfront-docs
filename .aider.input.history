@@ -2713,3 +2713,31 @@
 +5. Keep presets buttons, Deep Debug toggle, timeout warnings, error handling, dark theme classes unchanged.
 +
 +Commit message: "Refine MQTT panel layout: fix duplicate titles, make top-right status pill functional & colored, improve fonts + padding for readability"
+
+# 2026-02-28 13:18:23.290514
++aider --model xai/grok-code-fast-1 --subtree-only
+
+# 2026-02-28 13:19:34.240102
++ESP-IDF project compiles cleanly now (after fixing log level conflict).
++We are building MQTT-based lock controller for kayak rental (inspired by nodestark/mdb-esp32-cashless but without MDB).
++
++Create src/config.h with:
++#define WIFI_SSID "your-ssid"
++#define WIFI_PASSWORD "your-password"
++#define MQTT_SERVER "broker.emqx.io"
++#define MQTT_PORT 1883
++#define MQTT_CLIENT_ID "kayak-test-esp32"
++#define MQTT_TOPIC_UNLOCK "/kayak/test/unlock"
++#define MQTT_TOPIC_STATUS "/kayak/test/status"
++#define STATUS_INTERVAL_MS 60000
++
++In main.cpp (replace current idle loop):
++- Include WiFi.h, PubSubClient.h, ArduinoJson.h, config.h
++- Implement WiFi connect in station mode with event handler (handle disconnect/reconnect)
++- MQTT client with reconnect logic (use WiFiClient)
++- Subscribe to unlock topic → callback parses JSON {"bookingId":"...", "pin":"..."} → ESP_LOGI("Unlock for %s PIN %s", bookingId, pin)
++- FreeRTOS task or esp_timer to publish dummy JSON to status topic every 60s: {"state":"idle","battery":92,"kayakPresent":true,"connType":"wifi"}
++Use ESP_LOGI for all debug output. Compile clean.
+
+# 2026-02-28 13:19:38.483928
++all
