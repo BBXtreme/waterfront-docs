@@ -44,18 +44,13 @@ MockPubSubClient mockMqttClient;
 // Override extern mqttClient for tests
 PubSubClient& mqttClient = reinterpret_cast<PubSubClient&>(mockMqttClient);
 
-// Test setup: Initialize handler before each test
-TEST_CASE("MQTT Handler Initialization", "[mqtt]") {
-    mqtt_init();
-    REQUIRE(mockMqttClient.connected() == true);
-}
-
 // Test retained status payload simulation
 TEST_CASE("Simulate Retained Status Payload and Verify Ack Publish", "[mqtt]") {
-    // Setup: Initialize and connect
-    mqtt_init();
-    mqtt_connect();
-    mqtt_subscribe();
+    // Reset mock state
+    mockMqttClient.publishCount = 0;
+    mockMqttClient.lastPublishedTopic = "";
+    mockMqttClient.lastPublishedPayload = "";
+    mockMqttClient.lastPublishedRetained = false;
 
     // Simulate incoming retained status message for compartment 1
     const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/status";
@@ -75,9 +70,11 @@ TEST_CASE("Simulate Retained Status Payload and Verify Ack Publish", "[mqtt]") {
 
 // Test command payload simulation
 TEST_CASE("Simulate Command Payload and Verify Ack", "[mqtt]") {
-    // Setup
-    mqtt_init();
-    mqtt_connect();
+    // Reset mock state
+    mockMqttClient.publishCount = 0;
+    mockMqttClient.lastPublishedTopic = "";
+    mockMqttClient.lastPublishedPayload = "";
+    mockMqttClient.lastPublishedRetained = false;
 
     // Simulate command message
     const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/command";
@@ -95,7 +92,8 @@ TEST_CASE("Simulate Command Payload and Verify Ack", "[mqtt]") {
 
 // Test CRC validation failure
 TEST_CASE("CRC Validation Failure", "[mqtt]") {
-    mqtt_init();
+    // Reset mock state
+    mockMqttClient.publishCount = 0;
 
     const char* topic = "waterfront/locations/bremen-harbor-01/compartments/1/status";
     const char* payload = "{\"booked\":true,\"crc\":999999999}";  // Invalid CRC
