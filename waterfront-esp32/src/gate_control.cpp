@@ -3,6 +3,7 @@
 // Uses servo for gate movement and limit switches for feedback.
 // Integrates with MQTT for real-time control.
 // Non-blocking: uses millis() state machine for servo control.
+// Added state machine with timeouts for stuck gates.
 
 #include "gate_control.h"
 #include "config.h"
@@ -19,12 +20,18 @@
 Servo servos[MAX_COMPARTMENTS];
 
 // State machine for each compartment
-enum GateState { IDLE, OPENING, CLOSING };
-GateState gateStates[MAX_COMPARTMENTS] = {IDLE};
-unsigned long gateStartTimes[MAX_COMPARTMENTS] = {0};
-#define GATE_MOVE_DURATION_MS 2000  // Time to move gate
+enum CompartmentState { IDLE, OPENING, CLOSING, OPEN, CLOSED, ERROR };
+CompartmentState compartmentStates[MAX_COMPARTMENTS] = {CLOSED};
+unsigned long compartmentStartTimes[MAX_COMPARTMENTS] = {0};
+#define GATE_MOVE_TIMEOUT_MS 10000  // 10 seconds timeout for stuck gates
+#define RETRY_ATTEMPTS 3  // Max retries before error
 
-// Initialize gate control
+int retryCounts[MAX_COMPARTMENTS] = {0};
+
+/**
+ * @brief Initializes gate control for all compartments.
+ * @note Sets up pins and servos for active compartments.
+ */
 void gate_init() {
     // Initialize pins and servos for active compartments
     for (int i = 0; i < MAX_COMPARTMENTS; i++) {
@@ -32,38 +39,53 @@ void gate_init() {
             pinMode(LIMIT_OPEN_PIN_1, INPUT_PULLUP);
             pinMode(LIMIT_CLOSE_PIN_1, INPUT_PULLUP);
             servos[i].attach(SERVO_PIN_1);
-            closeCompartmentGate(i + 1);  // Start closed
+            compartmentStates[i] = CLOSED;  // Start closed
         }
         // Add more compartments as needed
     }
     ESP_LOGI("GATE", "Initialized for %d compartments", MAX_COMPARTMENTS);
 }
 
-// Open gate for compartment (non-blocking)
+/**
+ * @brief Opens gate for compartment (non-blocking).
+ * @param compartmentId The compartment ID to open.
+ * @note Sets state to OPENING and starts servo movement.
+ */
 void openCompartmentGate(int compartmentId) {
     if (compartmentId < 1 || compartmentId > MAX_COMPARTMENTS) return;
     int idx = compartmentId - 1;
-    if (gateStates[idx] == IDLE) {
-        gateStates[idx] = OPENING;
-        gateStartTimes[idx] = millis();
+    if (compartmentStates[idx] == CLOSED || compartmentStates[idx] == ERROR) {
+        compartmentStates[idx] = OPENING;
+        compartmentStartTimes[idx] = millis();
         servos[idx].write(90);  // Example angle for open; adjust
+        retryCounts[idx] = 0;
         ESP_LOGI("GATE", "Starting open for compartment %d", compartmentId);
     }
 }
 
-// Close gate for compartment (non-blocking)
+/**
+ * @brief Closes gate for compartment (non-blocking).
+ * @param compartmentId The compartment ID to close.
+ * @note Sets state to CLOSING and starts servo movement.
+ */
 void closeCompartmentGate(int compartmentId) {
     if (compartmentId < 1 || compartmentId > MAX_COMPARTMENTS) return;
     int idx = compartmentId - 1;
-    if (gateStates[idx] == IDLE) {
-        gateStates[idx] = CLOSING;
-        gateStartTimes[idx] = millis();
+    if (compartmentStates[idx] == OPEN || compartmentStates[idx] == ERROR) {
+        compartmentStates[idx] = CLOSING;
+        compartmentStartTimes[idx] = millis();
         servos[idx].write(0);  // Example angle for close; adjust
+        retryCounts[idx] = 0;
         ESP_LOGI("GATE", "Starting close for compartment %d", compartmentId);
     }
 }
 
-// Get gate state
+/**
+ * @brief Gets gate state for compartment.
+ * @param compartmentId The compartment ID.
+ * @return "open", "closed", or "unknown".
+ * @note Checks limit switches for compartment 1.
+ */
 const char* getCompartmentGateState(int compartmentId) {
     if (compartmentId < 1 || compartmentId > MAX_COMPARTMENTS) return "unknown";
     int idx = compartmentId - 1;
@@ -74,22 +96,43 @@ const char* getCompartmentGateState(int compartmentId) {
     return "unknown";
 }
 
-// Task to handle servo movement (call from main loop)
+/**
+ * @brief Task to handle servo movement and timeouts (call from main loop).
+ * @note Checks if movement duration has passed, updates state, handles retries on timeout.
+ */
 void gate_task() {
     unsigned long now = millis();
     for (int i = 0; i < MAX_COMPARTMENTS; i++) {
-        if (gateStates[i] != IDLE && (now - gateStartTimes[i]) >= GATE_MOVE_DURATION_MS) {
-            // Movement complete, check limit switches
-            if (gateStates[i] == OPENING) {
-                if (i == 0 && digitalRead(LIMIT_OPEN_PIN_1)) {
-                    ESP_LOGI("GATE", "Compartment %d gate opened", i + 1);
+        if (compartmentStates[i] == OPENING || compartmentStates[i] == CLOSING) {
+            if (now - compartmentStartTimes[i] > GATE_MOVE_TIMEOUT_MS) {
+                // Timeout: retry or error
+                if (retryCounts[i] < RETRY_ATTEMPTS) {
+                    retryCounts[i]++;
+                    ESP_LOGW("GATE", "Compartment %d stuck, retrying (attempt %d)", i + 1, retryCounts[i]);
+                    if (compartmentStates[i] == OPENING) {
+                        openCompartmentGate(i + 1);
+                    } else {
+                        closeCompartmentGate(i + 1);
+                    }
+                } else {
+                    compartmentStates[i] = ERROR;
+                    ESP_LOGE("GATE", "Compartment %d error: stuck after %d retries", i + 1, RETRY_ATTEMPTS);
+                    // TODO: Publish MQTT alert or trigger admin notification
                 }
-            } else if (gateStates[i] == CLOSING) {
-                if (i == 0 && digitalRead(LIMIT_CLOSE_PIN_1)) {
-                    ESP_LOGI("GATE", "Compartment %d gate closed", i + 1);
+            } else {
+                // Check limit switches for completion
+                if (compartmentStates[i] == OPENING) {
+                    if (i == 0 && digitalRead(LIMIT_OPEN_PIN_1)) {
+                        compartmentStates[i] = OPEN;
+                        ESP_LOGI("GATE", "Compartment %d gate opened", i + 1);
+                    }
+                } else if (compartmentStates[i] == CLOSING) {
+                    if (i == 0 && digitalRead(LIMIT_CLOSE_PIN_1)) {
+                        compartmentStates[i] = CLOSED;
+                        ESP_LOGI("GATE", "Compartment %d gate closed", i + 1);
+                    }
                 }
             }
-            gateStates[i] = IDLE;
         }
     }
 }

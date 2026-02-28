@@ -5,19 +5,33 @@
 #ifndef GATE_CONTROL_H
 #define GATE_CONTROL_H
 
-// Initialize gate control for all slots
+/**
+ * @brief Initializes gate control for all compartments.
+ */
 void gate_init();
 
-// Open gate for slot (non-blocking, sets target state)
-void openGateServo(int slotId);
+/**
+ * @brief Opens gate for compartment (non-blocking, sets target state).
+ * @param compartmentId The compartment ID to open.
+ */
+void openCompartmentGate(int compartmentId);
 
-// Close gate for slot (non-blocking, sets target state)
-void closeGateServo(int slotId);
+/**
+ * @brief Closes gate for compartment (non-blocking, sets target state).
+ * @param compartmentId The compartment ID to close.
+ */
+void closeCompartmentGate(int compartmentId);
 
-// Get gate state
-const char* getGateState(int slotId);
+/**
+ * @brief Gets gate state for compartment.
+ * @param compartmentId The compartment ID.
+ * @return String representing gate state ("open", "closed", or "unknown").
+ */
+const char* getCompartmentGateState(int compartmentId);
 
-// Task to handle servo movement (call from main loop)
+/**
+ * @brief Task to handle servo movement (call from main loop).
+ */
 void gate_task();
 
 #endif // GATE_CONTROL_H
