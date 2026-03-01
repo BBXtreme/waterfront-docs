@@ -37,9 +37,6 @@ class MockFile {
 public:
     MockFile(const String& content, const char* mode) : content(content), position(0), size(content.length()) {}
     size_t size() { return size; }
-    DeserializationError deserializeJson(DynamicJsonDocument& doc, MockFile& file) {
-        return deserializeJson(doc, content);
-    }
     void print(const char* str) { written += str; }
     void close() {}
     String content;
