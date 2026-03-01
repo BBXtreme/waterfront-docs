@@ -1,198 +1,218 @@
-# Waterfront ESP32 Firmware
+# Waterfront – Self-Service Kayak & SUP Rental System
 
-ESP32 firmware for Waterfront unmanned kayak rental compartments. Controls servo gates, detects presence with ultrasonic sensors, handles MQTT-based unlock commands, and supports runtime configuration updates.
+Unmanned, 24/7 kayak/SUP rental platform with **Next.js PWA**, **Supabase** backend, **Stripe + BTCPay** payments (fiat + Lightning/Liquid BTC), and **ESP32 MQTT** smart-locker control.
 
-## Project Overview
+**Live demo (frontend only – Vercel)**: https://waterfront-[your-project-slug].vercel.app  
+**Current status**: Early development – auth, local Supabase, calendar skeleton & MQTT base working. Payments & ESP32 sensor logic next.
 
-This firmware runs on ESP32-S3 (or ESP32 classic) to manage unmanned rental compartments for Waterfront. It connects to an MQTT broker for real-time control, publishes telemetry, and supports WiFi provisioning + LTE failover. All settings are loaded from `/config.json` on LittleFS, enabling remote updates without reflashing.
+## Core Concept
 
-Key features:
+Users book online → pay → receive PIN/QR → arrive at solar-powered locker → enter code / scan → take kayak → return to same bay → sensors confirm → deposit released automatically.
 
-- MQTT-based unlock on payment (Stripe/BTCPay webhooks)
-- Sensor-driven return confirmation (auto-lock)
-- Overdue timer with auto-lock
-- BLE/SoftAP WiFi provisioning
-- LTE cellular fallback
-- Watchdog for stability
-- Unit tests with Catch2
+## Features – Status
 
-## Hardware Requirements
+| Feature                               | Status    | Notes / Next                   |
+| ------------------------------------- | --------- | ------------------------------ |
+| Guest booking (no login required)     | ✅ Working | Calendar + time slots          |
+| Real-time availability                | 🟡 Partial | Supabase Realtime              |
+| Fiat payments (Stripe)                | 🚧 Planned | Checkout + webhook             |
+| Lightning / Liquid BTC (BTCPay)       | 🚧 Planned | Webhook → MQTT unlock          |
+| PIN/QR generation & delivery          | 🟡 Partial | Email / on-screen              |
+| ESP32 MQTT locker control             | ✅ Base    | Unlock command, status publish |
+| Kayak presence sensor (ultrasonic)    | 🚧 Planned | Taken / returned events        |
+| Deposit handling & auto-release       | 🚧 Planned | MQTT + backend logic           |
+| Admin dashboard (bookings, telemetry) | 🚧 Planned | Supabase + real-time           |
+| Offline-tolerant PWA                  | 🟡 Partial | QR/PIN caching                 |
 
-- **ESP32-S3 DevKitC-1-N8R2** (recommended; or ESP32 classic)
-- **SIM7600G-H LTE modem** (UART on GPIO16/17, PWRKEY on GPIO25)
-- **Servo motor** (e.g., SG90, for gate control)
-- **Ultrasonic sensor** (HC-SR04 or HC-SR04+, trigger/echo pins)
-- **Limit switches** (2 per compartment: open/close detection)
-- **Power supply** (3V ESP32 + 12V for solenoid, solar optional)
-- **Pins loaded from config.json** (no hard-codes; see Configuration section)
+## WATERFRONT Documentation Index
 
-Example wiring (pins from config.json):
+##### Core Specifications
+- [Technical Specification Document (TSD)](Technical%20Specification%20Document%20(TSD).md) — full system overview, flows, BTC/Lightning, edge cases
+- [Functional Specification Document (FSD)](Functional%20Specification%20Document%20(FSD).md) — requirements, architecture, data models
 
-- Servo: GPIO12
-- Ultrasonic Trig: GPIO5, Echo: GPIO18
-- LTE TX: GPIO17, RX: GPIO16
-- Limit Open: GPIO13, Close: GPIO14
+##### ESP32 Firmware Preparation
+- [ESP32 Pinout Plan and Diagram](ESP32%20Pinout%20Plan%20and%20Diagram.md) — GPIO assignments + wiring
+- [ESP32 Project Plan – Nodestark Adaptation](ESP32%20Project%20Plan%20-%20Waterfront%20Firmware%20Code%20Development.md) — step-by-step adaptation roadmap
+- [ESP32 Firmware – Test Checklist](ESP32%20Firmware%20-%20Test%20Checklist.md) — phased verification
 
-## Quick Start
+##### Integration & Architecture
+- [HARDWARE_BASELINE](HARDWARE_BASELINE.md) — confirmed board, sensors, modem, power
+- [MQTT_SPEC](MQTT_SPEC.md) — topics, payloads, QoS
+- [REST-MQTT-Architecture](REST-MQTT-Architecture.md) — backend → MQTT → ESP32 flow
 
-1. **Install PlatformIO** (VS Code extension or CLI).
+##### UI/UX Specs
+- [APP Admin - Layout Spec](APP%20Admin%20-%20Layout%20Spec.md)
+- [APP Booking - PWA Layout Spec](APP%20Booking%20-%20PWA%20Layout%20Spec.md)
 
-2. **Clone repo** and navigate to `waterfront-esp32/`.
+## Tech Stack
 
-3. **Build and upload firmware**:
+- **Frontend / PWA** — Next.js 15+, TypeScript, Tailwind CSS, shadcn/ui, Vercel deployment
+- **Backend / Database / Auth** — Supabase (PostgreSQL + Auth + Realtime + Storage)
+- **Payments** — Stripe Checkout + BTCPay Server (self-hosted, Lightning/Liquid)
+- **IoT Controller** — ESP32-S3 (ESP-IDF), MQTT (PubSubClient or esp-mqtt), TinyGSM (LTE fallback)
+- **MQTT Broker** — Mosquitto (Docker)
+- **Development** — pnpm, Aider (AI pair programming), PlatformIO, GitHub monorepo
+- **Deployment** — Vercel (frontend), Railway/Render/VPS (MQTT broker, future BTCPay)
 
-   ```bash
-   pio run -t upload
-   ```
+## Project Structure (Monorepo)
 
-4. **Upload filesystem** (includes initial `/config.json`):
+Waterfront/ 
 
-   ```bash
-   pio run -t uploadfs
-   ```
+├── docs/                   # Functional/Technical specs, wireframes, schemas 
 
-5. **Monitor serial output**:
+├── supabase-local/         # Local Supabase dev (CLI + migrations) 
 
-   ```bash
-   pio device monitor -b 115200
-   ```
+├── waterfront-web/         # Next.js PWA → deployed to Vercel 
 
-   Expected: "WATERFRONT starting..." and MQTT connection logs.
+├── waterfront-esp32/       # ESP-IDF project (PlatformIO/VS Code) 
 
-6. **Test MQTT unlock** (from broker):
+├── waterfront-infra/       # Docker Compose (Mosquitto, future BTCPay) 
 
-   ```bash
-   mosquitto_pub -h localhost -t "waterfront/bremen/harbor-01/compartments/1/command" -m "open_gate"
-   ```
+└── README.md
 
-   Gate should open, and ESP32 publishes ack.
+## Quick Start – Local Development
 
-## Configuration
+### Prerequisites
 
-All settings are in `data/config.json` (uploaded to LittleFS). No hard-codes in code — everything loads at runtime.
+- Node.js 20+ (nvm recommended)
+- pnpm (`npm install -g pnpm`)
+- Docker Desktop
+- Supabase CLI (`brew install supabase/tap/supabase` or `npm install -g supabase`)
+- PlatformIO (VS Code extension)
+- Git
 
-- **Remote update**: Publish new JSON to `waterfront/{location}/{locationCode}/config/update` topic. ESP32 validates, saves, and restarts.
+### 1. Clone & Install
 
-- **Example config.json**:
+```bash
+git clone https://github.com/[your-username]/Waterfront.git
+cd Waterfront
 
-  ```json
-  {
-    "mqtt": {
-      "broker": "192.168.178.50",
-      "port": 8883,
-      "username": "mqttuser",
-      "password": "strongpass123",
-      "clientIdPrefix": "waterfront",
-      "useTLS": true,
-      "caCertPath": "/ca.pem"
-    },
-    "location": {
-      "slug": "bremen",
-      "code": "harbor-01"
-    },
-    "wifiProvisioning": {
-      "fallbackSsid": "WATERFRONT-DEFAULT",
-      "fallbackPass": "defaultpass123"
-    },
-    "lte": {
-      "apn": "internet.t-mobile.de",
-      "simPin": "",
-      "rssiThreshold": -70,
-      "dataUsageAlertLimitKb": 100000
-    },
-    "ble": {
-      "serviceUuid": "12345678-1234-1234-1234-123456789abc",
-      "ssidCharUuid": "87654321-4321-4321-4321-cba987654321",
-      "passCharUuid": "87654321-4321-4321-4321-dba987654321",
-      "statusCharUuid": "87654321-4321-4321-4321-eba987654321"
-    },
-    "compartments": [
-      {
-        "number": 1,
-        "servoPin": 12,
-        "limitOpenPin": 13,
-        "limitClosePin": 14,
-        "ultrasonicTriggerPin": 15,
-        "ultrasonicEchoPin": 16,
-        "weightSensorPin": 17
-      }
-    ],
-    "system": {
-      "maxCompartments": 10,
-      "debugMode": true,
-      "gracePeriodSec": 3600,
-      "batteryLowThresholdPercent": 20,
-      "solarVoltageMin": 3.0
-    },
-    "other": {
-      "offlinePinTtlSec": 86400,
-      "depositHoldAmountFallback": 50
-    }
-  }
-  ```
-
-Broker requires username/password. Set mqtt.username and mqtt.password in config.json.
-
-## Testing
-
-- **Unit tests** (Catch2, mocks hardware):
-
-  ```bash
-  pio test -e unit_test
-  ```
-
-  Covers MQTT callbacks, gate control, compartment loading.
-
-- **Manual MQTT tests** (with Mosquitto broker):
-
-  - Status publish: `mosquitto_pub -h localhost -t "waterfront/bremen/harbor-01/compartments/1/status" -m '{"booked":true,"gateState":"locked"}'`
-  - Command: `mosquitto_pub -h localhost -t "waterfront/bremen/harbor-01/compartments/1/command" -m "open_gate"`
-  - Config update: `mosquitto_pub -h localhost -t "waterfront/bremen/harbor-01/config/update" -m '{"mqtt":{"broker":"new.ip"}}'`
-
-## Debug Tips
-
-- **Serial monitor**: 115200 baud. Logs ESP_LOGI/W/E for connection, unlocks, errors.
-- **ESP_LOG levels**: Set `debugMode: true` in config for verbose output (e.g., sensor distances, MQTT payloads).
-- **Common issues**:
-  - Wrong broker: Check logs for "MQTT Failed to connect". Verify IP/port in config.
-  - Pin conflicts: Use config.json to assign unique GPIOs. Avoid boot pins (0,2,12,15).
-  - No unlock: Ensure MQTT topic matches location/code in config. Check broker auth.
-  - LTE fallback: If WiFi fails, ESP32 auto-switches (logs "LTE MQTT switched to LTE").
-- **Watchdog resets**: If ESP32 hangs, it auto-restarts (15s timeout). Check logs for fatal errors.
-
-## Development Notes
-
-- **Non-blocking design**: All loops use `millis()` + FreeRTOS tasks (e.g., overdue check every 10s). No `delay()`.
-- **Dynamic compartments**: Loaded from config at boot; supports 1–10 compartments per device.
-- **Security TODO**: MQTT TLS + username/password enforced (broker-side). Client certs optional.
-- **Power optimization**: Deep sleep on idle; modem power gating for LTE.
-- **Code style**: Arduino-compatible, modular (one .cpp/.h per feature), with extern g_config.
-
-## Folder Structure
-
-```
-waterfront-esp32/
-├── src/                    # Source files (.cpp/.h)
-│   ├── main.cpp            # Entry point, setup/loop, tasks
-│   ├── config_loader.cpp   # Load/save config.json from LittleFS
-│   ├── mqtt_client.cpp     # MQTT connect/publish/subscribe
-│   ├── gate_control.cpp    # Servo + limit switch logic
-│   ├── return_sensor.cpp   # Ultrasonic presence detection
-│   ├── deposit_logic.cpp   # Rental timers, overdue auto-lock
-│   ├── wifi_manager.cpp    # WiFi station mode
-│   ├── nimble.cpp          # BLE provisioning
-│   ├── webui_server.cpp   # SoftAP provisioning
-│   ├── lte_manager.cpp     # LTE modem control
-│   ├── offline_fallback.cpp # PIN validation without MQTT
-│   └── error_handler.cpp   # Fatal error logging + restart
-├── test/                   # Unit tests (Catch2)
-│   ├── test_mqtt_handler.cpp
-│   ├── test_gate_control.cpp
-│   └── test_compartment_manager.cpp
-├── data/                   # LittleFS files (uploaded via pio run -t uploadfs)
-│   └── config.json         # Runtime configuration
-├── platformio.ini          # PlatformIO config (ESP32-S3, libs, build flags)
-└── README.md               # This file
+cd waterfront-web
+pnpm install
 ```
 
-For issues or contributions, open a GitHub issue. Happy coding!
+### 2. Run the PWA
+
+Bash
+
+```
+cd waterfront-web
+pnpm dev
+```
+
+→ [http://localhost:3000](http://localhost:3000/)
+
+### 3. Start Local Supabase
+
+Bash
+
+```
+cd ../supabase-local
+supabase init     # only first time
+supabase start
+```
+
+→ Studio: [http://127.0.0.1:54323](http://127.0.0.1:54323/) Login: postgres / postgres
+
+### 4. Start Local MQTT Broker
+
+Bash
+
+```
+cd ../waterfront-infra
+docker compose up -d
+```
+
+→ mqtt://localhost:1883 (anonymous)
+
+### 5. Build & Flash ESP32 Firmware
+
+The ESP32 controller uses **PlatformIO + ESP-IDF framework** (not Arduino core).
+
+#### Prerequisites
+- Install **VS Code** + **PlatformIO IDE** extension
+- (Optional but recommended) Also install **ESP-IDF** extension by Espressif for menuconfig & advanced debugging
+
+#### Steps
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/BBXtreme/Waterfront.git
+   cd Waterfront/waterfront-esp32
+
+
+
+##### Build / Upload / Monitor:
+
+- **Build**: Click PlatformIO → Build (checkmark icon) or run pio run in terminal
+
+- **Upload / Flash**: Click PlatformIO → Upload (right arrow icon) or pio run -t upload
+
+- **Serial Monitor**: Click PlatformIO → Serial Monitor (plug icon) or pio device monitor
+
+  
+
+## Environment Variables
+
+### waterfront-web/.env.local (local dev)
+
+env
+
+```
+# Supabase local (MUST use port 54321) 
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... 
+
+# MQTT broker (local) 
+MQTT_BROKER_URL=mqtt://localhost:1883 
+
+# Payments (add later) 
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... STRIPE_SECRET_KEY=sk_test_... BTCPAY_URL=https://your-btcpay-server.com BTCPAY_API_KEY=...
+```
+
+**Rule**: NEXT_PUBLIC_ → client-side only. Server secrets stay out of git.
+
+## Useful Commands
+
+Bash
+
+```
+# PWA dev server
+cd waterfront-web && pnpm dev
+
+# Local Supabase
+cd supabase-local && supabase start
+
+# MQTT broker
+cd waterfront-infra && docker compose up -d
+
+# Stop everything
+cd waterfront-infra && docker compose down
+
+# Open entire repo in VS Code
+code .
+```
+
+## Development Guidelines
+
+- Use **Aider** for code generation/refactoring:
+
+  Bash
+
+  ```
+  aider --model xai/grok-code-fast-1
+  ```
+
+- Small, focused commits
+
+- Branch naming: feat/calendar-availability, fix/mqtt-reconnect, refactor/remove-mdb
+
+- Document schemas/decisions in docs/
+
+- Keep waterfront-web as priority until booking/payment flow is complete
+
+## License
+
+MIT License (to be confirmed)
+
+Questions, ideas or help needed? Open an Issue or DM on X @BangLee8888.
+
+Happy building!
