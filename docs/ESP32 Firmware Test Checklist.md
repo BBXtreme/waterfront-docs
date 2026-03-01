@@ -1,12 +1,10 @@
-### 3. Prepare a Minimal Test List / Acceptance Criteria (30–60 min)
+# WATERFRONT ESP32 Firmware – Test Checklist
+
+### Test List / Acceptance Criteria (30–60 min)
 
 **Purpose**: simple pass/fail criteria for the first milestones. 
 
 
-
-Example:
-
-#### WATERFRONT ESP32 Firmware – Test Checklist
 
 ###### Phase 1 – Basic Connectivity
 

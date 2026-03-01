@@ -4446,3 +4446,499 @@
 +   - Update description: "Configuration is centralized in LittleFS JSON → loaded on boot → supports dynamic compartment count/pins per location."
 +
 +Show diff for docs/FSD.md only.
+
+# 2026-02-28 22:10:11.665511
++all
+
+# 2026-02-28 22:10:40.822119
++Update docs/MQTT_SPEC.md to document the new config update topic:
++
++1. Add new topic entry:
++   Topic: waterfront/{location}/{locationCode}/config/update
++   Direction: Backend/Admin → ESP32
++   QoS: 1
++   Retained: false
++   Payload: full JSON matching /config.json schema (example provided)
++   Action: ESP32 validates → saves to LittleFS → reloads config globals (optional restart)
++
++2. Add note: "This topic allows runtime configuration changes (MQTT broker, compartment pins, debug mode, etc.) without firmware re-flash. Used by admin dashboard."
++
++3. If present, remove/update any old references to hard-coded config values.
++
++Show diff for docs/MQTT_SPEC.md only.
+
+# 2026-02-28 22:11:35.547362
++all
+
+# 2026-02-28 22:11:48.533170
++Update docs/ESP32 Pinout Plan and Diagram.md:
++
++Replace hard-coded pin references (e.g., SERVO_PIN_1=12) with:
++"All compartment pins (servo, limit switches, ultrasonic trigger/echo, etc.) are now loaded dynamically from /config.json → compartments array.
++
++Example structure in config.json:
++"compartments": [
++  {"number":1, "servoPin":12, "limitOpenPin":13, "limitClosePin":14, "ultrasonicTriggerPin":15, "ultrasonicEchoPin":16},
++  ...
++]
++
++Pins are assigned at boot via compartment_manager. Update the JSON file or send via MQTT config/update topic for changes."
++
++Keep existing diagrams if any; add note that they now represent example/default mapping only.
++
++Show diff for docs/ESP32 Pinout Plan and Diagram.md.
+
+# 2026-02-28 22:21:42.670119
++Add ESP32 watchdog and global error handling for production stability in waterfront-esp32.
++
++1. In src/main.cpp / app_main():
++   - #include <esp_task_wdt.h>
++   - esp_task_wdt_init(15, true);  // 15s timeout, panic/restart on timeout
++   - esp_task_wdt_add(NULL);       // Subscribe main task
++
++2. Create new src/error_handler.cpp / error_handler.h:
++   - void fatal_error(const char* msg, esp_err_t code = ESP_FAIL);
++     → ESP_LOGE("FATAL", "%s: %s (0x%x)", msg, esp_err_to_name(code), code);
++     → delay(5000); esp_restart();
++
++3. In init functions (wifi_manager_init, mqtt_client_init, lte_manager_init, gate_control_init, compartment_manager_init):
++   - If return != ESP_OK → fatal_error("Init failed", ret);
++
++4. In long-running tasks (mqtt_loop_task, sensor_monitor_task): call esp_task_wdt_reset() every ~1s.
++
++Show diffs: main.cpp, new error_handler files, and one example usage (e.g. mqtt_client_init).
++Commit as "feat: add watchdog and global fatal_error handler"
+
+# 2026-02-28 22:22:11.053194
++all
+
+# 2026-02-28 22:22:25.485956
++n
+
+# 2026-02-28 22:22:33.701410
++Enable TLS for MQTT broker connection in waterfront-esp32.
++
++1. In src/mqtt_client.cpp:
++   - Change mqttClient.setServer(g_config.mqtt.broker.c_str(), g_config.mqtt.port);
++     → to mqttClient.setServer(g_config.mqtt.broker.c_str(), g_config.mqtt.port);  // port 8883 typically
++   - Add: mqttClient.setSecure(true);  // or use setCACert() if you have server cert
++   - For production: Add optional CA cert load from LittleFS ("/ca.pem") or hard-code public root certs (e.g., Let's Encrypt).
++
++2. Update config.json default port to 8883 if using TLS.
++
++3. In mqtt_topics.h or config_loader: Add "useTLS": true field.
++
++4. Log: ESP_LOGI("MQTT", "Connecting with TLS to %s:%d", broker, port);
++
++Show diff for mqtt_client.cpp + config_loader.cpp (if needed).
++Commit as "feat: enable TLS for MQTT client"
+
+# 2026-02-28 22:23:10.420821
++y
+
+# 2026-02-28 22:23:26.859597
++Expand unit tests for waterfront-esp32 with Catch2.
++
++1. Move test_mqtt_handler.cpp to test/ folder if not already (PlatformIO convention).
++2. Add new test files or extend:
++   - test_gate_control.cpp: Simulate millis() state transitions (LOCKED → OPENING → OPEN → verify servo angle / limit switch)
++   - test_compartment_manager.cpp: Test load from mock JSON, pin assignment
++
++3. In platformio.ini [env:unit_test]: Add test_filter = * (run all)
++
++4. Add simple mock structs if needed (e.g., MockServo, MockUltrasonic).
++
++Show diffs for new/updated test files + platformio.ini.
++Commit as "test: expand Catch2 coverage for gate_control and compartment_manager"
+
+# 2026-02-28 22:23:29.292876
++all
+
+# 2026-02-28 22:24:00.648123
++y
+
+# 2026-02-28 22:24:11.808557
++n
+
+# 2026-02-28 22:24:13.542158
++Implement overdue timer and auto-lock in waterfront-esp32 deposit_logic.
++
++1. In deposit_logic.h/cpp:
++   - Add struct RentalTimer { int compartmentId; unsigned long startMs; unsigned long durationSec; };
++   - std::vector<RentalTimer> activeTimers;
++   - void startRental(int compartmentId, unsigned long durationSec); // called on unlock
++   - void checkOverdue(); // call from main loop or timer task every 10s
++
++2. In checkOverdue():
++   - If millis() - startMs > (durationSec + gracePeriodSec) * 1000:
++     - closeCompartmentGate(compartmentId)
++     - mqtt_publish_event("overdue", compartmentId)
++     - publish to backend for auto-charge
++
++3. Use g_config.gracePeriodSec from config_loader.
++
++4. Add to main.cpp: xTaskCreate(overdue_check_task, "overdue", 2048, NULL, 4, NULL);
++
++Show diffs for deposit_logic.cpp/h, main.cpp, and config_loader.h (add gracePeriodSec if missing).
++Commit as "feat: implement overdue timer and auto-lock for late returns"
+
+# 2026-02-28 22:24:56.549595
++n
+
+# 2026-02-28 22:24:57.639719
++Add OTA-friendly debug logging and MQTT debug channel in waterfront-esp32.
++
++1. In main.cpp: If g_config.debugMode:
++   - esp_ota_ops_init() or simple OTA status publish
++
++2. Create debug_task() (low priority):
++   - Every 60s: Publish to "waterfront/{location}/{locationCode}/debug" JSON with uptime, freeHeap, task stats, etc.
++
++3. In error_handler: Publish fatal errors to debug topic before restart.
++
++Show diffs for main.cpp + new debug_task logic.
++Commit as "feat: add OTA debug logging and MQTT debug telemetry"
+
+# 2026-02-28 22:27:28.488337
++Centralize all config in /config.json for waterfront-esp32.
++
++1. Add LittleFS + data/config.json defaults (MQTT broker, location, compartment pins).
++2. Create config_loader.cpp/h: struct GlobalConfig; loadConfig() parse JSON → globals.
++3. In main.cpp: LittleFS.begin(); loadConfig().
++
++Show diffs: platformio.ini, main.cpp, new config_loader.
+
+# 2026-02-28 22:28:26.644043
++n
+
+# 2026-02-28 22:28:27.824246
++Add MQTT config update in mqtt_handler.cpp.
++
++1. Subscribe to waterfront/{location}/{code}/config/update.
++2. On payload: updateConfigFromJson(payload) → validate/save to LittleFS → reload/restart.
++
++Show diff for mqtt_handler.cpp + config_loader.cpp.
+
+# 2026-02-28 22:29:09.317966
++Enable TLS for MQTT in mqtt_client.cpp.
++
++1. Use mqttClient.setSecure(true); set port 8883.
++2. Load CA cert from LittleFS /ca.pem if g_config.mqtt.useTLS.
++
++Show diff for mqtt_client.cpp + config_loader (add useTLS).
+
+# 2026-02-28 22:29:43.039944
++n
+
+# 2026-02-28 22:29:43.858130
++Add ESP task watchdog in main.cpp.
++
++1. esp_task_wdt_init(15, true); add to tasks.
++2. Reset in loops; fatal_error on timeout.
++
++Show diff for main.cpp + error_handler.cpp.
+
+# 2026-02-28 22:30:09.379788
++Expand Catch2 tests.
++
++1. Add test_gate_control.cpp (state transitions).
++2. Add test_compartment_manager.cpp (JSON load).
++
++Show diffs for new test files + platformio.ini.
+
+# 2026-02-28 22:30:51.845870
++n
+
+# 2026-02-28 22:30:53.539962
++Add overdue timer in deposit_logic.cpp.
++
++1. Vector<RentalTimer>; startRental on unlock; checkOverdue task (millis > duration + grace → lock/publish).
++
++Show diff for deposit_logic.cpp/h + main.cpp (task).
+
+# 2026-02-28 22:32:01.616493
++n
+
+# 2026-02-28 22:32:14.184659
++Initialize basic Express server in waterfront-backend with Supabase client.
++
++1. Create or update index.js:
++   - Import express, body-parser, @supabase/supabase-js, mqtt
++   - const app = express(); app.use(body-parser.json());
++   - Initialize Supabase client with env vars (SUPABASE_URL, SUPABASE_KEY)
++   - MQTT client: const mqttClient = mqtt.connect('mqtt://localhost:1883'); // use env later
++   - mqttClient.on('connect', () => console.log('MQTT connected'));
++   - app.listen(3000, () => console.log('Backend on 3000'));
++
++2. Add .env.example with SUPABASE_URL, SUPABASE_KEY, MQTT_BROKER
++
++Show full index.js content or diff if file exists.
++Commit as "feat: backend - basic Express + Supabase + MQTT client"
+
+# 2026-02-28 22:32:21.623267
++/clear
+
+# 2026-02-28 22:32:23.423702
++Initialize basic Express server in waterfront-backend with Supabase client.
++
++1. Create or update index.js:
++   - Import express, body-parser, @supabase/supabase-js, mqtt
++   - const app = express(); app.use(body-parser.json());
++   - Initialize Supabase client with env vars (SUPABASE_URL, SUPABASE_KEY)
++   - MQTT client: const mqttClient = mqtt.connect('mqtt://localhost:1883'); // use env later
++   - mqttClient.on('connect', () => console.log('MQTT connected'));
++   - app.listen(3000, () => console.log('Backend on 3000'));
++
++2. Add .env.example with SUPABASE_URL, SUPABASE_KEY, MQTT_BROKER
++
++Show full index.js content or diff if file exists.
++Commit as "feat: backend - basic Express + Supabase + MQTT client"
+
+# 2026-02-28 22:32:42.748327
++all
+
+# 2026-02-28 22:32:53.843120
++Add Stripe webhook handler in waterfront-backend/index.js.
++
++1. Add POST /webhook/stripe route:
++   - Verify signature using stripe.webhooks.constructEvent(payload, sigHeader, STRIPE_WEBHOOK_SECRET)
++   - Handle event.type === 'payment_intent.succeeded' or 'checkout.session.completed':
++     - Extract bookingId from metadata
++     - Update Supabase bookings table: status = 'paid', payment_id = event.data.object.id
++     - Publish MQTT unlock: mqttClient.publish(
++         `waterfront/${location}/${locationCode}/compartments/${compartmentNumber}/unlock`,
++         JSON.stringify({ bookingId, durationSec: 7200 })
++       )
++
++2. Add error handling: 400 on invalid signature/event
++
++Show diff for index.js (add route + logic).
++Use env var STRIPE_WEBHOOK_SECRET.
++Commit as "feat: backend - Stripe webhook with Supabase update + MQTT unlock publish"
+
+# 2026-02-28 22:33:17.285561
++Add BTCPay webhook handler in waterfront-backend/index.js.
++
++1. POST /webhook/btcpay route:
++   - Verify BTCPay signature (x-btcpay-sig header vs HMAC with BTCPAY_WEBHOOK_SECRET)
++   - Handle invoice.paid or invoice.settled event:
++     - Get invoice metadata (bookingId, compartmentNumber)
++     - Update Supabase booking status to 'paid'
++     - MQTT publish to unlock topic (same as Stripe)
++
++2. Add logging and 200 OK response
++
++Show diff for index.js (add BTCPay route).
++Use env var BTCPAY_WEBHOOK_SECRET.
++Commit as "feat: backend - BTCPay webhook with MQTT unlock"
+
+# 2026-02-28 22:33:38.735053
++Refactor webhook logic to shared payment success function in waterfront-backend.
++
++1. Create function handlePaymentSuccess(bookingId, compartmentNumber, paymentId):
++   - Supabase update: bookings set status='paid', payment_id
++   - mqttClient.publish unlock topic with JSON payload
++
++2. Call this from both Stripe and BTCPay webhook handlers.
++
++Show diff for index.js (refactor + shared func).
++Commit as "refactor: backend - shared payment success handler for Stripe/BTCPay"
+
+# 2026-02-28 22:34:00.171968
++Enhance webhook to resolve location and compartment from booking in waterfront-backend.
++
++1. In handlePaymentSuccess:
++   - Query Supabase: SELECT location_slug, location_code, compartment_number FROM bookings WHERE id = bookingId
++   - Use results to build topic: waterfront/${location_slug}/${location_code}/compartments/${compartment_number}/unlock
++
++2. Handle if not found (log error, don't publish)
++
++Show diff for index.js.
++Commit as "feat: backend - dynamic location/compartment in webhook MQTT topic"
+
+# 2026-02-28 22:35:40.391026
++Secure Mosquitto broker in waterfront-infra with username/password and TLS.
++
++1. Update mosquitto.conf:
++   - allow_anonymous false
++   - password_file /mosquitto/config/passwd
++   - listener 1883
++   - listener 8883
++   - cafile /mosquitto/config/ca.crt
++   - certfile /mosquitto/config/server.crt
++   - keyfile /mosquitto/config/server.key
++   - require_certificate false  # client cert optional
++
++2. Add note in README or docs: "Generate passwd file: mosquitto_passwd -c /mosquitto/config/passwd mqttuser; then enter password"
++
++3. For self-signed certs: Add placeholder comment for openssl commands to generate ca.crt/server.crt/key (or use Let's Encrypt for production).
++
++Show diff for mosquitto.conf + docker-compose.yml volume mounts for certs/passwd.
++Commit as "security: enable username/password and TLS on Mosquitto broker"
+
+# 2026-02-28 22:35:42.745436
++all
+
+# 2026-02-28 22:36:01.704324
++Add MQTT authentication (username/password) from centralized config in waterfront-esp32.
++
++1. Extend GlobalConfig in config_loader.h:
++   struct Mqtt {
++     String broker;
++     int port;
++     String username;
++     String password;
++   } mqtt;
++
++2. In config_loader.cpp loadConfig(): parse "mqtt.username" and "mqtt.password" from JSON (add to default config.json).
++
++3. In mqtt_client.cpp mqtt_connect() or connect call:
++   - if (g_config.mqtt.username.length() > 0) {
++       mqttClient.connect(clientId.c_str(), g_config.mqtt.username.c_str(), g_config.mqtt.password.c_str());
++     } else {
++       mqttClient.connect(clientId.c_str());
++     }
++
++4. Update default config.json: add "username": "mqttuser", "password": "strongpass123"
++
++Show diffs for config_loader.h/cpp, mqtt_client.cpp, data/config.json.
++Commit as "feat: MQTT authentication with username/password from config.json"
+
+# 2026-02-28 22:36:39.839907
++n
+
+# 2026-02-28 22:36:41.252502
++Enable TLS (MQTTS) for secure MQTT connection in waterfront-esp32.
++
++1. In config_loader.h: Add bool useTLS = false; to GlobalConfig.mqtt
++
++2. In config_loader.cpp: Parse "mqtt.useTLS": true/false
++
++3. In mqtt_client.cpp connect:
++   - mqttClient.setServer(g_config.mqtt.broker.c_str(), g_config.mqtt.port);
++   - if (g_config.mqtt.useTLS) {
++       mqttClient.setSecure(true);  // PubSubClient basic TLS
++       // Optional: mqttClient.setCACert(ca_cert); // load from LittleFS /ca.pem
++     }
++
++4. Update default config.json: "useTLS": true, "port": 8883
++
++5. Log: ESP_LOGI("MQTT", "Connecting with %s to %s:%d", useTLS ? "TLS" : "plain", broker, port);
++
++6. For full CA cert: Add note/comment to load /ca.pem from LittleFS and call setCACert().
++
++Show diffs for config_loader.h/cpp, mqtt_client.cpp, data/config.json.
++Commit as "security: enable TLS/MQTTS for MQTT client with config toggle"
+
+# 2026-02-28 22:37:24.689168
++n
+
+# 2026-02-28 22:37:59.611367
++Document MQTT authentication and TLS setup in docs.
++
++1. Update docs/MQTT_SPEC.md:
++   - Add section "Security & Authentication"
++   - "Broker requires username/password (allow_anonymous false) and TLS on port 8883."
++   - "ESP32 uses mqttClient.connect(clientId, username, password) + setSecure(true) if useTLS=true in config.json"
++
++2. Update docs/TSD.md in Technology Stack or Security section:
++   - "MQTT connections use username/password authentication and TLS encryption (MQTTS) for secure communication over WiFi/LTE."
++
++Show diffs for MQTT_SPEC.md.md and TSD.md.
++Commit as "docs: add MQTT authentication and TLS configuration details"
+
+# 2026-02-28 22:38:03.931086
++all
+
+# 2026-02-28 22:46:17.124012
++Final cleanup: Ensure ZERO hard-coded values remain in waterfront-esp32 except inside config_loader.cpp defaults.
++
++Search entire src/ for any remaining #define MQTT_*, hard-coded IP, pin numbers, or strings like "192.168." and replace with g_config.* 
++
++Show summary of files changed.
++Commit: "refactor: remove all remaining hard-codes – full centralized config achieved"
+
+# 2026-02-28 22:48:39.133538
++analyze why last prompt stuck in a loop and if the prompt was completet all right
+
+# 2026-03-01 08:11:58.553265
++n
+
+# 2026-03-01 08:12:20.975582
++Implement full MQTT authentication and TLS in waterfront-esp32 and infra.
++
++1. Update mosquitto.conf: allow_anonymous false, password_file, listener 8883 with TLS certs.
++2. In config_loader: add mqtt.username, mqtt.password, mqtt.useTLS.
++3. In mqtt_client.cpp: use connect(clientId, username, password) + setSecure(true) if useTLS.
++4. Update default config.json with example credentials.
++
++Commit: "security: enforce MQTT username/password + TLS (MQTTS)"
+
+# 2026-03-01 08:12:48.081904
++y
+
+# 2026-03-01 08:13:31.032927
++check if the last prompt was implemented correctly
+
+# 2026-03-01 08:13:52.958364
++n
+
+# 2026-03-01 08:13:57.277650
++Implement complete Stripe + BTCPay webhook handler in waterfront-backend/index.js.
++
++Create shared handlePaymentSuccess(bookingId) that:
++- Updates Supabase booking status to 'paid'
++- Queries location + compartment from booking
++- Publishes to correct waterfront/{location}/{code}/compartments/{number}/unlock topic
++
++Add both /webhook/stripe and /webhook/btcpay routes with signature verification.
++
++Commit: "feat: backend - full Stripe + BTCPay webhook → MQTT unlock bridge"
+
+# 2026-03-01 08:15:12.054988
++check if all all remaining hard-codeswas done and full centralized config achieved
+
+# 2026-03-01 08:16:07.527444
++n
+
+# 2026-03-01 08:16:31.452801
++was the last prompt professionally done?
+
+# 2026-03-01 08:16:43.692913
++Add overdue timer in deposit_logic + full watchdog in main.cpp.
++
++Use g_config.gracePeriodSec and check every 10s → auto-close gate + publish overdue event.
++
++Add esp_task_wdt everywhere.
++
++Commit: "feat: overdue auto-lock timer + production watchdog"
+
+# 2026-03-01 08:17:16.046128
++Add GitHub Actions workflow for ESP32 build + tests + web lint.
++
++Create .github/workflows/ci.yml that runs pio run and pio test on push.
++
++Expand Catch2 tests to gate_control and compartment_manager.
++
++Commit: "ci: add PlatformIO build + Catch2 tests in GitHub Actions"
+
+# 2026-03-01 08:17:57.493118
++y
+
+# 2026-03-01 08:18:07.711842
++nn
+
+# 2026-03-01 08:18:08.487970
++n
+
+# 2026-03-01 08:18:23.745173
++update documentation and push
+
+# 2026-03-01 08:21:12.003184
++analyze why the laast prompt suck in a loop. do again if necessary in a professional way
+
+# 2026-03-01 08:21:42.062732
++was the last two prompts done correctly implemented?
+
+# 2026-03-01 08:22:43.880509
++analyze why the documentation wad not changed and commited

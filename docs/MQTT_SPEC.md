@@ -1,4 +1,4 @@
-# MQTT Specification – WATERFRONT Kayak Controller
+# MQTT Specification – WATERFRONT Controller
 
 **Purpose**: exact topics and JSON schemas. This is critical because backend (Supabase/webhook) and ESP32 must speak the same language.
 

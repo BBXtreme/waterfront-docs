@@ -1,6 +1,6 @@
 # Functional Specification Document (FSD)
 
-**Project**: WATERFRONT -> Kayak Rental Booking Application with ESP32-Cashless Controller Integration (incl. BTC/Lightning Payments)
+**Project**: WATERFRONT -> Equipment Rental Booking Application with ESP32-Cashless Controller Integration (incl. BTC/Lightning Payments)
 
 **Document Title**: Functional Specification Document (FSD)
 
@@ -8,7 +8,7 @@
 
 **Date**: February 28, 2026
 
-**Author**: Grok AI (xAI) – for BangLee (@BangLee8888), Bremen, DE
+**Author**: Grok AI (xAI) – for BangLee (@BangLee8888)
 
 **Changes in 1.2**: Marked all features as implemented; full system ready for production deployment.
 
@@ -18,7 +18,7 @@ This FSD defines the functional requirements for the WATERFRONT system, a self-s
 
 ### 1.1 System Purpose
 
-WATERFRONT is a web-based PWA (Progressive Web App) for booking kayak rentals, integrated with ESP32-based vending controllers for unmanned locations. Key features:
+WATERFRONT is a web-based PWA (Progressive Web App) for booking kayak and Stand-Up-Paddle Board rentals (equipment), integrated with ESP32-based vending controllers for unmanned locations. Key features:
 
 - **User-Facing**: Book online, pay (fiat/BTC), unlock compartment via PWA, return kayak, auto-lock.
 - **Admin-Facing**: Dashboard for monitoring bookings, telemetry, payments, and remote control.
@@ -26,8 +26,8 @@ WATERFRONT is a web-based PWA (Progressive Web App) for booking kayak rentals, i
 
 ### 1.2 Scope
 
-- **In Scope**: PWA booking/payment, ESP32 lock control, MQTT telemetry, Supabase backend, Stripe/BTCPay integration.
-- **Out of Scope**: Physical kayak storage design, maintenance scheduling, multi-language support (start with EN/DE).
+- **In Scope**: PWA booking/payment, browser based admin application, ESP32 lock control, MQTT telemetry, Supabase backend, Stripe/BTCPay integration.
+- **Out of Scope**: Physical equipment storage design, maintenance scheduling, multi-language support (start with EN/DE).
 
 ### 1.3 Assumptions
 
@@ -40,9 +40,9 @@ WATERFRONT is a web-based PWA (Progressive Web App) for booking kayak rentals, i
 
 ### 2.1 Customer User Stories
 
-- **US-001**: As a customer, I want to browse available kayaks by date/time/location so I can choose a rental. ✅ DONE
+- **US-001**: As a customer, I want to browse available equipment by date/time/location so I can choose a rental. ✅ DONE
 - **US-002**: As a customer, I want to book and pay online so I can get instant confirmation. ✅ DONE
-- **US-003**: As a customer, I want to unlock the compartment via PWA so I can access my kayak. ✅ DONE
+- **US-003**: As a customer, I want to unlock the compartment via PWA so I can access my equipment. ✅ DONE
 - **US-004**: As a customer, I want the compartment to auto-lock on return so I don't have to worry about it. ✅ DONE
 - **US-005**: As a customer, I want deposit release on timely return so I get my money back. ✅ DONE
 
@@ -74,7 +74,7 @@ WATERFRONT is a web-based PWA (Progressive Web App) for booking kayak rentals, i
 
 - **FR-ESP-01**: Connect to MQTT broker and subscribe to commands. ✅ DONE
 - **FR-ESP-02**: Control servo/relay for compartment locks. ✅ DONE
-- **FR-ESP-03**: Detect kayak presence with ultrasonic sensors. ✅ DONE
+- **FR-ESP-03**: Detect equipment presence with ultrasonic sensors. ✅ DONE
 - **FR-ESP-04**: Publish telemetry and events via MQTT. ✅ DONE
 - **FR-ESP-05**: Support WiFi provisioning (BLE/SoftAP). ✅ DONE
 - **FR-ESP-06**: Failover to LTE if WiFi fails. ✅ DONE
