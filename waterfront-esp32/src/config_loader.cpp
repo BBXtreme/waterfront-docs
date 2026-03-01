@@ -165,7 +165,7 @@ bool saveConfig() {
     return true;
 }
 
-bool updateConfigFromJson(const std::string& jsonPayload) {
+bool updateConfigFromJson(const String& jsonPayload) {
     // Validate basic JSON
     DynamicJsonDocument doc(4096);
     DeserializationError error = deserializeJson(doc, jsonPayload);
@@ -181,7 +181,7 @@ bool updateConfigFromJson(const std::string& jsonPayload) {
         ESP_LOGE("CONFIG", "Failed to open config.json for write");
         return false;
     }
-    configFile.print(jsonPayload.c_str());
+    configFile.print(jsonPayload);
     configFile.close();
     // Reload globals
     return loadConfig();
