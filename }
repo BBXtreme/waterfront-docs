@@ -58,3 +58,25 @@
 - Advanced sensor fusion
 - Cloud integration
 - Mobile app API
+
+## API Reference
+### MQTT Commands
+- Subscribe to `waterfront/{location}/{code}/command` for remote commands
+- Publish to `waterfront/{location}/{code}/response` for acknowledgments
+
+### REST API (SoftAP Provisioning)
+- GET `/`: Returns WiFi setup form
+- POST `/set`: Accepts SSID and password, attempts connection
+
+## Deployment Guide
+1. Flash ESP32 with firmware using PlatformIO
+2. Upload config.json and certs to LittleFS
+3. Power on and provision WiFi via BLE or SoftAP
+4. Monitor via MQTT topics
+
+## Troubleshooting
+- Check serial logs for errors
+- Verify config.json syntax
+- Ensure certs are uploaded to LittleFS
+- Monitor MQTT connection status
+- Use factory reset if unresponsive
