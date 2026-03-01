@@ -5913,3 +5913,20 @@
 
 # 2026-03-01 14:28:29.136048
 +/commit
+
+# 2026-03-01 14:28:56.244133
++Verify and finalize centralized configuration in waterfront-esp32.
++
++1. Confirm src/config_loader.cpp and config_loader.h exist.
++2. If missing, create them with GlobalConfig struct (mqtt, location, compartments array, useTLS, caCertPath, etc.).
++3. In main.cpp: call loadConfig() after LittleFS.begin().
++4. Ensure all other files use g_config.* instead of hard-codes.
++
++Show list of changed files + diffs for main.cpp and config_loader.h.
++Commit: "feat: finalize centralized config loader with full runtime support"
+
+# 2026-03-01 14:28:59.091062
++all
+
+# 2026-03-01 14:29:31.253150
++/commit
