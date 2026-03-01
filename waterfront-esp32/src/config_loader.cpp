@@ -79,8 +79,34 @@ bool validateConfig(const GlobalConfig& cfg) {
 // Handles edge cases: missing file, invalid JSON, validation failures
 bool loadConfig() {
     ESP_LOGI("CONFIG", "Attempting to load config from LittleFS");
-    if (!LittleFS.begin()) {
-        ESP_LOGE("CONFIG", "Failed to mount LittleFS");
+    const int MAX_RETRIES = 3;
+    bool success = false;
+    for (int retry = 0; retry < MAX_RETRIES; retry++) {
+        if (LittleFS.begin()) {
+            ESP_LOGI("CONFIG", "LittleFS mounted on attempt %d", retry + 1);
+            success = true;
+            break;
+        } else {
+            ESP_LOGE("CONFIG", "Failed to mount LittleFS on attempt %d", retry + 1);
+            if (retry == MAX_RETRIES - 1) {
+                ESP_LOGW("CONFIG", "Persistent LittleFS failure, attempting format");
+                if (LittleFS.format()) {
+                    ESP_LOGI("CONFIG", "LittleFS formatted successfully, retrying mount");
+                    if (LittleFS.begin()) {
+                        ESP_LOGI("CONFIG", "LittleFS mounted after format");
+                        success = true;
+                        break;
+                    } else {
+                        ESP_LOGE("CONFIG", "Failed to mount LittleFS even after format");
+                    }
+                } else {
+                    ESP_LOGE("CONFIG", "Failed to format LittleFS");
+                }
+            }
+        }
+    }
+    if (!success) {
+        ESP_LOGE("CONFIG", "LittleFS mount failed after retries and format, using defaults");
         g_config = getDefaultConfig();
         return false;
     }
