@@ -4,6 +4,7 @@
  * @author BBXtreme + Grok
  * @date 2026-02-28
  * @note Logs fatal errors, publishes alerts to MQTT, and restarts ESP32.
+ *       Handles edge cases like MQTT not connected, invalid codes.
  */
 
 #include "error_handler.h"
@@ -19,7 +20,12 @@ extern PubSubClient mqttClient;
 
 // fatal_error function: Handles unrecoverable errors.
 // Logs the error, publishes to MQTT if connected, and restarts the ESP32.
+// Edge cases: MQTT not connected (skips publish), invalid code (logs as is).
 void fatal_error(const char* msg, esp_err_t code) {
+    // Validate inputs
+    if (!msg) {
+        msg = "Unknown error";  // Fallback for null message
+    }
     // Log error with code name for debugging
     ESP_LOGE("FATAL", "%s: %s (0x%x)", msg, esp_err_to_name(code), code);
 
@@ -32,9 +38,15 @@ void fatal_error(const char* msg, esp_err_t code) {
         String payload;
         serializeJson(doc, payload);
         char topic[96];
-        snprintf(topic, sizeof(topic), "waterfront/%s/%s/debug", g_config.location.slug.c_str(), g_config.location.code.c_str());
-        mqttClient.publish(topic, payload.c_str(), false);  // Not retained for debug
-        ESP_LOGI("FATAL", "Published fatal error to debug topic");
+        int len = snprintf(topic, sizeof(topic), "waterfront/%s/%s/debug", g_config.location.slug.c_str(), g_config.location.code.c_str());
+        if (len >= sizeof(topic)) {
+            ESP_LOGE("FATAL", "Topic too long for buffer, skipping debug publish");
+        } else {
+            mqttClient.publish(topic, payload.c_str(), false);  // Not retained for debug
+            ESP_LOGI("FATAL", "Published fatal error to debug topic");
+        }
+    } else if (!mqttClient.connected()) {
+        ESP_LOGW("FATAL", "MQTT not connected, skipping debug publish");
     }
 
     // Publish to alert topic for critical alerts (always attempted)
@@ -45,9 +57,13 @@ void fatal_error(const char* msg, esp_err_t code) {
     String alertPayload;
     serializeJson(alertDoc, alertPayload);
     char alertTopic[96];
-    snprintf(alertTopic, sizeof(alertTopic), "waterfront/%s/%s/alert", g_config.location.slug.c_str(), g_config.location.code.c_str());
-    mqttClient.publish(alertTopic, alertPayload.c_str(), false);  // Not retained
-    ESP_LOGI("FATAL", "Published alert to %s", alertTopic);
+    int alertLen = snprintf(alertTopic, sizeof(alertTopic), "waterfront/%s/%s/alert", g_config.location.slug.c_str(), g_config.location.code.c_str());
+    if (alertLen >= sizeof(alertTopic)) {
+        ESP_LOGE("FATAL", "Alert topic too long for buffer, skipping alert publish");
+    } else {
+        mqttClient.publish(alertTopic, alertPayload.c_str(), false);  // Not retained
+        ESP_LOGI("FATAL", "Published alert to %s", alertTopic);
+    }
 
     // Delay to allow publish to complete before restart
     delay(5000);
