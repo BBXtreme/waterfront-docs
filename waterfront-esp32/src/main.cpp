@@ -217,10 +217,13 @@ void setup() {
         ESP_LOGI("OTA", "Start updating %s", type.c_str());
         // Save current FW_VERSION to NVS before OTA
         Preferences preferences;
-        preferences.begin("ota", false);
-        preferences.putString("prev_version", FW_VERSION);
-        preferences.end();
-        ESP_LOGI("OTA", "Saved previous FW version to NVS: %s", FW_VERSION);
+        if (preferences.begin("ota", false)) {
+            preferences.putString("prev_version", FW_VERSION);
+            preferences.end();
+            ESP_LOGI("OTA", "Saved previous FW version to NVS: %s", FW_VERSION);
+        } else {
+            ESP_LOGE("OTA", "Failed to begin NVS for OTA save");
+        }
         // Publish OTA start event
         if (mqttClient.connected()) {
             DynamicJsonDocument doc(256);
@@ -240,10 +243,13 @@ void setup() {
         ESP_LOGI("OTA", "End");
         // Clear saved version on successful OTA
         Preferences preferences;
-        preferences.begin("ota", false);
-        preferences.remove("prev_version");
-        preferences.end();
-        ESP_LOGI("OTA", "Cleared previous FW version from NVS after successful update");
+        if (preferences.begin("ota", false)) {
+            preferences.remove("prev_version");
+            preferences.end();
+            ESP_LOGI("OTA", "Cleared previous FW version from NVS after successful update");
+        } else {
+            ESP_LOGE("OTA", "Failed to begin NVS for OTA clear");
+        }
         // Publish OTA end event
         if (mqttClient.connected()) {
             DynamicJsonDocument doc(256);
