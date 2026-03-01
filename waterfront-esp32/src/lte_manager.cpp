@@ -56,7 +56,11 @@ bool lte_is_connected() {
 
 float readSolarVoltage() {
     // Assume ADC pin from config (e.g., GPIO 35)
-    int adcValue = analogRead(35);  // Example pin
+    int adcValue = analogRead(35);  // ADC pin for solar
+    if (adcValue < 0 || adcValue > 4095) {
+        ESP_LOGE("LTE", "Invalid ADC value for solar: %d", adcValue);
+        return 0.0f;  // Fallback
+    }
     // Convert to voltage (calibrate based on divider)
     float voltage = (adcValue / 4095.0) * 3.3 * (10.0 / 3.3);  // Example divider 10k/3.3k
     return voltage;
@@ -68,10 +72,12 @@ bool shouldDisableLTE() {
 }
 
 void lte_power_management() {
+    // Power down LTE if WiFi is connected and MQTT has been idle for >5 minutes
     if (WiFi.status() == WL_CONNECTED && mqttClient.connected() && (millis() - lastMqttActivity > 300000)) {  // 5 min idle
         lte_power_down();
         ESP_LOGI("LTE", "Powered down due to WiFi connected and idle > 5 min");
     }
+    // Power down LTE if solar voltage is low to conserve power
     if (shouldDisableLTE()) {
         lte_power_down();
         ESP_LOGI("LTE", "Powered down due to low solar voltage");
