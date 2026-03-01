@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <ArduinoJson.h>
 
-// Max compartments
-const int MAX_COMPARTMENTS
+struct MqttConfig {
+  String broker
