@@ -33,6 +33,7 @@ void factory_reset_task(void *pvParameters) {
     bool buttonPressed = false;
 
     while (1) {
+        esp_task_wdt_reset();  // Reset watchdog at start of loop
         int buttonState = digitalRead(RESET_BUTTON_PIN);
         if (buttonState == LOW) {  // Button pressed (active low)
             if (!buttonPressed) {
@@ -60,7 +61,6 @@ void factory_reset_task(void *pvParameters) {
         } else {
             buttonPressed = false;
         }
-        esp_task_wdt_reset();  // Reset watchdog
         vTaskDelay(pdMS_TO_TICKS(100));  // Check every 100ms
     }
 }
@@ -68,8 +68,8 @@ void factory_reset_task(void *pvParameters) {
 // Overdue check task
 void overdue_check_task(void *pvParameters) {
     while (1) {
+        esp_task_wdt_reset();  // Reset watchdog at start of loop
         checkOverdue();
-        esp_task_wdt_reset();  // Reset watchdog
         vTaskDelay(pdMS_TO_TICKS(10000));  // Check every 10 seconds
     }
 }
@@ -77,6 +77,7 @@ void overdue_check_task(void *pvParameters) {
 // Debug task for remote health telemetry
 void debug_task(void *pvParameters) {
     while (1) {
+        esp_task_wdt_reset();  // Reset watchdog at start of loop
         if (g_config.debugMode) {
             // Publish debug telemetry
             DynamicJsonDocument doc(512);
@@ -91,7 +92,6 @@ void debug_task(void *pvParameters) {
             mqttClient.publish(topic, payload.c_str(), false);  // Not retained
             ESP_LOGI("DEBUG", "Published debug telemetry: %s", payload.c_str());
         }
-        esp_task_wdt_reset();  // Reset watchdog
         vTaskDelay(pdMS_TO_TICKS(60000));  // Every 60 seconds (60000 ms)
     }
 }

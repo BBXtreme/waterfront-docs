@@ -99,13 +99,13 @@ void mqtt_publish_slot_status(int slotId, const char* jsonPayload) {
 // MQTT loop task with watchdog reset
 void mqtt_loop_task(void *pvParameters) {
     while (1) {
+        esp_task_wdt_reset();  // Reset watchdog at start of loop
         if (!mqttClient.connected()) {
             if (mqtt_init() != ESP_OK) {
                 fatal_error("MQTT reconnect failed");
             }
         }
         mqttClient.loop();
-        esp_task_wdt_reset();  // Reset watchdog every ~1s
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
