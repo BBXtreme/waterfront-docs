@@ -1,0 +1,60 @@
+
+## MQTT Topics
+- `waterfront/{location}/{code}/debug`: Health telemetry
+- `waterfront/{location}/{code}/alert`: Fatal errors
+- `waterfront/machine/{code}/status`: Machine status
+- `waterfront/slots/{id}/status`: Slot status
+- `waterfront/locations/{code}/depositRelease`: Deposit release
+- `waterfront/locations/{code}/returnConfirm`: Return confirmation
+
+## Power Management
+- Monitors battery and solar voltage every 60 seconds
+- Enters deep sleep if battery < threshold or solar < min
+- LTE modem powered down if WiFi connected and idle > 5 min
+- LTE modem powered down if solar voltage low
+
+## Provisioning
+- BLE GATT service for WiFi credentials
+- SoftAP web server as fallback
+- Stores credentials in NVS
+
+## OTA Updates
+- ArduinoOTA with password protection
+- Saves current FW version to NVS before update
+- Publishes progress and errors to MQTT
+- Clears saved version on success
+
+## Error Handling
+- Fatal errors logged and published to MQTT
+- ESP restart on fatal errors
+- Watchdog on all tasks (12s timeout)
+
+## Testing
+- Unit tests with Catch2 for core functions
+- Mocks for hardware and network dependencies
+- Coverage for config, MQTT, deposit, sensor, LTE, error handling
+
+## Security
+- TLS with CA and optional client certs
+- MQTT authentication
+- OTA password protection
+- NVS for sensitive data
+
+## Performance
+- Low power consumption with deep sleep
+- Efficient MQTT reconnection
+- Minimal heap usage
+
+## Edge Cases Handled
+- Invalid config values
+- MQTT disconnection
+- Sensor failures
+- Power fluctuations
+- Provisioning timeouts
+- OTA failures
+
+## Future Enhancements
+- Multi-compartment support
+- Advanced sensor fusion
+- Cloud integration
+- Mobile app API
