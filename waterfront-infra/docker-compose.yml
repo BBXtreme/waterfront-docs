@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
   mosquitto:
     image: eclipse-mosquitto:latest
     container_name: mqtt-broker
     ports:
-      - "1883:1883"         # MQTT plain
-      - "8883:8883"         # MQTT TLS
-      - "9001:9001"         # WebSocket (optional for browser clients)
+      - "1883:1883"     # plain MQTT (dev only - comment out in prod)
+      - "8883:8883"     # MQTTS (secure MQTT)
+      - "9001:9001"     # wss:// secure WebSockets
     volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro   # :ro = read-only
       - ./data:/mosquitto/data
       - ./log:/mosquitto/log
-      - ./certs:/mosquitto/config/certs  # Mount certs directory
-      - ./passwd:/mosquitto/config/passwd  # Mount password file
+      - ./certs:/mosquitto/config/certs:ro
+      - ./passwd:/mosquitto/config/passwd:ro
     restart: unless-stopped
