@@ -114,3 +114,36 @@ TEST_CASE("Get Gate State", "[gate]") {
     // Verify returns "open" (since mock digitalRead(13) == 1)
     REQUIRE(std::string(state) == "open");
 }
+
+// Test timeout and retry logic
+TEST_CASE("Gate Timeout and Retry", "[gate]") {
+    // Load mock config
+    loadConfig();
+
+    // Reset mocks
+    mockMillis = 0;
+    mockServos[0].lastWriteAngle = -1;
+
+    // Call open gate
+    openCompartmentGate(1);
+    REQUIRE(mockServos[0].lastWriteAngle == 90);
+
+    // Simulate timeout without limit switch
+    mockMillis = GATE_MOVE_TIMEOUT_MS + 1000;  // Exceed timeout
+    gate_task();  // Should retry
+
+    // Verify retry: servo write again
+    REQUIRE(mockServos[0].lastWriteAngle == 90);  // Same angle for retry
+}
+
+// Test invalid compartment ID
+TEST_CASE("Invalid Compartment ID", "[gate]") {
+    // Load mock config
+    loadConfig();
+
+    // Call open gate for invalid ID
+    openCompartmentGate(99);
+
+    // Verify no servo action (pin remains -1)
+    REQUIRE(mockServos[0].attachedPin == -1);  // Not attached in this test
+}

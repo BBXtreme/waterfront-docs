@@ -99,3 +99,33 @@ TEST_CASE("Get Compartment by Invalid ID", "[compartment]") {
     // Verify returns nullptr
     REQUIRE(comp == nullptr);
 }
+
+// Test compartment name generation
+TEST_CASE("Compartment Name Generation", "[compartment]") {
+    // Load compartments
+    load_compartments();
+
+    // Get compartments
+    auto comps = get_all_compartments();
+
+    // Verify names
+    REQUIRE(std::string(comps[0].name) == "Compartment 1");
+    REQUIRE(std::string(comps[1].name) == "Compartment 2");
+}
+
+// Test empty config fallback
+TEST_CASE("Empty Config Fallback", "[compartment]") {
+    // Clear compartments
+    g_config.compartments.clear();
+
+    // Call load
+    load_compartments();
+
+    // Get compartments
+    auto comps = get_all_compartments();
+
+    // Verify fallback to default
+    REQUIRE(comps.size() == 1);
+    REQUIRE(comps[0].id == 1);
+    REQUIRE(std::string(comps[0].name) == "Compartment 1");
+}
