@@ -147,6 +147,8 @@ void mqtt_publish_slot_status(int slotId, const char* jsonPayload) {
 // mqtt_loop_task: Maintains MQTT connection in a separate task.
 // Reconnects on failure and increments reconnect counter.
 void mqtt_loop_task(void *pvParameters) {
+    // Add this task to watchdog for monitoring
+    esp_task_wdt_add(NULL);
     while (1) {
         esp_task_wdt_reset();  // Reset watchdog
         if (!mqttClient.connected()) {

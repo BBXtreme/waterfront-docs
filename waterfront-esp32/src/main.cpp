@@ -32,6 +32,8 @@ void factory_reset_task(void *pvParameters) {
     const int RESET_BUTTON_PIN = 0;  // GPIO 0 (boot button)
     const unsigned long RESET_HOLD_TIME_MS = 5000;  // 5 seconds hold time
     pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);  // Pull-up for active low
+    // Add this task to watchdog for monitoring
+    esp_task_wdt_add(NULL);
     unsigned long pressStartTime = 0;
     bool buttonPressed = false;
 
@@ -71,6 +73,8 @@ void factory_reset_task(void *pvParameters) {
 
 // Overdue check task: Periodically checks for overdue rentals and triggers auto-lock.
 void overdue_check_task(void *pvParameters) {
+    // Add this task to watchdog for monitoring
+    esp_task_wdt_add(NULL);
     while (1) {
         esp_task_wdt_reset();  // Reset watchdog
         checkOverdue();  // Check and handle overdue rentals
@@ -81,6 +85,8 @@ void overdue_check_task(void *pvParameters) {
 // Debug task: Publishes health telemetry every 60s if debug mode is enabled.
 // Includes uptime, heap, firmware version, battery, tasks, and reconnects.
 void debug_task(void *pvParameters) {
+    // Add this task to watchdog for monitoring
+    esp_task_wdt_add(NULL);
     while (1) {
         esp_task_wdt_reset();  // Reset watchdog
         if (g_config.debugMode) {
