@@ -2,7 +2,6 @@
 #define CONFIG_LOADER_H
 
 #include <Arduino.h>
-#include <vector>
 #include <ArduinoJson.h>
 
 // Max compartments (for array fallback if needed, but using vector)
@@ -82,7 +81,7 @@ struct GlobalConfig {
     WifiProvisioningConfig wifiProvisioning;
     LteConfig lte;
     BleConfig ble;
-    std::vector<CompartmentConfig> compartments;
+    CompartmentConfig compartments[MAX_COMPARTMENTS];
     int compartmentCount;  // For compatibility
     SystemConfig system;
     OtherConfig other;
