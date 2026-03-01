@@ -1,6 +1,6 @@
 # Waterfront ESP32 Firmware
 
-ESP32 firmware for Waterfront unmanned kayak/SUP rental compartments. Controls servo gates, detects presence with ultrasonic sensors, handles MQTT-based unlock commands, and supports runtime configuration updates.
+ESP32 firmware for Waterfront unmanned kayak rental compartments. Controls servo gates, detects presence with ultrasonic sensors, handles MQTT-based unlock commands, and supports runtime configuration updates.
 
 ## Project Overview
 
