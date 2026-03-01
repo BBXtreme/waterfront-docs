@@ -6011,3 +6011,21 @@
 
 # 2026-03-01 14:36:02.475899
 +/commit
+
+# 2026-03-01 14:36:32.853730
++review implementations done by the 4 last prompts and improve or debugg if necessary
+
+# 2026-03-01 14:36:57.897067
++Add basic OTA and factory reset to waterfront-esp32.
++
++1. MQTT /ota/update subscription → httpUpdate.
++2. GPIO long-press factory reset (erase NVS + config.json).
++
++Show diffs for mqtt_handler.cpp + main.cpp.
++Commit: "feat: basic OTA + factory reset button"
+
+# 2026-03-01 14:37:34.757166
++all
+
+# 2026-03-01 14:38:16.321205
++/commit again
