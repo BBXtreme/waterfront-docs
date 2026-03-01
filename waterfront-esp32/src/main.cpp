@@ -294,11 +294,18 @@ void setup() {
         else if (error == OTA_CONNECT_ERROR) ESP_LOGE("OTA", "Connect Failed");
         else if (error == OTA_RECEIVE_ERROR) ESP_LOGE("OTA", "Receive Failed");
         else if (error == OTA_END_ERROR) ESP_LOGE("OTA", "End Failed");
-        // Publish error event
+        // Publish error event with previous version for rollback info
         if (mqttClient.connected()) {
+            Preferences preferences;
+            String prevVersion = "";
+            if (preferences.begin("ota", true)) {  // Read-only
+                prevVersion = preferences.getString("prev_version", "");
+                preferences.end();
+            }
             DynamicJsonDocument doc(256);
             doc["event"] = "ota_error";
             doc["error_code"] = error;
+            doc["prev_version"] = prevVersion;
             doc["timestamp"] = millis();
             String payload;
             serializeJson(doc, payload);
