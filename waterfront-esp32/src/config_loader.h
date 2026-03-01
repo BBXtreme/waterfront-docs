@@ -6,10 +6,4 @@
 #include <ArduinoJson.h>
 
 struct MqttConfig {
-  String broker;
-  int port;
-  String username;
-  String password;
-  bool useTLS;
-  String caCertPath = "/ca.pem";
-  String clientCertPath
+  String broker
