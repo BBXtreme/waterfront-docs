@@ -133,6 +133,16 @@ bool loadConfig() {
         return false;
     }
 
+    // Check version for migration
+    String configVersion = doc["version"].as<String>();
+    if (configVersion.length() == 0) {
+        ESP_LOGW("CONFIG", "Config version missing, assuming old config, migrating to 1.0");
+        configVersion = "1.0";
+        // Add any migration logic here if needed for future versions
+    }
+    g_config.version = configVersion;
+    ESP_LOGI("CONFIG", "Config version: %s", g_config.version.c_str());
+
     // Parse MQTT section
     if (doc.containsKey("mqtt")) {
         JsonObject mqtt = doc["mqtt"];
@@ -315,6 +325,7 @@ bool updateConfigFromJson(const char* jsonPayload) {
 GlobalConfig getDefaultConfig() {
     ESP_LOGI("CONFIG", "Generating default config");
     GlobalConfig def;
+    def.version = "1.0";
     def.mqtt.broker = "192.168.178.50";
     def.mqtt.port = 8883;
     def.mqtt.username = "mqttuser";
@@ -353,6 +364,8 @@ GlobalConfig getDefaultConfig() {
 // Useful for publishing current config via MQTT
 String getConfigAsJson() {
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    // Serialize version
+    doc["version"] = g_config.version;
     // Serialize MQTT section
     JsonObject mqtt = doc.createNestedObject("mqtt");
     mqtt["broker"] = g_config.mqtt.broker;

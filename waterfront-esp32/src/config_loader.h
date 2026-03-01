@@ -78,6 +78,7 @@ struct OtherConfig {
 
 // Global config struct
 struct GlobalConfig {
+    String version;  // Config version for migration
     MqttConfig mqtt;
     LocationConfig location;
     WifiProvisioningConfig wifiProvisioning;
