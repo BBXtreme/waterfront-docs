@@ -124,7 +124,7 @@ bool loadConfig() {
         return false;
     }
     ESP_LOGI("CONFIG", "Config file size: %d bytes", fileSize);
-    DynamicJsonDocument doc(4096);
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     DeserializationError error = deserializeJson(doc, configFile);
     configFile.close();  // Always close file
     if (error) {
@@ -266,7 +266,7 @@ bool saveConfig() {
         ESP_LOGE("CONFIG", "Failed to open config.json for write");
         return false;
     }
-    DynamicJsonDocument doc(4096);
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     // Serialize g_config to doc (placeholder - implement full serialization if needed)
     // For now, assume config is saved via updateConfigFromJson
     serializeJson(doc, configFile);
@@ -285,7 +285,7 @@ bool updateConfigFromJson(const char* jsonPayload) {
         return false;
     }
     // Validate basic JSON
-    DynamicJsonDocument doc(4096);
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     DeserializationError error = deserializeJson(doc, jsonPayload);
     if (error) {
         ESP_LOGE("CONFIG", "Invalid JSON for update: %s", error.c_str());
