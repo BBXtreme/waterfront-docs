@@ -1,36 +1,44 @@
 // gate_control.h - Header for gate control functions
 // This header declares functions for servo and limit switch operations.
 // Used for physical gate control in slot-based system.
+// Author: BBXtreme + Grok
+// Date: 2026-02-28
+// Note: Provides non-blocking gate operations for kayak compartments.
 
 #ifndef GATE_CONTROL_H
 #define GATE_CONTROL_H
 
 /**
  * @brief Initializes gate control for all compartments.
+ *        Sets up servos, limit switches, and initial states based on configuration.
  */
 void gate_init();
 
 /**
- * @brief Opens gate for compartment (non-blocking, sets target state).
- * @param compartmentId The compartment ID to open.
+ * @brief Opens the gate for a specific compartment (non-blocking operation).
+ *        Sets the target state to open; actual movement is handled in gate_task().
+ * @param compartmentId The ID of the compartment to open (1-based index).
  */
 void openCompartmentGate(int compartmentId);
 
 /**
- * @brief Closes gate for compartment (non-blocking, sets target state).
- * @param compartmentId The compartment ID to close.
+ * @brief Closes the gate for a specific compartment (non-blocking operation).
+ *        Sets the target state to close; actual movement is handled in gate_task().
+ * @param compartmentId The ID of the compartment to close (1-based index).
  */
 void closeCompartmentGate(int compartmentId);
 
 /**
- * @brief Gets gate state for compartment.
- * @param compartmentId The compartment ID.
- * @return String representing gate state ("open", "closed", or "unknown").
+ * @brief Retrieves the current gate state for a specific compartment.
+ * @param compartmentId The ID of the compartment to query (1-based index).
+ * @return A string representing the gate state ("open", "closed", or "unknown").
  */
 const char* getCompartmentGateState(int compartmentId);
 
 /**
- * @brief Task to handle servo movement (call from main loop).
+ * @brief Task function to handle servo movement and state updates.
+ *        Should be called periodically from the main loop to process gate operations.
+ *        Checks limit switches and updates states accordingly.
  */
 void gate_task();
 
