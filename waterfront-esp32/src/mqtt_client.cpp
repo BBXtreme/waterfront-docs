@@ -44,17 +44,49 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     ESP_LOGI("MQTT", "Parsed JSON successfully");
 }
 
+// Parse broker URI to extract host, port, and TLS flag
+// Supports mqtt://host:port and mqtts://host:port
+// Defaults to mqtts:// if no scheme
+void parseBrokerUri(const String& brokerUri, String& host, int& port, bool& useTLS) {
+    if (brokerUri.startsWith("mqtts://")) {
+        useTLS = true;
+        port = 8883;  // Default for MQTT over TLS
+        host = brokerUri.substring(8);  // Remove "mqtts://"
+    } else if (brokerUri.startsWith("mqtt://")) {
+        useTLS = false;
+        port = 1883;  // Default for plain MQTT
+        host = brokerUri.substring(7);  // Remove "mqtt://"
+    } else {
+        // No scheme, default to mqtts://
+        useTLS = true;
+        port = 8883;
+        host = "mqtts://" + brokerUri;
+    }
+    // Extract port if specified (e.g., host:port)
+    int colonIndex = host.indexOf(':');
+    if (colonIndex != -1) {
+        port = host.substring(colonIndex + 1).toInt();
+        host = host.substring(0, colonIndex);
+    }
+}
+
 // mqtt_init: Initializes MQTT connection with TLS if configured.
 // Loads certs from LittleFS, sets up client, and connects with credentials.
 // Edge cases: missing certs, invalid broker, connection failures.
 esp_err_t mqtt_init() {
-    // Retrieve broker and port from config with fallbacks
-    String broker = g_config.mqtt.broker.length() > 0 ? g_config.mqtt.broker : "192.168.178.50";
-    int port = g_config.mqtt.port > 0 ? g_config.mqtt.port : 1883;
-    bool useTLS = g_config.mqtt.useTLS;
-    ESP_LOGI("MQTT", "Initializing MQTT: broker=%s, port=%d, useTLS=%d", broker.c_str(), port, useTLS);
+    // Parse broker URI
+    String host;
+    int port;
+    bool useTLS;
+    parseBrokerUri(g_config.mqtt.broker, host, port, useTLS);
+    ESP_LOGI("MQTT", "Parsed broker: host=%s, port=%d, useTLS=%d", host.c_str(), port, useTLS);
 
-    bool tlsEnabled = useTLS;
+    // Override config useTLS if URI specifies
+    if (useTLS) {
+        g_config.mqtt.useTLS = true;
+    }
+
+    bool tlsEnabled = g_config.mqtt.useTLS;
     String caStr, certStr, keyStr;
     bool caLoaded = false, certLoaded = false;
     if (tlsEnabled) {
@@ -113,6 +145,11 @@ esp_err_t mqtt_init() {
         if (certLoaded) {
             mqttClient.setCertificate(certStr.c_str(), keyStr.c_str());
         }
+        // Skip verification if configured (for testing, false in prod)
+        if (g_config.mqtt.tlsSkipVerify) {
+            mqttClient.setInsecure();  // Skip certificate verification
+            ESP_LOGW("MQTT", "TLS certificate verification skipped (tlsSkipVerify=true)");
+        }
         ESP_LOGI("MQTT", "TLS configured");
     }
 
@@ -123,9 +160,9 @@ esp_err_t mqtt_init() {
     }
 
     // Set server and callback
-    mqttClient.setServer(broker.c_str(), port);
+    mqttClient.setServer(host.c_str(), port);
     mqttClient.setCallback(mqtt_callback);
-    ESP_LOGI("MQTT", "Server set to %s:%d", broker.c_str(), port);
+    ESP_LOGI("MQTT", "Server set to %s:%d", host.c_str(), port);
 
     // Generate client ID
     String clientId = (g_config.mqtt.clientIdPrefix.length() > 0 ? g_config.mqtt.clientIdPrefix : "waterfront") + "-client";

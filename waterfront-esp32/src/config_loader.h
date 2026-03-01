@@ -19,6 +19,7 @@ struct MqttConfig {
     String caCertPath;
     String clientCertPath;
     String clientKeyPath;
+    bool tlsSkipVerify;
 };
 
 // Location config

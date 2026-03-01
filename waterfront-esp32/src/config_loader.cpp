@@ -145,7 +145,8 @@ bool loadConfig() {
         g_config.mqtt.caCertPath = mqtt["caCertPath"].as<String>();
         g_config.mqtt.clientCertPath = mqtt["clientCertPath"].as<String>();
         g_config.mqtt.clientKeyPath = mqtt["clientKeyPath"].as<String>();
-        ESP_LOGI("CONFIG", "Loaded MQTT config: broker=%s, port=%d, useTLS=%d", g_config.mqtt.broker.c_str(), g_config.mqtt.port, g_config.mqtt.useTLS);
+        g_config.mqtt.tlsSkipVerify = mqtt["tlsSkipVerify"] | false;
+        ESP_LOGI("CONFIG", "Loaded MQTT config: broker=%s, port=%d, useTLS=%d, tlsSkipVerify=%d", g_config.mqtt.broker.c_str(), g_config.mqtt.port, g_config.mqtt.useTLS, g_config.mqtt.tlsSkipVerify);
     } else {
         ESP_LOGW("CONFIG", "MQTT section missing, using defaults");
     }
@@ -323,6 +324,7 @@ GlobalConfig getDefaultConfig() {
     def.mqtt.caCertPath = "/ca.pem";
     def.mqtt.clientCertPath = "";
     def.mqtt.clientKeyPath = "";
+    def.mqtt.tlsSkipVerify = false;
     def.location.slug = "bremen";
     def.location.code = "harbor-01";
     def.wifiProvisioning.fallbackSsid = "WATERFRONT-DEFAULT";
@@ -362,6 +364,7 @@ String getConfigAsJson() {
     mqtt["caCertPath"] = g_config.mqtt.caCertPath;
     mqtt["clientCertPath"] = g_config.mqtt.clientCertPath;
     mqtt["clientKeyPath"] = g_config.mqtt.clientKeyPath;
+    mqtt["tlsSkipVerify"] = g_config.mqtt.tlsSkipVerify;
     // Serialize location section
     JsonObject location = doc.createNestedObject("location");
     location["slug"] = g_config.location.slug;
