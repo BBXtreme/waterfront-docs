@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 #include "error_handler.h"
+#include <LittleFS.h>
 
 // Adapted from original mqtt_event_handler in mdb-slave-esp32s3.c
 WiFiClient espClient;
@@ -36,27 +37,50 @@ esp_err_t mqtt_init() {
     int port = g_config.mqtt.port > 0 ? g_config.mqtt.port : 1883;
     bool useTLS = g_config.mqtt.useTLS;
 
-    // Enable TLS if configured
-    if (useTLS) {
+    bool tlsEnabled = useTLS;
+    String caStr, certStr, keyStr;
+    bool caLoaded = false, certLoaded = false;
+    if (tlsEnabled) {
         File ca = LittleFS.open(g_config.mqtt.caCertPath, "r");
         if (!ca) {
-            ESP_LOGE("MQTT", "CA cert missing – aborting TLS");
-            return ESP_FAIL;
-        }
-        mqttClient.setCACert(ca.readString().c_str());
-        ESP_LOGI("MQTT", "Loaded CA cert from %s", g_config.mqtt.caCertPath.c_str());
-
-        if (g_config.mqtt.clientCertPath.length() > 0) {
-            File cert = LittleFS.open(g_config.mqtt.clientCertPath, "r");
-            File key = LittleFS.open(g_config.mqtt.clientKeyPath, "r");
-            if (cert && key) {
-                mqttClient.setCertificate(cert.readString().c_str(), key.readString().c_str());
-                ESP_LOGI("MQTT", "Loaded client cert from %s and key from %s", g_config.mqtt.clientCertPath.c_str(), g_config.mqtt.clientKeyPath.c_str());
+            ESP_LOGE("MQTT", "CA cert file missing – skipping TLS");
+            tlsEnabled = false;
+        } else {
+            caStr = ca.readString();
+            if (caStr.length() == 0) {
+                ESP_LOGE("MQTT", "CA cert empty – skipping TLS");
+                tlsEnabled = false;
             } else {
-                ESP_LOGW("MQTT", "Client cert/key missing – continuing without");
+                caLoaded = true;
+                if (g_config.mqtt.clientCertPath.length() > 0) {
+                    File cert = LittleFS.open(g_config.mqtt.clientCertPath, "r");
+                    File key = LittleFS.open(g_config.mqtt.clientKeyPath, "r");
+                    if (!cert || !key) {
+                        ESP_LOGE("MQTT", "Client cert/key file missing – skipping TLS");
+                        tlsEnabled = false;
+                    } else {
+                        certStr = cert.readString();
+                        keyStr = key.readString();
+                        if (certStr.length() == 0 || keyStr.length() == 0) {
+                            ESP_LOGE("MQTT", "Client cert/key empty – skipping TLS");
+                            tlsEnabled = false;
+                        } else {
+                            certLoaded = true;
+                        }
+                    }
+                }
             }
         }
     }
+
+    if (tlsEnabled) {
+        mqttClient.setCACert(caStr.c_str());
+        if (certLoaded) {
+            mqttClient.setCertificate(certStr.c_str(), keyStr.c_str());
+        }
+    }
+
+    if (!tlsEnabled && port == 8883) port = 1883;
 
     mqttClient.setServer(broker.c_str(), port);
     mqttClient.setCallback(mqtt_callback);
