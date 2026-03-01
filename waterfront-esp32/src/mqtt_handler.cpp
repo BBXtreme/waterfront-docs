@@ -98,6 +98,7 @@ void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
     }
     uint32_t crc = computeCRC32(jsonPayload, strlen(jsonPayload));
     doc["crc"] = crc;
+    doc["firmwareVersion"] = FW_VERSION;  // Include firmware version
     String updatedPayload;
     serializeJson(doc, updatedPayload);
     char topic[96];
@@ -146,20 +147,33 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
         ESP_LOGI("MQTT", "OTA update received: %s", msg.c_str());
         // Assume msg is the URL
         t_httpUpdate_return ret = httpUpdate.update(msg);
+        DynamicJsonDocument otaDoc(256);
+        otaDoc["firmwareVersion"] = FW_VERSION;
         switch (ret) {
             case HTTP_UPDATE_FAILED:
                 ESP_LOGE("OTA", "Update failed: %s", httpUpdate.getLastErrorString().c_str());
+                otaDoc["otaResult"] = "failed";
+                otaDoc["error"] = httpUpdate.getLastErrorString().c_str();
                 break;
             case HTTP_UPDATE_NO_UPDATES:
                 ESP_LOGI("OTA", "No updates available");
+                otaDoc["otaResult"] = "no_updates";
                 break;
             case HTTP_UPDATE_OK:
                 ESP_LOGI("OTA", "Update successful, restarting");
-                ESP.restart();
+                otaDoc["otaResult"] = "success";
                 break;
             default:
                 ESP_LOGE("OTA", "Unknown update result: %d", ret);
+                otaDoc["otaResult"] = "unknown";
                 break;
+        }
+        String otaPayload;
+        serializeJson(otaDoc, otaPayload);
+        std::string otaStatusTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/ota/status";
+        mqttClient.publish(otaStatusTopic.c_str(), otaPayload.c_str(), true);
+        if (ret == HTTP_UPDATE_OK) {
+            ESP.restart();
         }
         return;
     }
