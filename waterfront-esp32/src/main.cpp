@@ -21,6 +21,9 @@
 
 // Include other headers as needed
 
+// Firmware version define
+const char* FW_VERSION = "0.9.2-beta";
+
 // Factory reset task
 void factory_reset_task(void *pvParameters) {
     const int RESET_BUTTON_PIN = 0;  // GPIO 0 (boot button)
@@ -83,7 +86,7 @@ void debug_task(void *pvParameters) {
             doc["wifiRSSI"] = WiFi.RSSI();
             doc["mqttConnected"] = mqttClient.connected();
             doc["otaPartition"] = esp_ota_get_running_partition()->label;
-            doc["firmwareVersion"] = String(ESP.getSketchMD5());  // Firmware version (MD5 hash)
+            doc["firmwareVersion"] = FW_VERSION;  // Firmware version
             String payload;
             serializeJson(doc, payload);
             char topic[96];
