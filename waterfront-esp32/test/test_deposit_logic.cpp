@@ -10,15 +10,20 @@
 // Include headers under test
 #include "deposit_logic.h"
 #include "config_loader.h"
-#include <PubSubClient.h>
 
 // Mock GlobalConfig for tests
 GlobalConfig g_config;
 
+// Minimal PubSubClient base class for mocking
+class PubSubClient {
+public:
+    virtual bool publish(const char* topic, const char* payload, bool retained) = 0;
+};
+
 // Mock PubSubClient
 class MockPubSubClient : public PubSubClient {
 public:
-    MockPubSubClient() : PubSubClient(mockClient) {}
+    MockPubSubClient() : PubSubClient() {}
     bool publish(const char* topic, const char* payload, bool retained) override {
         lastPublishedTopic = topic;
         lastPublishedPayload = payload;
@@ -28,22 +33,6 @@ public:
     String lastPublishedTopic;
     String lastPublishedPayload;
     int publishCount = 0;
-private:
-    class MockClient : public Client {
-    public:
-        virtual int connect(IPAddress ip, uint16_t port) override { return 1; }
-        virtual int connect(const char *host, uint16_t port) override { return 1; }
-        virtual size_t write(uint8_t) override { return 1; }
-        virtual size_t write(const uint8_t *buf, size_t size) override { return size; }
-        virtual int available() override { return 0; }
-        virtual int read() override { return -1; }
-        virtual int read(uint8_t *buf, size_t size) override { return -1; }
-        virtual int peek() override { return -1; }
-        virtual void flush() override {}
-        virtual void stop() override {}
-        virtual uint8_t connected() override { return 1; }
-        virtual operator bool() override { return true; }
-    } mockClient;
 };
 
 // Global mock instance
