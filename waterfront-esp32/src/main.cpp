@@ -24,6 +24,7 @@
 void overdue_check_task(void *pvParameters) {
     while (1) {
         checkOverdue();
+        esp_task_wdt_reset();  // Reset watchdog
         vTaskDelay(pdMS_TO_TICKS(10000));  // Check every 10 seconds
     }
 }
@@ -47,6 +48,7 @@ void debug_task(void *pvParameters) {
             mqttClient.publish(topic, payload.c_str(), false);  // Not retained
             ESP_LOGI("DEBUG", "Published debug telemetry: %s", payload.c_str());
         }
+        esp_task_wdt_reset();  // Reset watchdog
         vTaskDelay(pdMS_TO_TICKS(60000));  // Every 60 seconds
     }
 }
