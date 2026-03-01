@@ -8,6 +8,9 @@
 // JSON buffer size for ArduinoJson documents (tune if config grows)
 #define JSON_BUFFER_SIZE 4096
 
+// Thread-safety mutex for g_config access (ESP32 multi-core)
+extern portMUX_TYPE g_configMutex;
+
 // MQTT config
 struct MqttConfig {
     String broker;

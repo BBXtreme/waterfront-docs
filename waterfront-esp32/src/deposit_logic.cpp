@@ -41,15 +41,18 @@ void checkOverdue() {
     unsigned long now = millis();
     for (auto it = activeTimers.begin(); it != activeTimers.end(); ) {
         unsigned long elapsedSec = (now - it->startMs) / 1000;
+        vPortEnterCritical(&g_configMutex);
         unsigned long totalAllowedSec = it->durationSec + g_config.system.gracePeriodSec;
+        String locationCode = g_config.location.code;
+        vPortExitCritical(&g_configMutex);
         if (elapsedSec > totalAllowedSec) {
             // Overdue: auto-lock
             closeCompartmentGate(it->compartmentId);
             // Publish overdue event
             char topic[96];
-            snprintf(topic, sizeof(topic), "waterfront/%s/%s/compartments/%d/event", g_config.location.slug.c_str(), g_config.location.code.c_str(), it->compartmentId);
+            snprintf(topic, sizeof(topic), "waterfront/locations/%s/returnConfirm", locationCode.c_str());
             char payload[128];
-            snprintf(payload, sizeof(payload), "{\"event\":\"overdue\",\"compartmentId\":%d,\"elapsedSec\":%lu}", it->compartmentId, elapsedSec);
+            snprintf(payload, sizeof(payload), "{\"bookingId\":\"current\",\"action\":\"autoLock\"}");
             mqttClient.publish(topic, payload);
             ESP_LOGW("DEPOSIT", "Compartment %d overdue, auto-locked", it->compartmentId);
             // Remove timer
@@ -79,7 +82,10 @@ void deposit_on_return(PubSubClient* client) {
         // Publish deposit release event
         char topic[64];
         char payload[128];
-        snprintf(topic, sizeof(topic), "waterfront/locations/%s/depositRelease", g_config.location.code.c_str());
+        vPortEnterCritical(&g_configMutex);
+        String locationCode = g_config.location.code;
+        vPortExitCritical(&g_configMutex);
+        snprintf(topic, sizeof(topic), "waterfront/locations/%s/depositRelease", locationCode.c_str());
         snprintf(payload, sizeof(payload), "{\"bookingId\":\"current\",\"release\":true}");
         client->publish(topic, payload);
     } else {
@@ -99,7 +105,10 @@ void deposit_check_overdue(PubSubClient* client) {
         // Publish returnConfirm for auto-lock
         char topic[64];
         char payload[128];
-        snprintf(topic, sizeof(topic), "waterfront/locations/%s/returnConfirm", g_config.location.code.c_str());
+        vPortEnterCritical(&g_configMutex);
+        String locationCode = g_config.location.code;
+        vPortExitCritical(&g_configMutex);
+        snprintf(topic, sizeof(topic), "waterfront/locations/%s/returnConfirm", locationCode.c_str());
         snprintf(payload, sizeof(payload), "{\"bookingId\":\"current\",\"action\":\"autoLock\"}");
         client->publish(topic, payload);
     }

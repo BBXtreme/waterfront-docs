@@ -13,6 +13,9 @@
 // Global config instance - shared across the application
 GlobalConfig g_config;
 
+// Thread-safety mutex for g_config access (ESP32 multi-core)
+portMUX_TYPE g_configMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // Validate config: check types, bounds (pins 0-39, etc.)
 // Returns false if any validation fails, logs errors for debugging
 bool validateConfig(const GlobalConfig& cfg) {
@@ -107,20 +110,26 @@ bool loadConfig() {
     }
     if (!success) {
         ESP_LOGE("CONFIG", "LittleFS mount failed after retries and format, using defaults");
+        vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
         return false;
     }
     File configFile = LittleFS.open("/config.json", "r");
     if (!configFile) {
         ESP_LOGW("CONFIG", "config.json not found, using defaults");
+        vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
         return false;
     }
     size_t fileSize = configFile.size();
     if (fileSize == 0) {
         ESP_LOGE("CONFIG", "config.json is empty, using defaults");
         configFile.close();
+        vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
         return false;
     }
     ESP_LOGI("CONFIG", "Config file size: %d bytes", fileSize);
@@ -129,17 +138,20 @@ bool loadConfig() {
     configFile.close();  // Always close file
     if (error) {
         ESP_LOGE("CONFIG", "Failed to parse config.json: %s, using defaults", error.c_str());
+        vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
         return false;
     }
 
     // Check version for migration
-    String configVersion = doc["version"].as<String>();
+    String configVersion = doc["version"].as.String();
     if (configVersion.length() == 0) {
         ESP_LOGW("CONFIG", "Config version missing, assuming old config, migrating to 1.0");
         configVersion = "1.0";
         // Add any migration logic here if needed for future versions
     }
+    vPortEnterCritical(&g_configMutex);
     g_config.version = configVersion;
     ESP_LOGI("CONFIG", "Config version: %s", g_config.version.c_str());
 
@@ -257,10 +269,12 @@ bool loadConfig() {
     if (!validateConfig(g_config)) {
         ESP_LOGE("CONFIG", "Config validation failed, using defaults");
         g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
         return false;
     }
 
     ESP_LOGI("CONFIG", "Loaded and validated config from LittleFS");
+    vPortExitCritical(&g_configMutex);
     return true;
 }
 
@@ -363,6 +377,7 @@ GlobalConfig getDefaultConfig() {
 // Serialize current g_config to JSON string
 // Useful for publishing current config via MQTT
 String getConfigAsJson() {
+    vPortEnterCritical(&g_configMutex);
     DynamicJsonDocument doc(JSON_BUFFER_SIZE);
     // Serialize version
     doc["version"] = g_config.version;
@@ -424,5 +439,6 @@ String getConfigAsJson() {
     // Serialize to string
     String jsonString;
     serializeJson(doc, jsonString);
+    vPortExitCritical(&g_configMutex);
     return jsonString;
 }

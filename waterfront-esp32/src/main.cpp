@@ -107,7 +107,12 @@ void debug_task(void *pvParameters) {
     esp_task_wdt_add(NULL);
     while (1) {
         esp_task_wdt_reset();  // Reset watchdog
-        if (g_config.debugMode) {
+        vPortEnterCritical(&g_configMutex);
+        bool debugEnabled = g_config.system.debugMode;
+        String locationSlug = g_config.location.slug;
+        String locationCode = g_config.location.code;
+        vPortExitCritical(&g_configMutex);
+        if (debugEnabled) {
             // Collect telemetry data
             DynamicJsonDocument doc(512);
             doc["uptime"] = millis() / 1000;  // Uptime in seconds
@@ -121,7 +126,7 @@ void debug_task(void *pvParameters) {
             // Publish to debug topic
             if (mqttClient.connected()) {
                 char topic[96];
-                int len = snprintf(topic, sizeof(topic), "waterfront/%s/%s/debug", g_config.location.slug.c_str(), g_config.location.code.c_str());
+                int len = snprintf(topic, sizeof(topic), "waterfront/%s/%s/debug", locationSlug.c_str(), locationCode.c_str());
                 if (len < sizeof(topic)) {
                     mqttClient.publish(topic, payload.c_str(), false);  // Not retained
                     ESP_LOGI("DEBUG", "Published debug telemetry: %s", payload.c_str());
@@ -267,7 +272,10 @@ void setup() {
     }
 
     // Create debug task if debug mode enabled
-    if (g_config.debugMode) {
+    vPortEnterCritical(&g_configMutex);
+    bool debugEnabled = g_config.system.debugMode;
+    vPortExitCritical(&g_configMutex);
+    if (debugEnabled) {
         task_ret = xTaskCreate(debug_task, "debug", 4096, NULL, 1, NULL);  // Low priority
         if (task_ret != pdPASS) {
             ESP_LOGE("MAIN", "Failed to create debug task");
