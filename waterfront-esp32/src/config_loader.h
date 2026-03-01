@@ -3,9 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-
-// Max compartments (for array fallback if needed, but using vector)
-#define MAX_COMPARTMENTS 20
+#include "config.h"
 
 // JSON buffer size for ArduinoJson documents (tune if config grows)
 #define JSON_BUFFER_SIZE 4096
@@ -95,5 +93,6 @@ bool loadConfig();
 bool saveConfig();
 bool updateConfigFromJson(const char* jsonPayload);
 GlobalConfig getDefaultConfig();
+String getConfigAsJson();
 
 #endif // CONFIG_LOADER_H

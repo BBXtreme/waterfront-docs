@@ -346,3 +346,67 @@ GlobalConfig getDefaultConfig() {
     def.other.depositHoldAmountFallback = 50;
     return def;
 }
+
+// Serialize current g_config to JSON string
+// Useful for publishing current config via MQTT
+String getConfigAsJson() {
+    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    // Serialize MQTT section
+    JsonObject mqtt = doc.createNestedObject("mqtt");
+    mqtt["broker"] = g_config.mqtt.broker;
+    mqtt["port"] = g_config.mqtt.port;
+    mqtt["username"] = g_config.mqtt.username;
+    mqtt["password"] = g_config.mqtt.password;
+    mqtt["clientIdPrefix"] = g_config.mqtt.clientIdPrefix;
+    mqtt["useTLS"] = g_config.mqtt.useTLS;
+    mqtt["caCertPath"] = g_config.mqtt.caCertPath;
+    mqtt["clientCertPath"] = g_config.mqtt.clientCertPath;
+    mqtt["clientKeyPath"] = g_config.mqtt.clientKeyPath;
+    // Serialize location section
+    JsonObject location = doc.createNestedObject("location");
+    location["slug"] = g_config.location.slug;
+    location["code"] = g_config.location.code;
+    // Serialize WiFi provisioning section
+    JsonObject wifiProvisioning = doc.createNestedObject("wifiProvisioning");
+    wifiProvisioning["fallbackSsid"] = g_config.wifiProvisioning.fallbackSsid;
+    wifiProvisioning["fallbackPass"] = g_config.wifiProvisioning.fallbackPass;
+    // Serialize LTE section
+    JsonObject lte = doc.createNestedObject("lte");
+    lte["apn"] = g_config.lte.apn;
+    lte["simPin"] = g_config.lte.simPin;
+    lte["rssiThreshold"] = g_config.lte.rssiThreshold;
+    lte["dataUsageAlertLimitKb"] = g_config.lte.dataUsageAlertLimitKb;
+    // Serialize BLE section
+    JsonObject ble = doc.createNestedObject("ble");
+    ble["serviceUuid"] = g_config.ble.serviceUuid;
+    ble["ssidCharUuid"] = g_config.ble.ssidCharUuid;
+    ble["passCharUuid"] = g_config.ble.passCharUuid;
+    ble["statusCharUuid"] = g_config.ble.statusCharUuid;
+    // Serialize compartments array
+    JsonArray compartments = doc.createNestedArray("compartments");
+    for (int i = 0; i < g_config.compartmentCount; i++) {
+        JsonObject comp = compartments.createNestedObject();
+        comp["number"] = g_config.compartments[i].number;
+        comp["servoPin"] = g_config.compartments[i].servoPin;
+        comp["limitOpenPin"] = g_config.compartments[i].limitOpenPin;
+        comp["limitClosePin"] = g_config.compartments[i].limitClosePin;
+        comp["ultrasonicTriggerPin"] = g_config.compartments[i].ultrasonicTriggerPin;
+        comp["ultrasonicEchoPin"] = g_config.compartments[i].ultrasonicEchoPin;
+        comp["weightSensorPin"] = g_config.compartments[i].weightSensorPin;
+    }
+    // Serialize system section
+    JsonObject system = doc.createNestedObject("system");
+    system["maxCompartments"] = g_config.system.maxCompartments;
+    system["debugMode"] = g_config.system.debugMode;
+    system["gracePeriodSec"] = g_config.system.gracePeriodSec;
+    system["batteryLowThresholdPercent"] = g_config.system.batteryLowThresholdPercent;
+    system["solarVoltageMin"] = g_config.system.solarVoltageMin;
+    // Serialize other section
+    JsonObject other = doc.createNestedObject("other");
+    other["offlinePinTtlSec"] = g_config.other.offlinePinTtlSec;
+    other["depositHoldAmountFallback"] = g_config.other.depositHoldAmountFallback;
+    // Serialize to string
+    String jsonString;
+    serializeJson(doc, jsonString);
+    return jsonString;
+}
