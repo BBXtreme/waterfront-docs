@@ -5930,3 +5930,33 @@
 
 # 2026-03-01 14:29:31.253150
 +/commit
+
+# 2026-03-01 14:30:03.732379
++always commit changes after aider prompt from now on
+
+# 2026-03-01 14:30:19.371941
++Verify and finalize centralized configuration in waterfront-esp32.
++
++1. Confirm src/config_loader.cpp and config_loader.h exist.
++2. If missing, create them with GlobalConfig struct (mqtt, location, compartments array, useTLS, caCertPath, etc.).
++3. In main.cpp: call loadConfig() after LittleFS.begin().
++4. Ensure all other files use g_config.* instead of hard-codes.
++
++Show list of changed files + diffs for main.cpp and config_loader.h.
++Commit: "feat: finalize centralized config loader with full runtime support"
+
+# 2026-03-01 14:30:34.178462
++Add full ESP task watchdog and error_handler in waterfront-esp32.
++
++1. Create src/error_handler.cpp/h with fatal_error() that logs and restarts.
++2. In main.cpp: esp_task_wdt_init(12, true); reset in all tasks.
++3. Use fatal_error in init functions.
++
++Show diffs for new files + main.cpp.
++Commit: "reliability: full watchdog + global error handler"
+
+# 2026-03-01 14:30:46.492748
++all
+
+# 2026-03-01 14:31:00.461204
++/commit
