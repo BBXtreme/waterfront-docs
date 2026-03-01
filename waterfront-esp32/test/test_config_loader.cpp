@@ -5,7 +5,7 @@
 // Run tests with PlatformIO: pio test
 
 #define CATCH_CONFIG_RUNNER  // Catch2 runner for multiple test files
-#include <catch2/catch.hpp>  // Catch2 header (add to lib_deps in platformio.ini)
+#include <catch.hpp>  // Catch2 header (add to lib_deps in platformio.ini)
 
 // Include headers under test
 #include "config_loader.h"
