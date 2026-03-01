@@ -111,8 +111,8 @@ int readBatteryLevel() {
 
 // Function to read solar voltage
 float readSolarVoltage() {
-    // Assume ADC pin from config (e.g., GPIO 35)
-    int adcValue = analogRead(35);  // Example pin
+    // Assume ADC pin from config (e.g., GPIO 34)
+    int adcValue = analogRead(34);  // Example pin
     // Convert to voltage (calibrate based on divider)
     float voltage = (adcValue / 4095.0) * 3.3 * (10.0 / 3.3);  // Example divider 10k/3.3k
     return voltage;
@@ -186,6 +186,9 @@ void loop() {
     // MQTT loop
     mqtt_loop();
 
+    // LTE power management
+    lte_power_management();
+
     // Other loop tasks
     // ...
 
@@ -202,4 +205,4 @@ void loop() {
     // Reset watchdog every loop iteration
     esp_task_wdt_reset();
 }
- * @note Initializes LittleFS, loads config
+ * @note Initializes LittleFS, loads config```

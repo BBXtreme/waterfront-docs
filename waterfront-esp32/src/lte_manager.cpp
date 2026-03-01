@@ -1,23 +1,6 @@
-// lte_manager.cpp - LTE cellular fallback management using TinyGSM
-// This file manages the LTE modem for cellular connectivity as a WiFi fallback.
-// It uses TinyGSM library to control the modem, connect to GPRS, and provide TCP client for MQTT.
-// Power management is included to conserve battery in solar-powered setups.
-
-#include "lte_manager.h"
-#include "config_loader.h"
-#include <TinyGsmClient.h>
-#include <HardwareSerial.h>
-#include <PubSubClient.h>
-
-// External references
-extern PubSubClient mqttClient;
-
-// TinyGSM setup
-HardwareSerial SerialAT(2);
 TinyGsm modem(SerialAT);
 TinyGsmClient lteClient(modem);
 
-// Initialize LTE modem
 void lte_init() {
     SerialAT.begin(115200, SERIAL_8N1, 16, 17);  // Use config pins if needed
     pinMode(25, OUTPUT);  // PWRKEY
@@ -25,7 +8,6 @@ void lte_init() {
     ESP_LOGI("LTE", "Initialized (powered off)");
 }
 
-// Power up and connect modem
 void lte_power_up() {
     digitalWrite(25, HIGH);
     delay(1000);
@@ -36,14 +18,12 @@ void lte_power_up() {
     ESP_LOGI("LTE", "Powered up and connected to GPRS");
 }
 
-// Power down modem
 void lte_power_down() {
     modem.poweroff();
     digitalWrite(25, LOW);
     ESP_LOGI("LTE", "Powered down");
 }
 
-// Switch MQTT to LTE
 void lte_switch_to_lte() {
     lte_power_up();
     mqttClient.setClient(lteClient);
@@ -54,24 +34,20 @@ void lte_switch_to_lte() {
     }
 }
 
-// Switch MQTT back to WiFi
 void lte_switch_to_wifi() {
     mqttClient.setClient(wifiClient);
     ESP_LOGI("LTE", "MQTT switched back to WiFi");
     lte_power_down();
 }
 
-// Check LTE signal
 int lte_get_signal() {
     return modem.getSignalQuality();
 }
 
-// Is LTE connected
 bool lte_is_connected() {
     return modem.isGprsConnected();
 }
 
-// Read solar voltage (ADC)
 float readSolarVoltage() {
     // Assume ADC pin from config (e.g., GPIO 35)
     int adcValue = analogRead(35);  // Example pin
@@ -80,16 +56,14 @@ float readSolarVoltage() {
     return voltage;
 }
 
-// Check if LTE should be disabled due to low solar
 bool shouldDisableLTE() {
     float solarVoltage = readSolarVoltage();
     return solarVoltage < g_config.system.solarVoltageMin;
 }
 
-// Power down modem if WiFi connected and idle, or low solar
 void lte_power_management() {
-    if (WiFi.status() == WL_CONNECTED && !mqttClient.connected() && shouldDisableLTE()) {
+    if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
         lte_power_down();
-        ESP_LOGI("LTE", "Powered down due to WiFi connected and low solar voltage");
+        ESP_LOGI("LTE", "Powered down due to WiFi connected and MQTT connected");
     }
 }
