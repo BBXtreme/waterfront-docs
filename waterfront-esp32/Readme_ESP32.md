@@ -83,7 +83,8 @@ All settings are in `data/config.json` (uploaded to LittleFS). No hard-codes in 
       "username": "mqttuser",
       "password": "strongpass123",
       "clientIdPrefix": "waterfront",
-      "useTLS": true
+      "useTLS": true,
+      "caCertPath": "/ca.pem"
     },
     "location": {
       "slug": "bremen",
