@@ -6,4 +6,9 @@
 #include <ArduinoJson.h>
 
 struct MqttConfig {
-  String broker
+  String broker;
+  int port;
+  String username;
+  String password;
+  bool useTLS;
+  String
