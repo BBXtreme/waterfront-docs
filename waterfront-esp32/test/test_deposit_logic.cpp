@@ -14,11 +14,6 @@
 
 // Mock GlobalConfig for tests
 GlobalConfig g_config;
-void loadConfig() { // Mock load
-    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
-    g_config.compartmentCount = 1;
-    g_config.system.gracePeriodSec = 3600;  // 1 hour
-}
 
 // Mock PubSubClient
 class MockPubSubClient : public PubSubClient {
@@ -63,8 +58,10 @@ unsigned long mockMillis = 0;
 
 // Test deposit initialization
 TEST_CASE("Deposit Initialization", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -75,8 +72,10 @@ TEST_CASE("Deposit Initialization", "[deposit]") {
 
 // Test deposit on take
 TEST_CASE("Deposit On Take", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -90,8 +89,10 @@ TEST_CASE("Deposit On Take", "[deposit]") {
 
 // Test deposit on return (on time)
 TEST_CASE("Deposit On Return - On Time", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -112,8 +113,10 @@ TEST_CASE("Deposit On Return - On Time", "[deposit]") {
 
 // Test deposit on return (overdue)
 TEST_CASE("Deposit On Return - Overdue", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -134,8 +137,10 @@ TEST_CASE("Deposit On Return - Overdue", "[deposit]") {
 
 // Test start rental timer
 TEST_CASE("Start Rental Timer", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -149,8 +154,10 @@ TEST_CASE("Start Rental Timer", "[deposit]") {
 
 // Test check overdue (no overdue)
 TEST_CASE("Check Overdue - No Overdue", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();
@@ -168,8 +175,10 @@ TEST_CASE("Check Overdue - No Overdue", "[deposit]") {
 
 // Test check overdue (overdue)
 TEST_CASE("Check Overdue - Overdue", "[deposit]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+    g_config.system.gracePeriodSec = 3600;  // 1 hour
 
     // Call init
     deposit_init();

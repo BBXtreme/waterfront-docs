@@ -13,10 +13,6 @@
 
 // Mock GlobalConfig for tests
 GlobalConfig g_config;
-void loadConfig() { // Mock load
-    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
-    g_config.compartmentCount = 1;
-}
 
 // Mock digitalWrite and pulseIn for ultrasonic sensor
 int mockTrigPin = -1;
@@ -45,8 +41,9 @@ unsigned long mockPulseIn(int pin, int value) {
 
 // Test sensor initialization
 TEST_CASE("Sensor Initialization", "[sensor]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Call init
     sensor_init();
@@ -57,8 +54,9 @@ TEST_CASE("Sensor Initialization", "[sensor]") {
 
 // Test distance measurement
 TEST_CASE("Distance Measurement", "[sensor]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Call init
     sensor_init();
@@ -72,8 +70,9 @@ TEST_CASE("Distance Measurement", "[sensor]") {
 
 // Test kayak presence detection (present)
 TEST_CASE("Kayak Presence Detection - Present", "[sensor]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Set mock distance < threshold (50cm)
     mockPulseDuration = 2940;  // 50cm
@@ -90,8 +89,9 @@ TEST_CASE("Kayak Presence Detection - Present", "[sensor]") {
 
 // Test kayak presence detection (not present)
 TEST_CASE("Kayak Presence Detection - Not Present", "[sensor]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Set mock distance > threshold (100cm)
     mockPulseDuration = 5880;  // 100cm
@@ -108,8 +108,9 @@ TEST_CASE("Kayak Presence Detection - Not Present", "[sensor]") {
 
 // Test invalid distance (pulseIn returns 0)
 TEST_CASE("Invalid Distance Reading", "[sensor]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Set mock pulse to 0 (invalid)
     mockPulseDuration = 0;

@@ -14,10 +14,6 @@
 // Mock GlobalConfig for tests
 #include "config_loader.h"
 GlobalConfig g_config;
-void loadConfig() { // Mock load
-    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
-    g_config.compartmentCount = 1;
-}
 
 // Mock Servo class
 class MockServo : public Servo {
@@ -47,8 +43,9 @@ unsigned long mockMillis = 0;
 
 // Test gate initialization
 TEST_CASE("Gate Initialization", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Reset mocks
     for (int i = 0; i < MAX_COMPARTMENTS; i++) {
@@ -65,8 +62,9 @@ TEST_CASE("Gate Initialization", "[gate]") {
 
 // Test open gate state transition
 TEST_CASE("Open Gate State Transition", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Reset mocks
     mockMillis = 0;
@@ -90,8 +88,9 @@ TEST_CASE("Open Gate State Transition", "[gate]") {
 
 // Test close gate state transition
 TEST_CASE("Close Gate State Transition", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Reset mocks
     mockMillis = 0;
@@ -106,8 +105,9 @@ TEST_CASE("Close Gate State Transition", "[gate]") {
 
 // Test get gate state
 TEST_CASE("Get Gate State", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Call get state for compartment 1
     const char* state = getCompartmentGateState(1);
@@ -118,8 +118,9 @@ TEST_CASE("Get Gate State", "[gate]") {
 
 // Test timeout and retry logic
 TEST_CASE("Gate Timeout and Retry", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Reset mocks
     mockMillis = 0;
@@ -139,8 +140,9 @@ TEST_CASE("Gate Timeout and Retry", "[gate]") {
 
 // Test invalid compartment ID
 TEST_CASE("Invalid Compartment ID", "[gate]") {
-    // Load mock config
-    loadConfig();
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
 
     // Call open gate for invalid ID
     openCompartmentGate(99);

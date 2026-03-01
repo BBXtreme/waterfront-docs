@@ -14,11 +14,6 @@
 
 // Mock GlobalConfig for tests
 GlobalConfig g_config;
-void loadConfig() { // Mock load
-    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
-    g_config.compartments[1] = {2, 15, 16, 17, 18, 19, 20};
-    g_config.compartmentCount = 2;
-}
 
 // Mock LittleFS for config loading
 class MockLittleFS {
@@ -60,6 +55,11 @@ private:
 
 // Test load compartments from mock JSON
 TEST_CASE("Load Compartments from Config", "[compartment]") {
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartments[1] = {2, 15, 16, 17, 18, 19, 20};
+    g_config.compartmentCount = 2;
+
     // Call load (assuming it uses LittleFS)
     load_compartments();
 
@@ -84,6 +84,11 @@ TEST_CASE("Load Compartments from Config", "[compartment]") {
 
 // Test get compartment by ID
 TEST_CASE("Get Compartment by ID", "[compartment]") {
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartments[1] = {2, 15, 16, 17, 18, 19, 20};
+    g_config.compartmentCount = 2;
+
     // Assuming load_compartments called in previous test
     Compartment* comp = get_compartment(1);
 
@@ -95,6 +100,11 @@ TEST_CASE("Get Compartment by ID", "[compartment]") {
 
 // Test get compartment by invalid ID
 TEST_CASE("Get Compartment by Invalid ID", "[compartment]") {
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartments[1] = {2, 15, 16, 17, 18, 19, 20};
+    g_config.compartmentCount = 2;
+
     Compartment* comp = get_compartment(99);
 
     // Verify returns nullptr
@@ -103,6 +113,11 @@ TEST_CASE("Get Compartment by Invalid ID", "[compartment]") {
 
 // Test compartment name generation
 TEST_CASE("Compartment Name Generation", "[compartment]") {
+    // Set mock config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartments[1] = {2, 15, 16, 17, 18, 19, 20};
+    g_config.compartmentCount = 2;
+
     // Load compartments
     load_compartments();
 
@@ -116,7 +131,7 @@ TEST_CASE("Compartment Name Generation", "[compartment]") {
 
 // Test empty config fallback
 TEST_CASE("Empty Config Fallback", "[compartment]") {
-    // Clear compartments
+    // Set mock config
     g_config.compartmentCount = 0;
 
     // Call load
