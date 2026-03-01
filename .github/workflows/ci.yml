@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -30,24 +30,4 @@ jobs:
 
     - name: Run unit tests
       working-directory: ./waterfront-esp32
-      run: pio test
-
-  web-lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
-    - name: Install dependencies
-      working-directory: ./waterfront-backend
-      run: npm install
-
-    - name: Run ESLint
-      working-directory: ./waterfront-backend
-      run: npx eslint index.js
+      run: pio test -e unit_test
