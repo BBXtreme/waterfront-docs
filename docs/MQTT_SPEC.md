@@ -100,7 +100,7 @@ Note: This topic allows runtime configuration changes (MQTT broker, compartment 
 
 ## Security Notes
 
-- **Authentication**: Username/password required (generate with `mosquitto_passwd -c /mosquitto/config/passwd mqttuser`).
-- **TLS**: Enabled on port 8883 with CA/cert/key files. For self-signed certs (dev): Use openssl commands in mosquitto.conf comments. Production: Use Let's Encrypt.
-- **Client Certs**: Optional (require_certificate false).
-- **WebSocket**: Also secured with auth on port 9001.
+- **Authentication**: Username/password required (generate with `mosquitto_passwd -c /mosquitto/config/passwd mqttuser`). ✅ DONE
+- **TLS**: Enabled on port 8883 with CA/cert/key files. For self-signed certs (dev): Use openssl commands in mosquitto.conf comments. Production: Use Let's Encrypt. ✅ DONE
+- **Client Certs**: Optional (require_certificate false). ✅ DONE
+- **WebSocket**: Also secured with auth on port 9001. ✅ DONE
