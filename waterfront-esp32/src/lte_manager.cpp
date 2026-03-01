@@ -26,6 +26,7 @@ void lte_power_up() {
 void lte_power_down() {
     modem.poweroff();
     digitalWrite(25, LOW);
+    delay(1000);  // Ensure power down
     ESP_LOGI("LTE", "Powered down");
 }
 
@@ -70,5 +71,9 @@ void lte_power_management() {
     if (WiFi.status() == WL_CONNECTED && mqttClient.connected() && (millis() - lastMqttActivity > 300000)) {  // 5 min idle
         lte_power_down();
         ESP_LOGI("LTE", "Powered down due to WiFi connected and idle > 5 min");
+    }
+    if (shouldDisableLTE()) {
+        lte_power_down();
+        ESP_LOGI("LTE", "Powered down due to low solar voltage");
     }
 }

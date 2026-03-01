@@ -120,7 +120,7 @@ float readSolarVoltage() {
 
 // Function to enter deep sleep
 void enterDeepSleep() {
-    ESP_LOGI("MAIN", "Entering deep sleep due to low solar voltage");
+    ESP_LOGI("MAIN", "Entering deep sleep due to low power conditions");
     // Configure wake sources: timer (60 s) or GPIO (button)
     esp_sleep_enable_timer_wakeup(60 * 1000000);  // 60 seconds
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);  // Wake on GPIO 0 low
@@ -219,14 +219,15 @@ void loop() {
     // Other loop tasks
     // ...
 
-    // Check solar voltage periodically
-    static unsigned long lastSolarCheck = 0;
-    if (millis() - lastSolarCheck > 60000) {  // Every minute
+    // Check power conditions periodically
+    static unsigned long lastPowerCheck = 0;
+    if (millis() - lastPowerCheck > 60000) {  // Every minute
+        int batteryPercent = readBatteryLevel();
         float solarVoltage = readSolarVoltage();
-        if (solarVoltage < g_config.system.solarVoltageMin) {
+        if (batteryPercent < g_config.system.batteryLowThresholdPercent || solarVoltage < g_config.system.solarVoltageMin) {
             enterDeepSleep();
         }
-        lastSolarCheck = millis();
+        lastPowerCheck = millis();
     }
 
     // Reset watchdog every loop iteration
