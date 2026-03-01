@@ -13,6 +13,7 @@
 // Updated for retained MQTT topics: subscribes to compartment status/command, publishes acks.
 // Handles real-time compartment booking sync and gate control.
 // Added CRC32 checksums for payload integrity.
+// Added OTA update support.
 
 #include "mqtt_handler.h"
 #include "mqtt_topics.h"
@@ -21,6 +22,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <ESP32httpUpdate.h>
 
 // CRC32 implementation (simple polynomial)
 uint32_t computeCRC32(const char* data, size_t length) {
@@ -80,6 +82,10 @@ void mqtt_subscribe() {
     std::string configTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/config/update";
     mqttClient.subscribe(configTopic.c_str(), 1);
     ESP_LOGI("MQTT", "Subscribed to %s", configTopic.c_str());
+    // Subscribe to OTA update
+    std::string otaTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/ota/update";
+    mqttClient.subscribe(otaTopic.c_str(), 1);
+    ESP_LOGI("MQTT", "Subscribed to %s", otaTopic.c_str());
 }
 
 // Publish retained status for a compartment with CRC32
@@ -130,6 +136,21 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
             ESP.restart();
         } else {
             ESP_LOGE("MQTT", "Failed to update config");
+        }
+        return;
+    }
+
+    // Check if OTA update
+    std::string otaTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/ota/update";
+    if (strcmp(topic, otaTopic.c_str()) == 0) {
+        ESP_LOGI("MQTT", "OTA update received: %s", msg.c_str());
+        // Assume msg is the URL
+        t_httpUpdate_return ret = ESPhttpUpdate.update(msg);
+        if (ret == HTTP_UPDATE_OK) {
+            ESP_LOGI("OTA", "Update successful, restarting");
+            ESP.restart();
+        } else {
+            ESP_LOGE("OTA", "Update failed: %d", ret);
         }
         return;
     }

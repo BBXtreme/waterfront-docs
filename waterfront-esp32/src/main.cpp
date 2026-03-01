@@ -41,6 +41,7 @@ void debug_task(void *pvParameters) {
             doc["wifiRSSI"] = WiFi.RSSI();
             doc["mqttConnected"] = mqttClient.connected();
             doc["otaPartition"] = esp_ota_get_running_partition()->label;
+            doc["firmwareVersion"] = String(ESP.getSketchMD5());  // Firmware version (MD5 hash)
             String payload;
             serializeJson(doc, payload);
             char topic[96];
@@ -49,7 +50,7 @@ void debug_task(void *pvParameters) {
             ESP_LOGI("DEBUG", "Published debug telemetry: %s", payload.c_str());
         }
         esp_task_wdt_reset();  // Reset watchdog
-        vTaskDelay(pdMS_TO_TICKS(60000));  // Every 60 seconds
+        vTaskDelay(pdMS_TO_TICKS(1800000));  // Every 30 minutes (1800000 ms)
     }
 }
 
