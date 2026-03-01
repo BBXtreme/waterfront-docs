@@ -19,6 +19,7 @@
 #include "mqtt_topics.h"
 #include "gate_control.h"
 #include "config_loader.h"
+#include "deposit_logic.h"
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -86,6 +87,10 @@ void mqtt_subscribe() {
     std::string otaTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/ota/update";
     mqttClient.subscribe(otaTopic.c_str(), 1);
     ESP_LOGI("MQTT", "Subscribed to %s", otaTopic.c_str());
+    // Subscribe to booking paid
+    std::string bookingPaidTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/booking/paid";
+    mqttClient.subscribe(bookingPaidTopic.c_str(), 1);
+    ESP_LOGI("MQTT", "Subscribed to %s", bookingPaidTopic.c_str());
 }
 
 // Publish retained status for a compartment with CRC32
@@ -175,6 +180,25 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
         if (ret == HTTP_UPDATE_OK) {
             ESP.restart();
         }
+        return;
+    }
+
+    // Check if booking paid
+    std::string bookingPaidTopic = "waterfront/" + g_config.location.slug + "/" + g_config.location.code + "/booking/paid";
+    if (strcmp(topic, bookingPaidTopic.c_str()) == 0) {
+        ESP_LOGI("MQTT", "Booking paid received: %s", msg.c_str());
+        DynamicJsonDocument doc(256);
+        DeserializationError error = deserializeJson(doc, msg);
+        if (error) {
+            ESP_LOGE("MQTT", "Failed to parse booking paid payload");
+            return;
+        }
+        String bookingId = doc["bookingId"];
+        int compartmentId = doc["compartmentId"];
+        unsigned long durationSec = doc["durationSec"];
+        // Start rental timer
+        startRental(compartmentId, durationSec + g_config.system.gracePeriodSec);
+        ESP_LOGI("MQTT", "Started rental for booking %s, compartment %d, duration %lu sec", bookingId.c_str(), compartmentId, durationSec);
         return;
     }
 
