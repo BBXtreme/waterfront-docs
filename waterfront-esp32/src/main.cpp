@@ -21,6 +21,7 @@
 #include <ArduinoJson.h>
 #include <nvs_flash.h>
 #include <ArduinoOTA.h>
+#include <Preferences.h>
 
 // Include other headers as needed
 
@@ -214,6 +215,12 @@ void setup() {
     ArduinoOTA.onStart([]() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
         ESP_LOGI("OTA", "Start updating %s", type.c_str());
+        // Save current FW_VERSION to NVS before OTA
+        Preferences preferences;
+        preferences.begin("ota", false);
+        preferences.putString("prev_version", FW_VERSION);
+        preferences.end();
+        ESP_LOGI("OTA", "Saved previous FW version to NVS: %s", FW_VERSION);
         // Publish OTA start event
         if (mqttClient.connected()) {
             DynamicJsonDocument doc(256);
@@ -231,6 +238,12 @@ void setup() {
     });
     ArduinoOTA.onEnd([]() {
         ESP_LOGI("OTA", "End");
+        // Clear saved version on successful OTA
+        Preferences preferences;
+        preferences.begin("ota", false);
+        preferences.remove("prev_version");
+        preferences.end();
+        ESP_LOGI("OTA", "Cleared previous FW version from NVS after successful update");
         // Publish OTA end event
         if (mqttClient.connected()) {
             DynamicJsonDocument doc(256);
