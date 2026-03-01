@@ -39,12 +39,12 @@ esp_err_t mqtt_init() {
     // Enable TLS if configured
     if (useTLS) {
         File ca = LittleFS.open(g_config.mqtt.caCertPath, "r");
-        if (ca) {
-            mqttClient.setCACert(ca.readString().c_str());
-            ESP_LOGI("MQTT", "Loaded CA cert from %s", g_config.mqtt.caCertPath.c_str());
-        } else {
-            ESP_LOGE("MQTT", "CA cert missing – insecure TLS");
+        if (!ca) {
+            ESP_LOGE("MQTT", "CA cert missing – aborting TLS");
+            return ESP_FAIL;
         }
+        mqttClient.setCACert(ca.readString().c_str());
+        ESP_LOGI("MQTT", "Loaded CA cert from %s", g_config.mqtt.caCertPath.c_str());
 
         if (g_config.mqtt.clientCertPath.length() > 0) {
             File cert = LittleFS.open(g_config.mqtt.clientCertPath, "r");
@@ -53,7 +53,7 @@ esp_err_t mqtt_init() {
                 mqttClient.setCertificate(cert.readString().c_str(), key.readString().c_str());
                 ESP_LOGI("MQTT", "Loaded client cert from %s and key from %s", g_config.mqtt.clientCertPath.c_str(), g_config.mqtt.clientKeyPath.c_str());
             } else {
-                ESP_LOGE("MQTT", "Client cert/key missing – using server auth only");
+                ESP_LOGW("MQTT", "Client cert/key missing – continuing without");
             }
         }
     }
