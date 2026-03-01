@@ -155,7 +155,10 @@ void provisioning_task() {
             String msg;
             serializeJson(doc, msg);
             char topic[64];
-            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", g_config.location.code.c_str());
+            vPortEnterCritical(&g_configMutex);
+            String locationCode = g_config.location.code;
+            vPortExitCritical(&g_configMutex);
+            snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", locationCode.c_str());
             mqttClient.publish(topic, msg.c_str(), true);  // Retained publish for machine status
             // Reconnect MQTT if needed
             mqtt_connect();
@@ -187,7 +190,9 @@ void provisioning_task() {
                 String msg;
                 serializeJson(doc, msg);
                 char topic[64];
-                snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", g_config.location.code.c_str());
+                vPortEnterCritical(&g_configMutex);
+                String locationCode = g_config.location.code;
+                vPortExitCritical(&g_configMutex);
                 mqttClient.publish(topic, msg.c_str(), true);
                 // Reset state
                 provState = PROV_IDLE;
@@ -199,6 +204,9 @@ void provisioning_task() {
 // Start BLE provisioning
 // Calls ble_init and sets provisioning flag.
 void startBLEProvisioning() {
-    ble_init(g_config.location.slug.c_str());
+    vPortEnterCritical(&g_configMutex);
+    String locationSlug = g_config.location.slug;
+    vPortExitCritical(&g_configMutex);
+    ble_init(locationSlug.c_str());
     provisioningActive = true;    // Indicate provisioning is running
 }

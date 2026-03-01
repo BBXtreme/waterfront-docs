@@ -11,14 +11,17 @@
 // Start BLE provisioning
 // Calls BLE init function and sets active flag.
 void startBLEProvisioning() {
-    ble_init(g_config.location.slug.c_str());
+    vPortEnterCritical(&g_configMutex);
+    String locationSlug = g_config.location.slug;
+    vPortExitCritical(&g_configMutex);
+    ble_init(locationSlug.c_str());
     provisioningActive = true;    // Indicate provisioning is running
 }
 
 // Start SoftAP provisioning
 // Calls SoftAP and server init functions, sets active flag.
 void startSoftAPProvisioning() {
-    start_softap();
-    start_rest_server();
+    start_softap();           // Start AP mode
+    start_rest_server();     // Start web server
     provisioningActive = true;  // Indicate provisioning active
 }

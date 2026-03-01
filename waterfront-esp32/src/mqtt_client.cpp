@@ -75,29 +75,37 @@ void parseBrokerUri(const String& brokerUri, String& host, int& port, bool& useT
 // Edge cases: missing certs, invalid broker, connection failures.
 esp_err_t mqtt_init() {
     // Parse broker URI
+    vPortEnterCritical(&g_configMutex);
+    String brokerUri = g_config.mqtt.broker;
+    vPortExitCritical(&g_configMutex);
     String host;
     int port;
     bool useTLS;
-    parseBrokerUri(g_config.mqtt.broker, host, port, useTLS);
+    parseBrokerUri(brokerUri, host, port, useTLS);
     ESP_LOGI("MQTT", "Parsed broker: host=%s, port=%d, useTLS=%d", host.c_str(), port, useTLS);
 
     // Override config useTLS if URI specifies
     if (useTLS) {
+        vPortEnterCritical(&g_configMutex);
         g_config.mqtt.useTLS = true;
+        vPortExitCritical(&g_configMutex);
     }
 
-    bool tlsEnabled = g_config.mqtt.useTLS;
+    bool tlsEnabled = useTLS;
     String caStr, certStr, keyStr;
     bool caLoaded = false, certLoaded = false;
     if (tlsEnabled) {
         // Check CA cert path
-        if (g_config.mqtt.caCertPath.length() == 0) {
+        vPortEnterCritical(&g_configMutex);
+        String caCertPath = g_config.mqtt.caCertPath;
+        vPortExitCritical(&g_configMutex);
+        if (caCertPath.length() == 0) {
             ESP_LOGE("MQTT", "CA cert path empty – skipping TLS");
             tlsEnabled = false;
         } else {
-            ESP_LOGI("MQTT", "Attempting to load CA cert from %s", g_config.mqtt.caCertPath.c_str());
+            ESP_LOGI("MQTT", "Attempting to load CA cert from %s", caCertPath.c_str());
             // Load CA cert from LittleFS
-            File ca = LittleFS.open(g_config.mqtt.caCertPath, "r");
+            File ca = LittleFS.open(caCertPath, "r");
             if (!ca) {
                 ESP_LOGE("MQTT", "CA cert file missing – skipping TLS");
                 tlsEnabled = false;
@@ -111,10 +119,14 @@ esp_err_t mqtt_init() {
                     caLoaded = true;
                     ESP_LOGI("MQTT", "Loaded CA cert, size=%d", caStr.length());
                     // Load client cert/key if paths provided
-                    if (g_config.mqtt.clientCertPath.length() > 0) {
-                        ESP_LOGI("MQTT", "Attempting to load client cert from %s", g_config.mqtt.clientCertPath.c_str());
-                        File cert = LittleFS.open(g_config.mqtt.clientCertPath, "r");
-                        File key = LittleFS.open(g_config.mqtt.clientKeyPath, "r");
+                    vPortEnterCritical(&g_configMutex);
+                    String clientCertPath = g_config.mqtt.clientCertPath;
+                    String clientKeyPath = g_config.mqtt.clientKeyPath;
+                    vPortExitCritical(&g_configMutex);
+                    if (clientCertPath.length() > 0) {
+                        ESP_LOGI("MQTT", "Attempting to load client cert from %s", clientCertPath.c_str());
+                        File cert = LittleFS.open(clientCertPath, "r");
+                        File key = LittleFS.open(clientKeyPath, "r");
                         if (!cert || !key) {
                             ESP_LOGE("MQTT", "Client cert/key file missing – continuing without client cert");
                             cert.close();
@@ -146,7 +158,10 @@ esp_err_t mqtt_init() {
             mqttClient.setCertificate(certStr.c_str(), keyStr.c_str());
         }
         // Skip verification if configured (for testing, false in prod)
-        if (g_config.mqtt.tlsSkipVerify) {
+        vPortEnterCritical(&g_configMutex);
+        bool tlsSkipVerify = g_config.mqtt.tlsSkipVerify;
+        vPortExitCritical(&g_configMutex);
+        if (tlsSkipVerify) {
             mqttClient.setInsecure();  // Skip certificate verification
             ESP_LOGW("MQTT", "TLS certificate verification skipped (tlsSkipVerify=true)");
         }
@@ -165,7 +180,10 @@ esp_err_t mqtt_init() {
     ESP_LOGI("MQTT", "Server set to %s:%d", host.c_str(), port);
 
     // Generate client ID
-    String clientId = (g_config.mqtt.clientIdPrefix.length() > 0 ? g_config.mqtt.clientIdPrefix : "waterfront") + "-client";
+    vPortEnterCritical(&g_configMutex);
+    String clientIdPrefix = g_config.mqtt.clientIdPrefix;
+    vPortExitCritical(&g_configMutex);
+    String clientId = (clientIdPrefix.length() > 0 ? clientIdPrefix : "waterfront") + "-client";
     if (clientId.length() > 23) {  // MQTT client ID max 23 chars
         clientId = clientId.substring(0, 23);
         ESP_LOGW("MQTT", "Client ID truncated to %s", clientId.c_str());
@@ -173,9 +191,13 @@ esp_err_t mqtt_init() {
 
     // Attempt connection with or without auth
     bool connected;
-    if (g_config.mqtt.username.length() > 0) {
-        connected = mqttClient.connect(clientId.c_str(), g_config.mqtt.username.c_str(), g_config.mqtt.password.c_str());
-        ESP_LOGI("MQTT", "Connecting with auth: user=%s", g_config.mqtt.username.c_str());
+    vPortEnterCritical(&g_configMutex);
+    String username = g_config.mqtt.username;
+    String password = g_config.mqtt.password;
+    vPortExitCritical(&g_configMutex);
+    if (username.length() > 0) {
+        connected = mqttClient.connect(clientId.c_str(), username.c_str(), password.c_str());
+        ESP_LOGI("MQTT", "Connecting with auth: user=%s", username.c_str());
     } else {
         connected = mqttClient.connect(clientId.c_str());
         ESP_LOGI("MQTT", "Connecting without auth");
@@ -204,7 +226,9 @@ void mqtt_publish_status() {
     String payload;
     serializeJson(doc, payload);
     char topic[64];
+    vPortEnterCritical(&g_configMutex);
     String locationCode = g_config.location.code.length() > 0 ? g_config.location.code : "harbor-01";
+    vPortExitCritical(&g_configMutex);
     int len = snprintf(topic, sizeof(topic), "waterfront/machine/%s/status", locationCode.c_str());
     if (len >= sizeof(topic)) {
         ESP_LOGE("MQTT", "Status topic too long, skipping publish");
@@ -227,7 +251,9 @@ void mqtt_publish_slot_status(int slotId, const char* jsonPayload) {
         return;
     }
     char topic[64];
+    vPortEnterCritical(&g_configMutex);
     String locationCode = g_config.location.code.length() > 0 ? g_config.location.code : "harbor-01";
+    vPortExitCritical(&g_configMutex);
     int len = snprintf(topic, sizeof(topic), "waterfront/slots/%d/status", slotId);
     if (len >= sizeof(topic)) {
         ESP_LOGE("MQTT", "Slot status topic too long, skipping publish");
