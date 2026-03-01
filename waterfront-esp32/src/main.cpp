@@ -108,11 +108,20 @@ int readBatteryLevel() {
     return batteryPercent;
 }
 
+// Function to read solar voltage
+float readSolarVoltage() {
+    // Assume ADC pin from config (e.g., GPIO 35)
+    int adcValue = analogRead(35);  // Example pin
+    // Convert to voltage (calibrate based on divider)
+    float voltage = (adcValue / 4095.0) * 3.3 * (10.0 / 3.3);  // Example divider 10k/3.3k
+    return voltage;
+}
+
 // Function to enter deep sleep
 void enterDeepSleep() {
-    ESP_LOGI("MAIN", "Entering deep sleep due to low battery");
-    // Configure wake sources: timer (15 min) or GPIO (button)
-    esp_sleep_enable_timer_wakeup(15 * 60 * 1000000);  // 15 minutes
+    ESP_LOGI("MAIN", "Entering deep sleep due to low solar voltage");
+    // Configure wake sources: timer (60 s) or GPIO (button)
+    esp_sleep_enable_timer_wakeup(60 * 1000000);  // 60 seconds
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);  // Wake on GPIO 0 low
     esp_deep_sleep_start();
 }
@@ -179,14 +188,14 @@ void loop() {
     // Other loop tasks
     // ...
 
-    // Check battery level periodically
-    static unsigned long lastBatteryCheck = 0;
-    if (millis() - lastBatteryCheck > 60000) {  // Every minute
-        int batteryLevel = readBatteryLevel();
-        if (batteryLevel < g_config.system.batteryLowThresholdPercent) {
+    // Check solar voltage periodically
+    static unsigned long lastSolarCheck = 0;
+    if (millis() - lastSolarCheck > 60000) {  // Every minute
+        float solarVoltage = readSolarVoltage();
+        if (solarVoltage < g_config.system.solarVoltageMin) {
             enterDeepSleep();
         }
-        lastBatteryCheck = millis();
+        lastSolarCheck = millis();
     }
 
     // Reset watchdog every loop iteration
