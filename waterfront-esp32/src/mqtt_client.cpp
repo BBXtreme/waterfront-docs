@@ -47,12 +47,13 @@ esp_err_t mqtt_init() {
     if (tlsEnabled) {
         File ca = LittleFS.open(g_config.mqtt.caCertPath, "r");
         if (!ca) {
-            ESP_LOGE("MQTT", "CA cert file missing – skipping TLS");
+            ESP_LOGE("MQTT", "CA cert file missing – aborting TLS");
             tlsEnabled = false;
         } else {
             caStr = ca.readString();
+            ca.close();  // Ensure file is closed
             if (caStr.length() == 0) {
-                ESP_LOGE("MQTT", "CA cert empty – skipping TLS");
+                ESP_LOGE("MQTT", "CA cert empty – aborting TLS");
                 tlsEnabled = false;
             } else {
                 caLoaded = true;
@@ -60,14 +61,16 @@ esp_err_t mqtt_init() {
                     File cert = LittleFS.open(g_config.mqtt.clientCertPath, "r");
                     File key = LittleFS.open(g_config.mqtt.clientKeyPath, "r");
                     if (!cert || !key) {
-                        ESP_LOGE("MQTT", "Client cert/key file missing – skipping TLS");
-                        tlsEnabled = false;
+                        ESP_LOGE("MQTT", "Client cert/key file missing – continuing without client cert");
+                        cert.close();
+                        key.close();
                     } else {
                         certStr = cert.readString();
                         keyStr = key.readString();
+                        cert.close();
+                        key.close();
                         if (certStr.length() == 0 || keyStr.length() == 0) {
-                            ESP_LOGE("MQTT", "Client cert/key empty – skipping TLS");
-                            tlsEnabled = false;
+                            ESP_LOGE("MQTT", "Client cert/key empty – continuing without client cert");
                         } else {
                             certLoaded = true;
                         }
