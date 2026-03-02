@@ -138,7 +138,7 @@ export default function BookingPage() {
                   <option value="canoe">Canoe</option>
                 </select>
               </div>
-              <Button type="submit" variant="btc" size="lg" className="transition-all duration-200 ease-in-out">
+              <Button type="submit" variant="default" size="lg" className="transition-all duration-200 ease-in-out">
                 Submit Booking
               </Button>
             </form>
