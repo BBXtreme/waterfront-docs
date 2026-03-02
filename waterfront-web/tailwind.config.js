@@ -51,11 +51,17 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         waterfront: {
-          primary: "hsl(var(--waterfront-primary))",
+          primary: "#0EA5E9",
         },
         btc: {
-          accent: "var(--btc-accent)",
+          accent: "#F7931A",
         },
+      },
+      backgroundImage: {
+        'wave-blue': 'linear-gradient(135deg, #0EA5E9 0%, #3B82F6 50%, #1E40AF 100%)',
+        'wave-orange': 'linear-gradient(135deg, #F7931A 0%, #F59E0B 50%, #D97706 100%)',
+        'btc-wave': 'linear-gradient(135deg, #F7931A 0%, #FF9500 100%)',
+        'waterfront-wave': 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
