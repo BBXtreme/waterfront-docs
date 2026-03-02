@@ -1015,11 +1015,9 @@ const debugVercelEnvironment = async () => {
                 {envStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {envStatus.timestamp}</p>}
                 <div className="flex gap-4">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={checkEnvironment}
                     disabled={loading}
-                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
                   >
                     Check Environment
                   </Button>
@@ -1050,15 +1048,13 @@ const debugVercelEnvironment = async () => {
                 </div>
                 <div className="flex gap-4">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={checkVercel}
                     disabled={loading}
-                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
                   >
                     Test Connection
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={debugVercelEnvironment} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors">
+                  <Button onClick={debugVercelEnvironment} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300">
                     Deep Debug Vercel
                   </Button>
                 </div>
@@ -1093,15 +1089,13 @@ const debugVercelEnvironment = async () => {
                 </div>
                 <div className="flex gap-4">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={async () => await checkSupabase()}
                     disabled={loading}
-                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
                   >
                     Test Connection
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={debugSupabaseConnection} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors">
+                  <Button onClick={debugSupabaseConnection} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300">
                     Deep Debug Supabase
                   </Button>
                 </div>
@@ -1135,11 +1129,9 @@ const debugVercelEnvironment = async () => {
                 </div>
                 <div className="flex gap-4">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={testStripeConnection}
                     disabled={stripeStatus === "Pending"}
-                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
                   >
                     Test Connection
                   </Button>
@@ -1169,11 +1161,9 @@ const debugVercelEnvironment = async () => {
                 </div>
                 <div className="flex gap-4">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={testBTCPayConnection}
                     disabled={btcPayStatus === "Pending"}
-                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
                   >
                     Test Connection
                   </Button>
@@ -1217,8 +1207,7 @@ const debugVercelEnvironment = async () => {
           <Button
             onClick={refreshStatuses}
             disabled={loading}
-            variant="secondary"
-            className="px-5 py-2.5 mr-2.5 bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
+            className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors border border-gray-300"
           >
             {loading ? 'Refreshing...' : 'Refresh All'}
           </Button>
