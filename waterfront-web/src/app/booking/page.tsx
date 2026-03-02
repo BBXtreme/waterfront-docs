@@ -54,10 +54,10 @@ export default function BookingPage() {
         kayakType,
       });
       router.push(`/confirmation?${params.toString()}`);
-    } catch (error) {
-      console.error('Booking submission failed:', error);
+    } catch (error: any) {
+      console.error('Booking submission failed:', error?.message || error);
       toast.error('Booking failed', {
-        description: 'Please try again later.',
+        description: error?.message || 'Please try again later.',
       });
     }
   };
