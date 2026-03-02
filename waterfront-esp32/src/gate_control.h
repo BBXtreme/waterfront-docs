@@ -8,6 +8,16 @@
 #ifndef GATE_CONTROL_H
 #define GATE_CONTROL_H
 
+#include "config.h"
+
+// State machine for each compartment
+enum CompartmentState { IDLE, OPENING, CLOSING, OPEN, CLOSED, ERROR };
+
+// Extern compartment states for testing
+extern CompartmentState compartmentStates[MAX_COMPARTMENTS];
+extern unsigned long compartmentStartTimes[MAX_COMPARTMENTS];
+extern int retryCounts[MAX_COMPARTMENTS];
+
 /**
  * @brief Initializes gate control for all compartments.
  *        Sets up servos, limit switches, and initial states based on configuration.

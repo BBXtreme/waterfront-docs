@@ -99,5 +99,6 @@ bool saveConfig();
 bool updateConfigFromJson(const char* jsonPayload);
 GlobalConfig getDefaultConfig();
 String getConfigAsJson();
+bool validateConfig(const GlobalConfig& cfg);
 
 #endif // CONFIG_LOADER_H
