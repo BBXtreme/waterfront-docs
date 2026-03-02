@@ -31,7 +31,7 @@ export default function BookingPage() {
       const { error } = await supabase.from('bookings').insert({
         name,
         email,
-        booking_date: date,
+        date,
         time,
         kayak_type: kayakType,
         created_at: new Date().toISOString(),
