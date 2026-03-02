@@ -11,7 +11,7 @@ export default function Home() {
       </p>
       <Link
         href="/test-connections"
-        style={{ backgroundColor: '#2563eb', color: 'white', padding: '1rem 2rem', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+        style={{ backgroundColor: '#2563eb', color: 'white', padding: '1rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
       >
@@ -19,7 +19,7 @@ export default function Home() {
       </Link>
       <Link
         href="/booking"
-        style={{ backgroundColor: '#16a34a', color: 'white', padding: '1rem 2rem', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s', marginTop: '1rem' }}
+        style={{ backgroundColor: '#16a34a', color: 'white', padding: '1rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s', marginTop: '1rem' }}
         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
       >
