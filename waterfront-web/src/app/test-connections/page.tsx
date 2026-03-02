@@ -183,7 +183,7 @@ const debugMQTTConnection = async () => {
 
     client.on('connect', () => {
       console.log('MQTT connected successfully');
-      client.subscribe('/kayak/+/status', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/+/status', (err: Error | null) => {
         if (err) {
           console.error('Subscribe failed:', (err as Error).message);
         } else {
@@ -259,7 +259,7 @@ const debugLocalMQTT = async () => {
 
     client.on('connect', () => {
       console.log('MQTT connected successfully');
-      client.subscribe('/kayak/+/status', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/+/status', (err: Error | null) => {
         if (err) {
           console.error('Subscribe failed:', (err as Error).message);
         } else {
@@ -316,7 +316,7 @@ const debugHivemqMQTT = async () => {
 
     client.on('connect', () => {
       console.log('MQTT connected successfully');
-      client.subscribe('/kayak/+/status', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/+/status', (err: Error | null) => {
         if (err) {
           console.error('Subscribe failed:', (err as Error).message);
         } else {
@@ -373,7 +373,7 @@ const debugEmqxMQTT = async () => {
 
     client.on('connect', () => {
       console.log('MQTT connected successfully');
-      client.subscribe('/kayak/+/status', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/+/status', (err: Error | null) => {
         if (err) {
           console.error('Subscribe failed:', (err as Error).message);
         } else {
@@ -437,7 +437,7 @@ const debugHivemqCloudMQTT = async () => {
 
     client.on('connect', () => {
       console.log('MQTT connected successfully');
-      client.subscribe('/kayak/+/status', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/+/status', (err: Error | null) => {
         if (err) {
           console.error('Subscribe failed:', (err as Error).message);
         } else {
@@ -612,7 +612,7 @@ const debugVercelEnvironment = async () => {
       });
       setAttempts(0);
       // Subscribe to ack topic
-      client.subscribe('/kayak/test/ack', (err?: Error | ErrorWithReasonCode) => {
+      client.subscribe('/kayak/test/ack', (err: Error | null) => {
         if (err) console.error(`Subscribe error for ${broker}:`, (err as Error).message);
       });
     });
