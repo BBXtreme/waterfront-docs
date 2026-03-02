@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -8,18 +9,16 @@ export default function Home() {
         Minimal setup • Nordend / Frankfurt • Connection tests first
       </p>
       <div className="flex gap-4 flex-wrap justify-center">
-        <Link
-          href="/test-connections"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-medium shadow-md transition-colors"
-        >
-          → Connection Tests
-        </Link>
-        <Link
-          href="/booking"
-          className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg text-lg font-medium shadow-md transition-colors"
-        >
-          → Book a Kayak
-        </Link>
+        <Button asChild size="lg" className="px-8 py-4 text-lg">
+          <Link href="/test-connections">
+            → Connection Tests
+          </Link>
+        </Button>
+        <Button asChild size="lg" variant="secondary" className="px-8 py-4 text-lg">
+          <Link href="/booking">
+            → Book a Kayak
+          </Link>
+        </Button>
       </div>
     </div>
   );
