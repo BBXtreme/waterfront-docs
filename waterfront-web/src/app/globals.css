@@ -25,8 +25,8 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
-  --waterfront-primary: 221.2 83.2% 53.3%;
-  --btc-accent: linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
+  --waterfront-primary: #0EA5E9;
+  --btc-accent: #F7931A;
 }
 
 .dark {
@@ -44,8 +44,6 @@
   --muted-foreground: 215 20.2% 65.1%;
   --accent: 217.2 32.6% 17.5%;
   --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 94.1%;
@@ -69,6 +67,8 @@
 
 @layer components {
   .bg-wave {
-    background: linear-gradient(135deg, #0EA5E9 0%, #F7931A 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%),
+                radial-gradient(circle at 20% 30%, rgba(14,165,233,0.12) 0%, transparent 60%);
+    background-blend-mode: overlay;
   }
 }

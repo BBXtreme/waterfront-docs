@@ -52,9 +52,11 @@ module.exports = {
         },
         waterfront: {
           primary: "#0EA5E9",
+          'primary-dark': '#0284C7',
         },
         btc: {
           accent: "#F7931A",
+          'accent-dark': '#D97706',
         },
       },
       backgroundImage: {
@@ -62,6 +64,8 @@ module.exports = {
         'wave-orange': 'linear-gradient(135deg, #F7931A 0%, #F59E0B 50%, #D97706 100%)',
         'btc-wave': 'linear-gradient(135deg, #F7931A 0%, #FF9500 100%)',
         'waterfront-wave': 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+        'btc-gradient': 'linear-gradient(135deg, #F7931A 0%, #F5A623 100%)',
+        'wave-gradient': 'linear-gradient(to right, #0EA5E9 0%, #0284C7 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
