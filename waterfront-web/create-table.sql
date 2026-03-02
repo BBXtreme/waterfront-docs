@@ -1,4 +1,4 @@
--- Drop table if exists to avoid conflicts
+-- Drop table if exists to override
 DROP TABLE IF EXISTS bookings;
 
 -- Create the bookings table in Supabase
@@ -6,7 +6,7 @@ CREATE TABLE bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT NOT NULL,
-  date TEXT NOT NULL,
+  booking_date TEXT NOT NULL,
   time TEXT NOT NULL,
   kayak_type TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
