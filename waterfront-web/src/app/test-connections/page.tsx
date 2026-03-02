@@ -493,19 +493,59 @@ const debugVercelEnvironment = async () => {
   const checkEnvironment = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (supabaseUrl && supabaseKey) {
-      setEnvStatus({
-        status: 'OK',
-        message: `URL: ${supabaseUrl}, Key Length: ${supabaseKey.length}`,
-        timestamp: new Date().toLocaleString(),
-      });
+    const mqttUrl = process.env.NEXT_PUBLIC_MQTT_BROKER_URL;
+    const mqttUsername = process.env.NEXT_PUBLIC_MQTT_USERNAME;
+    const mqttPassword = process.env.NEXT_PUBLIC_MQTT_PASSWORD;
+
+    const isValidUrl = (url: string) => {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    let status = 'OK';
+    let messages: string[] = [];
+
+    // Check Supabase
+    if (!supabaseUrl) {
+      status = 'Error';
+      messages.push('Missing NEXT_PUBLIC_SUPABASE_URL');
+    } else if (!isValidUrl(supabaseUrl)) {
+      status = 'Error';
+      messages.push('Invalid NEXT_PUBLIC_SUPABASE_URL format');
     } else {
-      setEnvStatus({
-        status: 'Error',
-        message: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY',
-        timestamp: new Date().toLocaleString(),
-      });
+      messages.push(`Supabase URL: ${supabaseUrl}`);
     }
+
+    if (!supabaseKey) {
+      status = 'Error';
+      messages.push('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    } else {
+      messages.push(`Supabase Key Length: ${supabaseKey.length}`);
+    }
+
+    // Check MQTT
+    if (!mqttUrl) {
+      status = 'Error';
+      messages.push('Missing NEXT_PUBLIC_MQTT_BROKER_URL');
+    } else if (!isValidUrl(mqttUrl)) {
+      status = 'Error';
+      messages.push('Invalid NEXT_PUBLIC_MQTT_BROKER_URL format');
+    } else {
+      messages.push(`MQTT URL: ${mqttUrl}`);
+    }
+
+    if (mqttUsername) messages.push('MQTT Username: Set');
+    if (mqttPassword) messages.push('MQTT Password: Set');
+
+    setEnvStatus({
+      status,
+      message: messages.join('; '),
+      timestamp: new Date().toLocaleString(),
+    });
   };
 
   // Function to check Supabase connection
@@ -959,16 +999,28 @@ const debugVercelEnvironment = async () => {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Supabase URL & Key</span>
-                    <Badge variant={process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "default" : "destructive"}>
-                      {process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Present" : "Missing"}
+                    <Badge variant={envStatus.status === "OK" ? "default" : "destructive"}>
+                      {envStatus.status}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span>MQTT Broker URL</span>
-                    <Badge variant={process.env.NEXT_PUBLIC_MQTT_BROKER_URL ? "default" : "destructive"}>
-                      {process.env.NEXT_PUBLIC_MQTT_BROKER_URL ? "Present" : "Missing"}
+                    <Badge variant={envStatus.status === "OK" ? "default" : "destructive"}>
+                      {envStatus.status}
                     </Badge>
                   </div>
+                </div>
+                <p className="text-muted-foreground">{envStatus.message}</p>
+                {envStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {envStatus.timestamp}</p>}
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={checkEnvironment}
+                    disabled={loading}
+                  >
+                    Check Environment
+                  </Button>
                 </div>
               </CardContent>
             </Card>
