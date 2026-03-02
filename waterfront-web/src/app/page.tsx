@@ -11,17 +11,17 @@ export default function Home() {
       </p>
       <Link
         href="/test-connections"
-        style={{ backgroundColor: '#2563eb', color: 'white', padding: '1rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+        className="bg-blue-600 text-white px-8 py-4 rounded-full text-lg font-medium shadow-lg hover:bg-blue-700 transition-colors"
+        onMouseOver={(e) => e.currentTarget.classList.add('bg-blue-700')}
+        onMouseOut={(e) => e.currentTarget.classList.remove('bg-blue-700')}
       >
         → Start Connection Tests
       </Link>
       <Link
         href="/booking"
-        style={{ backgroundColor: '#16a34a', color: 'white', padding: '1rem 2rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '1.125rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s', marginTop: '1rem' }}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+        className="bg-green-600 text-white px-8 py-4 rounded-full text-lg font-medium shadow-lg hover:bg-green-700 transition-colors mt-4"
+        onMouseOver={(e) => e.currentTarget.classList.add('bg-green-700')}
+        onMouseOut={(e) => e.currentTarget.classList.remove('bg-green-700')}
       >
         → Start Booking Tests
       </Link>

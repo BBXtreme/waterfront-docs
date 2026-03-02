@@ -1019,7 +1019,7 @@ const debugVercelEnvironment = async () => {
                     size="sm" 
                     onClick={checkEnvironment}
                     disabled={loading}
-                    style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
                   >
                     Check Environment
                   </Button>
@@ -1054,11 +1054,11 @@ const debugVercelEnvironment = async () => {
                     size="sm" 
                     onClick={checkVercel}
                     disabled={loading}
-                    style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
                   >
                     Test Connection
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={debugVercelEnvironment} style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}>
+                  <Button variant="secondary" size="sm" onClick={debugVercelEnvironment} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors">
                     Deep Debug Vercel
                   </Button>
                 </div>
@@ -1097,11 +1097,11 @@ const debugVercelEnvironment = async () => {
                     size="sm" 
                     onClick={async () => await checkSupabase()}
                     disabled={loading}
-                    style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
                   >
                     Test Connection
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={debugSupabaseConnection} style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}>
+                  <Button variant="secondary" size="sm" onClick={debugSupabaseConnection} className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors">
                     Deep Debug Supabase
                   </Button>
                 </div>
@@ -1139,7 +1139,7 @@ const debugVercelEnvironment = async () => {
                     size="sm" 
                     onClick={testStripeConnection}
                     disabled={stripeStatus === "Pending"}
-                    style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
                   >
                     Test Connection
                   </Button>
@@ -1173,7 +1173,7 @@ const debugVercelEnvironment = async () => {
                     size="sm" 
                     onClick={testBTCPayConnection}
                     disabled={btcPayStatus === "Pending"}
-                    style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+                    className="bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
                   >
                     Test Connection
                   </Button>
@@ -1218,8 +1218,7 @@ const debugVercelEnvironment = async () => {
             onClick={refreshStatuses}
             disabled={loading}
             variant="secondary"
-            className="px-5 py-2.5 mr-2.5"
-            style={{ backgroundColor: 'white', color: 'black', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '1rem', fontWeight: '500', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'background-color 0.2s' }}
+            className="px-5 py-2.5 mr-2.5 bg-white text-black px-4 py-2 rounded-full text-base font-medium shadow-md transition-colors"
           >
             {loading ? 'Refreshing...' : 'Refresh All'}
           </Button>
