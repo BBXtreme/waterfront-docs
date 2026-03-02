@@ -50,6 +50,12 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        waterfront: {
+          primary: "hsl(var(--waterfront-primary))",
+        },
+        btc: {
+          accent: "var(--btc-accent)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

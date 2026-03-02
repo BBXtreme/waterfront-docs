@@ -970,9 +970,9 @@ const debugVercelEnvironment = async () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/10 p-[50px]">
+    <div className="min-h-screen bg-background p-8">
       {/* Header */}
-      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center shadow-lg rounded-lg mb-8">
+      <header className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-10 px-6 py-4 flex justify-between items-center shadow-sm rounded-lg mb-8">
         <h1 className="text-2xl font-semibold">Waterfront – Connection Test</h1>
         <Toggle
           suppressHydrationWarning={true}
@@ -989,14 +989,14 @@ const debugVercelEnvironment = async () => {
         {/* System Connections */}
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">System Connections</h2>
-          <div className="grid grid-cols-3 gap-2.5">
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+          <div className="grid grid-cols-3 gap-6">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Required Environment Variables</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
+              <CardContent className="p-6 flex flex-col gap-2.5 text-sm">
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Supabase URL & Key</span>
@@ -1027,8 +1027,8 @@ const debugVercelEnvironment = async () => {
               </CardContent>
             </Card>
 
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Vercel</CardTitle>
                   <Badge
@@ -1043,7 +1043,7 @@ const debugVercelEnvironment = async () => {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
+              <CardContent className="p-6 flex flex-col gap-2.5 text-sm">
                 <div>
                   <p className="text-muted-foreground">{vercelStatus.message}</p>
                   {vercelStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {vercelStatus.timestamp}</p>}
@@ -1065,8 +1065,8 @@ const debugVercelEnvironment = async () => {
               </CardContent>
             </Card>
 
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Supabase API & Auth</CardTitle>
                   <Badge
@@ -1081,7 +1081,7 @@ const debugVercelEnvironment = async () => {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
+              <CardContent className="p-6 flex flex-col gap-2.5 text-sm">
                 <div>
                   <p className="text-muted-foreground">{supabaseStatus.message}</p>
                   {supabaseStatus.timestamp && <p className="text-xs text-muted-foreground">Last checked: {supabaseStatus.timestamp}</p>}
@@ -1113,9 +1113,9 @@ const debugVercelEnvironment = async () => {
         {/* Payment Gateway Tests */}
         <div className="mb-12">
           <h2 className="text-xl font-medium text-center mb-6">Payment Gateway Tests</h2>
-          <div className="grid grid-cols-3 gap-2.5">
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+          <div className="grid grid-cols-3 gap-6">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">Stripe</CardTitle>
                   <Badge
@@ -1128,7 +1128,7 @@ const debugVercelEnvironment = async () => {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
+              <CardContent className="p-6 flex flex-col gap-2.5 text-sm">
                 <div>
                   <p className="text-muted-foreground">Connection to Stripe API</p>
                   <p className="text-xs text-muted-foreground">Endpoint: api.stripe.com</p>
@@ -1148,21 +1148,20 @@ const debugVercelEnvironment = async () => {
               </CardContent>
             </Card>
             
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">BTCPay/Lightning</CardTitle>
                   <Badge
                     className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
-                      btcPayStatus === "OK" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" : btcPayStatus === "Pending" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200" : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
+                      "px-2 py-1 rounded-full text-xs font-medium bg-btc-accent text-white"
                     )}
                   >
                     {btcPayStatus}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-[25px] flex flex-col gap-2.5 text-sm">
+              <CardContent className="p-6 flex flex-col gap-2.5 text-sm">
                 <div>
                   <p className="text-muted-foreground">Connection to BTCPay Server</p>
                   <p className="text-xs text-muted-foreground">Endpoint: btcpay.example.com</p>
@@ -1189,8 +1188,8 @@ const debugVercelEnvironment = async () => {
           <h2 className="text-xl font-medium text-center mb-6">MQTT Brokers</h2>
           <div className="grid grid-cols-1 gap-6">
             {/* Local Mosquitto Card */}
-            <Card className="m-[10px] shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-              <CardHeader className="p-[15px] pb-0">
+            <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+              <CardHeader className="p-6 pb-0">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-medium">MQTT - Local Mosquitto</CardTitle>
                   <Badge

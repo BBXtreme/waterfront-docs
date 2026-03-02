@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,6 +25,8 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
+  --waterfront-primary: 221.2 83.2% 53.3%;
+  --btc-accent: linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
 }
 
 .dark {
@@ -45,6 +49,8 @@
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 94.1%;
+  --waterfront-primary: 217.2 91.2% 59.8%;
+  --btc-accent: linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
 }
 
 @layer base {
@@ -54,5 +60,9 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
   }
 }

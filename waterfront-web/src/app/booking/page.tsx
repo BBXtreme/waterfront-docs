@@ -63,13 +63,13 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/10 p-[50px]">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-2xl mx-auto">
-        <Card className="shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-          <CardHeader className="p-[25px] pb-0">
+        <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+          <CardHeader className="p-6 pb-0">
             <CardTitle className="font-medium text-center">Book Your Kayak</CardTitle>
           </CardHeader>
-          <CardContent className="p-[25px]">
+          <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
