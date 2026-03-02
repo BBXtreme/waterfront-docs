@@ -13,15 +13,15 @@ export default function ConfirmationPage() {
   const kayakType = searchParams.get('kayakType') || 'N/A';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/10 p-[50px]">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-2xl mx-auto">
-        <Card className="shadow-sm rounded-lg overflow-hidden bg-card border border-border">
-          <CardHeader className="p-[25px] pb-0">
+        <Card className="shadow-sm rounded-lg overflow-hidden bg-card border">
+          <CardHeader className="p-6 pb-0">
             <CardTitle className="font-medium text-center">Booking Confirmation</CardTitle>
           </CardHeader>
-          <CardContent className="p-[25px] space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div className="text-center">
-              <Badge variant="success" className="mb-4">Booking Confirmed</Badge>
+              <Badge className="mb-4 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">Booking Confirmed</Badge>
               <p className="text-muted-foreground">Thank you for your booking! Here are the details:</p>
             </div>
             <div className="space-y-2">
