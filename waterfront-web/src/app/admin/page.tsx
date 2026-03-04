@@ -1,79 +1,36 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// src/app/admin/page.tsx
+import { ThemeToggle } from '@/components/ThemeToggle';
 
-export default function AdminPage() {
+export default function AdminOverview() {
   return (
-    <div className="min-h-screen bg-background py-12 md:py-16 lg:py-20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="font-bold text-4xl md:text-5xl tracking-tight mb-8">Admin Panel</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-sm hover:shadow-md transition-shadow rounded-xl border py-6 shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Dashboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Overview of machines and bookings.</p>
-              <Link href="/admin/dashboard">
-                <Button variant="default" size="default" className="transition-all duration-200 ease-in-out">
-                  Go to Dashboard
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm hover:shadow-md transition-shadow rounded-xl border py-6 shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Manage customer bookings.</p>
-              <Link href="/admin/bookings">
-                <Button variant="default" size="default" className="transition-all duration-200 ease-in-out">
-                  Manage Bookings
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm hover:shadow-md transition-shadow rounded-xl border py-6 shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Machines</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Monitor and control machines.</p>
-              <Link href="/admin/machines">
-                <Button variant="default" size="default" className="transition-all duration-200 ease-in-out">
-                  Manage Machines
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm hover:shadow-md transition-shadow rounded-xl border py-6 shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Connections</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Check system connections.</p>
-              <Link href="/admin/connections">
-                <Button variant="default" size="default" className="transition-all duration-200 ease-in-out">
-                  View Connections
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm hover:shadow-md transition-shadow rounded-xl border py-6 shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Logs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">View system logs.</p>
-              <p className="text-btc-accent">BTC logs available</p>
-              <Link href="/admin/logs">
-                <Button variant="default" size="default" className="transition-all duration-200 ease-in-out">
-                  View Logs
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-background relative">
+      {/* Floating toggle – always visible, top-right */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
+      {/* Main admin content */}
+      <div className="container mx-auto py-10 px-4 md:px-6">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+              Welcome to Waterfront Admin
+            </h1>
+            <p className="mt-3 text-lg text-muted-foreground">
+              Use the sidebar to navigate: monitor locations via MQTT, manage bookings, check connections (WiFi/LTE), view BTC/Lightning logs, etc.
+            </p>
+          </div>
+
+          {/* Optional quick stats or welcome cards */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h3 className="text-lg font-medium text-waterfront-primary">Quick Actions</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Select a section from the left sidebar to begin.
+              </p>
+            </div>
+            {/* Add more teaser cards later */}
+          </div>
         </div>
       </div>
     </div>
