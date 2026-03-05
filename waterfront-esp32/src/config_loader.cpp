@@ -8,7 +8,9 @@
  */
 
 #include "config_loader.h"
-#include <LittleFS.h>
+#include <esp_vfs.h>
+#include <esp_littlefs.h>
+#include <nlohmann/json.hpp>
 
 // Global config instance - shared across the application
 GlobalConfig g_config;
@@ -85,27 +87,30 @@ bool loadConfig() {
     const int MAX_RETRIES = 3;
     bool success = false;
     for (int retry = 0; retry < MAX_RETRIES; retry++) {
-        if (LittleFS.begin()) {
-            ESP_LOGI("CONFIG", "LittleFS mounted on attempt %d", retry + 1);
-            success = true;
-            break;
-        } else {
-            ESP_LOGE("CONFIG", "Failed to mount LittleFS on attempt %d", retry + 1);
+        esp_err_t ret = esp_vfs_littlefs_register(&littlefs_config);
+        if (ret != ESP_OK) {
+            ESP_LOGE("CONFIG", "Failed to mount LittleFS on attempt %d: %s", retry + 1, esp_err_to_name(ret));
             if (retry == MAX_RETRIES - 1) {
                 ESP_LOGW("CONFIG", "Persistent LittleFS failure, attempting format");
-                if (LittleFS.format()) {
+                ret = esp_littlefs_format(NULL);
+                if (ret == ESP_OK) {
                     ESP_LOGI("CONFIG", "LittleFS formatted successfully, retrying mount");
-                    if (LittleFS.begin()) {
+                    ret = esp_vfs_littlefs_register(&littlefs_config);
+                    if (ret == ESP_OK) {
                         ESP_LOGI("CONFIG", "LittleFS mounted after format");
                         success = true;
                         break;
                     } else {
-                        ESP_LOGE("CONFIG", "Failed to mount LittleFS even after format");
+                        ESP_LOGE("CONFIG", "Failed to mount LittleFS even after format: %s", esp_err_to_name(ret));
                     }
                 } else {
-                    ESP_LOGE("CONFIG", "Failed to format LittleFS");
+                    ESP_LOGE("CONFIG", "Failed to format LittleFS: %s", esp_err_to_name(ret));
                 }
             }
+        } else {
+            ESP_LOGI("CONFIG", "LittleFS mounted on attempt %d", retry + 1);
+            success = true;
+            break;
         }
     }
     if (!success) {
@@ -115,7 +120,7 @@ bool loadConfig() {
         vPortExitCritical(&g_configMutex);
         return false;
     }
-    File configFile = LittleFS.open("/config.json", "r");
+    FILE* configFile = fopen("/littlefs/config.json", "r");
     if (!configFile) {
         ESP_LOGW("CONFIG", "config.json not found, using defaults");
         vPortEnterCritical(&g_configMutex);
@@ -123,30 +128,46 @@ bool loadConfig() {
         vPortExitCritical(&g_configMutex);
         return false;
     }
-    size_t fileSize = configFile.size();
+    fseek(configFile, 0, SEEK_END);
+    size_t fileSize = ftell(configFile);
+    fseek(configFile, 0, SEEK_SET);
     if (fileSize == 0) {
         ESP_LOGE("CONFIG", "config.json is empty, using defaults");
-        configFile.close();
+        fclose(configFile);
         vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
         vPortExitCritical(&g_configMutex);
         return false;
     }
     ESP_LOGI("CONFIG", "Config file size: %d bytes", fileSize);
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    DeserializationError error = deserializeJson(doc, configFile);
-    configFile.close();  // Always close file
-    if (error) {
-        ESP_LOGE("CONFIG", "Failed to parse config.json: %s, using defaults", error.c_str());
+    char* buffer = (char*)malloc(fileSize + 1);
+    if (!buffer) {
+        ESP_LOGE("CONFIG", "Failed to allocate buffer for config");
+        fclose(configFile);
         vPortEnterCritical(&g_configMutex);
         g_config = getDefaultConfig();
         vPortExitCritical(&g_configMutex);
         return false;
     }
+    size_t readSize = fread(buffer, 1, fileSize, configFile);
+    buffer[readSize] = '\0';
+    fclose(configFile);
+    nlohmann::json doc;
+    try {
+        doc = nlohmann::json::parse(buffer);
+    } catch (const nlohmann::json::parse_error& e) {
+        ESP_LOGE("CONFIG", "Failed to parse config.json: %s, using defaults", e.what());
+        free(buffer);
+        vPortEnterCritical(&g_configMutex);
+        g_config = getDefaultConfig();
+        vPortExitCritical(&g_configMutex);
+        return false;
+    }
+    free(buffer);
 
     // Check version for migration
-    String configVersion = doc["version"].as.String();
-    if (configVersion.length() == 0) {
+    std::string configVersion = doc.value("version", "");
+    if (configVersion.empty()) {
         ESP_LOGW("CONFIG", "Config version missing, assuming old config, migrating to 1.0");
         configVersion = "1.0";
         // Add any migration logic here if needed for future versions
@@ -156,84 +177,84 @@ bool loadConfig() {
     ESP_LOGI("CONFIG", "Config version: %s", g_config.version.c_str());
 
     // Parse MQTT section
-    if (doc.containsKey("mqtt")) {
-        JsonObject mqtt = doc["mqtt"];
-        g_config.mqtt.broker = mqtt["broker"].as<String>();
-        g_config.mqtt.port = mqtt["port"];
-        g_config.mqtt.username = mqtt["username"].as<String>();
-        g_config.mqtt.password = mqtt["password"].as<String>();
-        g_config.mqtt.clientIdPrefix = mqtt["clientIdPrefix"].as<String>();
-        g_config.mqtt.useTLS = mqtt["useTLS"] | false;
-        g_config.mqtt.caCertPath = mqtt["caCertPath"].as<String>();
-        g_config.mqtt.clientCertPath = mqtt["clientCertPath"].as<String>();
-        g_config.mqtt.clientKeyPath = mqtt["clientKeyPath"].as<String>();
-        g_config.mqtt.tlsSkipVerify = mqtt["tlsSkipVerify"] | false;
+    if (doc.contains("mqtt")) {
+        auto mqtt = doc["mqtt"];
+        g_config.mqtt.broker = mqtt.value("broker", "");
+        g_config.mqtt.port = mqtt.value("port", 0);
+        g_config.mqtt.username = mqtt.value("username", "");
+        g_config.mqtt.password = mqtt.value("password", "");
+        g_config.mqtt.clientIdPrefix = mqtt.value("clientIdPrefix", "");
+        g_config.mqtt.useTLS = mqtt.value("useTLS", false);
+        g_config.mqtt.caCertPath = mqtt.value("caCertPath", "");
+        g_config.mqtt.clientCertPath = mqtt.value("clientCertPath", "");
+        g_config.mqtt.clientKeyPath = mqtt.value("clientKeyPath", "");
+        g_config.mqtt.tlsSkipVerify = mqtt.value("tlsSkipVerify", false);
         ESP_LOGI("CONFIG", "Loaded MQTT config: broker=%s, port=%d, useTLS=%d, tlsSkipVerify=%d", g_config.mqtt.broker.c_str(), g_config.mqtt.port, g_config.mqtt.useTLS, g_config.mqtt.tlsSkipVerify);
     } else {
         ESP_LOGW("CONFIG", "MQTT section missing, using defaults");
     }
 
     // Parse location section
-    if (doc.containsKey("location")) {
-        JsonObject loc = doc["location"];
-        g_config.location.slug = loc["slug"].as<String>();
-        g_config.location.code = loc["code"].as<String>();
+    if (doc.contains("location")) {
+        auto loc = doc["location"];
+        g_config.location.slug = loc.value("slug", "");
+        g_config.location.code = loc.value("code", "");
         ESP_LOGI("CONFIG", "Loaded location: slug=%s, code=%s", g_config.location.slug.c_str(), g_config.location.code.c_str());
     } else {
         ESP_LOGW("CONFIG", "Location section missing, using defaults");
     }
 
     // Parse WiFi provisioning section
-    if (doc.containsKey("wifiProvisioning")) {
-        JsonObject wp = doc["wifiProvisioning"];
-        g_config.wifiProvisioning.fallbackSsid = wp["fallbackSsid"].as<String>();
-        g_config.wifiProvisioning.fallbackPass = wp["fallbackPass"].as<String>();
+    if (doc.contains("wifiProvisioning")) {
+        auto wp = doc["wifiProvisioning"];
+        g_config.wifiProvisioning.fallbackSsid = wp.value("fallbackSsid", "");
+        g_config.wifiProvisioning.fallbackPass = wp.value("fallbackPass", "");
         ESP_LOGI("CONFIG", "Loaded WiFi provisioning: SSID=%s", g_config.wifiProvisioning.fallbackSsid.c_str());
     } else {
         ESP_LOGW("CONFIG", "WiFi provisioning section missing, using defaults");
     }
 
     // Parse LTE section
-    if (doc.containsKey("lte")) {
-        JsonObject lte = doc["lte"];
-        g_config.lte.apn = lte["apn"].as<String>();
-        g_config.lte.simPin = lte["simPin"].as<String>();
-        g_config.lte.rssiThreshold = lte["rssiThreshold"];
-        g_config.lte.dataUsageAlertLimitKb = lte["dataUsageAlertLimitKb"];
+    if (doc.contains("lte")) {
+        auto lte = doc["lte"];
+        g_config.lte.apn = lte.value("apn", "");
+        g_config.lte.simPin = lte.value("simPin", "");
+        g_config.lte.rssiThreshold = lte.value("rssiThreshold", 0);
+        g_config.lte.dataUsageAlertLimitKb = lte.value("dataUsageAlertLimitKb", 0);
         ESP_LOGI("CONFIG", "Loaded LTE config: APN=%s, RSSI threshold=%d", g_config.lte.apn.c_str(), g_config.lte.rssiThreshold);
     } else {
         ESP_LOGW("CONFIG", "LTE section missing, using defaults");
     }
 
     // Parse BLE section
-    if (doc.containsKey("ble")) {
-        JsonObject ble = doc["ble"];
-        g_config.ble.serviceUuid = ble["serviceUuid"].as<String>();
-        g_config.ble.ssidCharUuid = ble["ssidCharUuid"].as<String>();
-        g_config.ble.passCharUuid = ble["passCharUuid"].as<String>();
-        g_config.ble.statusCharUuid = ble["statusCharUuid"].as<String>();
+    if (doc.contains("ble")) {
+        auto ble = doc["ble"];
+        g_config.ble.serviceUuid = ble.value("serviceUuid", "");
+        g_config.ble.ssidCharUuid = ble.value("ssidCharUuid", "");
+        g_config.ble.passCharUuid = ble.value("passCharUuid", "");
+        g_config.ble.statusCharUuid = ble.value("statusCharUuid", "");
         ESP_LOGI("CONFIG", "Loaded BLE config: service UUID=%s", g_config.ble.serviceUuid.c_str());
     } else {
         ESP_LOGW("CONFIG", "BLE section missing, using defaults");
     }
 
     // Parse compartments array
-    if (doc.containsKey("compartments")) {
-        JsonArray comps = doc["compartments"];
+    if (doc.contains("compartments")) {
+        auto comps = doc["compartments"];
         g_config.compartmentCount = 0;
-        for (JsonObject comp : comps) {
+        for (const auto& comp : comps) {
             if (g_config.compartmentCount >= MAX_COMPARTMENTS) {
                 ESP_LOGW("CONFIG", "Max compartments (%d) reached, skipping additional", MAX_COMPARTMENTS);
                 break;
             }
             CompartmentConfig c;
-            c.number = comp["number"];
-            c.servoPin = comp["servoPin"];
-            c.limitOpenPin = comp["limitOpenPin"];
-            c.limitClosePin = comp["limitClosePin"];
-            c.ultrasonicTriggerPin = comp["ultrasonicTriggerPin"];
-            c.ultrasonicEchoPin = comp["ultrasonicEchoPin"];
-            c.weightSensorPin = comp["weightSensorPin"];
+            c.number = comp.value("number", 0);
+            c.servoPin = comp.value("servoPin", 0);
+            c.limitOpenPin = comp.value("limitOpenPin", 0);
+            c.limitClosePin = comp.value("limitClosePin", 0);
+            c.ultrasonicTriggerPin = comp.value("ultrasonicTriggerPin", 0);
+            c.ultrasonicEchoPin = comp.value("ultrasonicEchoPin", 0);
+            c.weightSensorPin = comp.value("weightSensorPin", 0);
             g_config.compartments[g_config.compartmentCount++] = c;
             ESP_LOGI("CONFIG", "Loaded compartment %d: servo=%d, limits=%d/%d", c.number, c.servoPin, c.limitOpenPin, c.limitClosePin);
         }
@@ -243,23 +264,23 @@ bool loadConfig() {
     }
 
     // Parse system section
-    if (doc.containsKey("system")) {
-        JsonObject sys = doc["system"];
-        g_config.system.maxCompartments = sys["maxCompartments"];
-        g_config.system.debugMode = sys["debugMode"];
-        g_config.system.gracePeriodSec = sys["gracePeriodSec"];
-        g_config.system.batteryLowThresholdPercent = sys["batteryLowThresholdPercent"];
-        g_config.system.solarVoltageMin = sys["solarVoltageMin"];
+    if (doc.contains("system")) {
+        auto sys = doc["system"];
+        g_config.system.maxCompartments = sys.value("maxCompartments", 0);
+        g_config.system.debugMode = sys.value("debugMode", false);
+        g_config.system.gracePeriodSec = sys.value("gracePeriodSec", 0);
+        g_config.system.batteryLowThresholdPercent = sys.value("batteryLowThresholdPercent", 0);
+        g_config.system.solarVoltageMin = sys.value("solarVoltageMin", 0.0f);
         ESP_LOGI("CONFIG", "Loaded system config: debugMode=%d, gracePeriod=%d", g_config.system.debugMode, g_config.system.gracePeriodSec);
     } else {
         ESP_LOGW("CONFIG", "System section missing, using defaults");
     }
 
     // Parse other section
-    if (doc.containsKey("other")) {
-        JsonObject oth = doc["other"];
-        g_config.other.offlinePinTtlSec = oth["offlinePinTtlSec"];
-        g_config.other.depositHoldAmountFallback = oth["depositHoldAmountFallback"];
+    if (doc.contains("other")) {
+        auto oth = doc["other"];
+        g_config.other.offlinePinTtlSec = oth.value("offlinePinTtlSec", 0);
+        g_config.other.depositHoldAmountFallback = oth.value("depositHoldAmountFallback", 0);
         ESP_LOGI("CONFIG", "Loaded other config: offline TTL=%d", g_config.other.offlinePinTtlSec);
     } else {
         ESP_LOGW("CONFIG", "Other section missing, using defaults");
@@ -282,20 +303,21 @@ bool loadConfig() {
 // Returns true on success, false on failure
 bool saveConfig() {
     ESP_LOGI("CONFIG", "Attempting to save config to LittleFS");
-    if (!LittleFS.begin()) {
-        ESP_LOGE("CONFIG", "Failed to mount LittleFS for save");
-        return false;
-    }
-    File configFile = LittleFS.open("/config.json", "w");
+    FILE* configFile = fopen("/littlefs/config.json", "w");
     if (!configFile) {
         ESP_LOGE("CONFIG", "Failed to open config.json for write");
         return false;
     }
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    nlohmann::json doc;
     // Serialize g_config to doc (placeholder - implement full serialization if needed)
     // For now, assume config is saved via updateConfigFromJson
-    serializeJson(doc, configFile);
-    configFile.close();
+    std::string jsonString = doc.dump();
+    size_t written = fwrite(jsonString.c_str(), 1, jsonString.size(), configFile);
+    fclose(configFile);
+    if (written != jsonString.size()) {
+        ESP_LOGE("CONFIG", "Failed to write full config to file");
+        return false;
+    }
     ESP_LOGI("CONFIG", "Saved config to LittleFS");
     return true;
 }
@@ -310,25 +332,30 @@ bool updateConfigFromJson(const char* jsonPayload) {
         return false;
     }
     // Validate basic JSON
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
-    DeserializationError error = deserializeJson(doc, jsonPayload);
-    if (error) {
-        ESP_LOGE("CONFIG", "Invalid JSON for update: %s", error.c_str());
+    nlohmann::json doc;
+    try {
+        doc = nlohmann::json::parse(jsonPayload);
+    } catch (const nlohmann::json::parse_error& e) {
+        ESP_LOGE("CONFIG", "Invalid JSON for update: %s", e.what());
         return false;
     }
     // Remove old file
-    if (!LittleFS.remove("/config.json")) {
+    if (unlink("/littlefs/config.json") != 0) {
         ESP_LOGE("CONFIG", "Failed to remove old config file");
         return false;
     }
     // Write new
-    File configFile = LittleFS.open("/config.json", "w");
+    FILE* configFile = fopen("/littlefs/config.json", "w");
     if (!configFile) {
         ESP_LOGE("CONFIG", "Failed to open config.json for write");
         return false;
     }
-    configFile.print(jsonPayload);
-    configFile.close();
+    size_t written = fwrite(jsonPayload, 1, strlen(jsonPayload), configFile);
+    fclose(configFile);
+    if (written != strlen(jsonPayload)) {
+        ESP_LOGE("CONFIG", "Failed to write full payload to file");
+        return false;
+    }
     ESP_LOGI("CONFIG", "Updated config file, reloading");
     // Reload globals
     return loadConfig();
@@ -346,7 +373,7 @@ GlobalConfig getDefaultConfig() {
     def.mqtt.password = "strongpass123";
     def.mqtt.clientIdPrefix = "waterfront";
     def.mqtt.useTLS = true;
-    def.mqtt.caCertPath = "/ca.pem";
+    def.mqtt.caCertPath = "/littlefs/ca.pem";
     def.mqtt.clientCertPath = "";
     def.mqtt.clientKeyPath = "";
     def.mqtt.tlsSkipVerify = false;
@@ -376,13 +403,13 @@ GlobalConfig getDefaultConfig() {
 
 // Serialize current g_config to JSON string
 // Useful for publishing current config via MQTT
-String getConfigAsJson() {
+std::string getConfigAsJson() {
     vPortEnterCritical(&g_configMutex);
-    DynamicJsonDocument doc(JSON_BUFFER_SIZE);
+    nlohmann::json doc;
     // Serialize version
     doc["version"] = g_config.version;
     // Serialize MQTT section
-    JsonObject mqtt = doc.createNestedObject("mqtt");
+    auto mqtt = doc["mqtt"];
     mqtt["broker"] = g_config.mqtt.broker;
     mqtt["port"] = g_config.mqtt.port;
     mqtt["username"] = g_config.mqtt.username;
@@ -394,29 +421,29 @@ String getConfigAsJson() {
     mqtt["clientKeyPath"] = g_config.mqtt.clientKeyPath;
     mqtt["tlsSkipVerify"] = g_config.mqtt.tlsSkipVerify;
     // Serialize location section
-    JsonObject location = doc.createNestedObject("location");
+    auto location = doc["location"];
     location["slug"] = g_config.location.slug;
     location["code"] = g_config.location.code;
     // Serialize WiFi provisioning section
-    JsonObject wifiProvisioning = doc.createNestedObject("wifiProvisioning");
+    auto wifiProvisioning = doc["wifiProvisioning"];
     wifiProvisioning["fallbackSsid"] = g_config.wifiProvisioning.fallbackSsid;
     wifiProvisioning["fallbackPass"] = g_config.wifiProvisioning.fallbackPass;
     // Serialize LTE section
-    JsonObject lte = doc.createNestedObject("lte");
+    auto lte = doc["lte"];
     lte["apn"] = g_config.lte.apn;
     lte["simPin"] = g_config.lte.simPin;
     lte["rssiThreshold"] = g_config.lte.rssiThreshold;
     lte["dataUsageAlertLimitKb"] = g_config.lte.dataUsageAlertLimitKb;
     // Serialize BLE section
-    JsonObject ble = doc.createNestedObject("ble");
+    auto ble = doc["ble"];
     ble["serviceUuid"] = g_config.ble.serviceUuid;
     ble["ssidCharUuid"] = g_config.ble.ssidCharUuid;
     ble["passCharUuid"] = g_config.ble.passCharUuid;
     ble["statusCharUuid"] = g_config.ble.statusCharUuid;
     // Serialize compartments array
-    JsonArray compartments = doc.createNestedArray("compartments");
+    auto compartments = doc["compartments"];
     for (int i = 0; i < g_config.compartmentCount; i++) {
-        JsonObject comp = compartments.createNestedObject();
+        auto comp = compartments[i];
         comp["number"] = g_config.compartments[i].number;
         comp["servoPin"] = g_config.compartments[i].servoPin;
         comp["limitOpenPin"] = g_config.compartments[i].limitOpenPin;
@@ -426,19 +453,18 @@ String getConfigAsJson() {
         comp["weightSensorPin"] = g_config.compartments[i].weightSensorPin;
     }
     // Serialize system section
-    JsonObject system = doc.createNestedObject("system");
+    auto system = doc["system"];
     system["maxCompartments"] = g_config.system.maxCompartments;
     system["debugMode"] = g_config.system.debugMode;
     system["gracePeriodSec"] = g_config.system.gracePeriodSec;
     system["batteryLowThresholdPercent"] = g_config.system.batteryLowThresholdPercent;
     system["solarVoltageMin"] = g_config.system.solarVoltageMin;
     // Serialize other section
-    JsonObject other = doc.createNestedObject("other");
+    auto other = doc["other"];
     other["offlinePinTtlSec"] = g_config.other.offlinePinTtlSec;
     other["depositHoldAmountFallback"] = g_config.other.depositHoldAmountFallback;
     // Serialize to string
-    String jsonString;
-    serializeJson(doc, jsonString);
+    std::string jsonString = doc.dump();
     vPortExitCritical(&g_configMutex);
     return jsonString;
 }
