@@ -7,7 +7,7 @@
     "password": "strongpass123",
     "clientIdPrefix": "waterfront",
     "useTLS": true,
-    "caCertPath": "/ca.pem",
+    "caCertPath": "/littlefs/ca.pem",
     "clientCertPath": "",
     "clientKeyPath": "",
     "tlsSkipVerify": false

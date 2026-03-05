@@ -1,8 +1,8 @@
 #ifndef CONFIG_LOADER_H
 #define CONFIG_LOADER_H
 
-#include <Arduino.h>
-#include <ArduinoJson.h>
+#include <string>
+#include <nlohmann/json.hpp>
 #include "config.h"
 
 // JSON buffer size for ArduinoJson documents (tune if config grows)
@@ -13,44 +13,44 @@ extern portMUX_TYPE g_configMutex;
 
 // MQTT config
 struct MqttConfig {
-    String broker;
+    std::string broker;
     int port;
-    String username;
-    String password;
-    String clientIdPrefix;
+    std::string username;
+    std::string password;
+    std::string clientIdPrefix;
     bool useTLS;
-    String caCertPath;
-    String clientCertPath;
-    String clientKeyPath;
+    std::string caCertPath;
+    std::string clientCertPath;
+    std::string clientKeyPath;
     bool tlsSkipVerify;
 };
 
 // Location config
 struct LocationConfig {
-    String slug;
-    String code;
+    std::string slug;
+    std::string code;
 };
 
 // WiFi provisioning config
 struct WifiProvisioningConfig {
-    String fallbackSsid;
-    String fallbackPass;
+    std::string fallbackSsid;
+    std::string fallbackPass;
 };
 
 // LTE config
 struct LteConfig {
-    String apn;
-    String simPin;
+    std::string apn;
+    std::string simPin;
     int rssiThreshold;
     int dataUsageAlertLimitKb;
 };
 
 // BLE config
 struct BleConfig {
-    String serviceUuid;
-    String ssidCharUuid;
-    String passCharUuid;
-    String statusCharUuid;
+    std::string serviceUuid;
+    std::string ssidCharUuid;
+    std::string passCharUuid;
+    std::string statusCharUuid;
 };
 
 // Compartment config (pins)
@@ -81,7 +81,7 @@ struct OtherConfig {
 
 // Global config struct
 struct GlobalConfig {
-    String version;  // Config version for migration
+    std::string version;  // Config version for migration
     MqttConfig mqtt;
     LocationConfig location;
     WifiProvisioningConfig wifiProvisioning;
@@ -98,7 +98,7 @@ bool loadConfig();
 bool saveConfig();
 bool updateConfigFromJson(const char* jsonPayload);
 GlobalConfig getDefaultConfig();
-String getConfigAsJson();
+std::string getConfigAsJson();
 bool validateConfig(const GlobalConfig& cfg);
 
 #endif // CONFIG_LOADER_H
