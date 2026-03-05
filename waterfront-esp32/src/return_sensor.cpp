@@ -2,14 +2,36 @@
 // This file handles HC-SR04 ultrasonic sensor to detect if a kayak is present in the bay.
 // It measures distance and determines presence based on threshold.
 // Used for real-time slot booking sync and gate control.
+// Added calibration for environmental temperature and humidity compensation.
+// Adaptive thresholds based on environmental conditions.
 
 #include "return_sensor.h"
 #include "config_loader.h"
 #include <driver/gpio.h>
 #include <esp_timer.h>
 
-// Threshold for kayak presence (distance in cm; adjust based on setup)
-#define PRESENCE_THRESHOLD_CM 50.0f
+// Default environmental conditions (can be updated via config or sensor)
+static float ambientTemperatureC = 20.0f;  // Ambient temperature in Celsius
+static float ambientHumidityPercent = 50.0f;  // Ambient humidity in percent
+
+// Adaptive presence threshold (adjusted based on conditions)
+static float presenceThresholdCm = 50.0f;  // Base threshold in cm
+
+// Update environmental conditions (call periodically or from sensor)
+void sensor_update_environment(float tempC, float humidityPercent) {
+    ambientTemperatureC = tempC;
+    ambientHumidityPercent = humidityPercent;
+    // Adaptive threshold: increase slightly in high humidity or temp for better accuracy
+    presenceThresholdCm = 50.0f + (humidityPercent - 50.0f) * 0.1f + (tempC - 20.0f) * 0.05f;
+    if (presenceThresholdCm < 40.0f) presenceThresholdCm = 40.0f;  // Min threshold
+    if (presenceThresholdCm > 60.0f) presenceThresholdCm = 60.0f;  // Max threshold
+}
+
+// Calculate speed of sound in m/s based on temperature and humidity
+// Formula: speed = 331.3 + 0.606 * T + 0.0124 * H (approximate)
+float calculate_speed_of_sound() {
+    return 331.3f + 0.606f * ambientTemperatureC + 0.0124f * ambientHumidityPercent;
+}
 
 // Initialize sensor pins
 void sensor_init() {
@@ -21,7 +43,7 @@ void sensor_init() {
     }
 }
 
-// Get distance in cm
+// Get distance in cm with environmental compensation
 float sensor_get_distance() {
     if (g_config.compartmentCount == 0) return -1.0f;
     gpio_num_t trigPin = (gpio_num_t)g_config.compartments[0].ultrasonicTriggerPin;
@@ -44,12 +66,15 @@ float sensor_get_distance() {
         if (esp_timer_get_time() - start > 1000000) return -1.0f;  // Timeout 1ms
     }
     uint64_t duration = esp_timer_get_time() - start;
-    float distance = duration * 0.034 / 2 / 1000;  // Speed of sound: 343 m/s, convert to cm
+
+    // Calculate distance with compensated speed of sound
+    float speedOfSound = calculate_speed_of_sound();  // m/s
+    float distance = (duration / 1000000.0f) * speedOfSound / 2.0f * 100.0f;  // Convert to cm
     return distance;
 }
 
-// Check if kayak is present (distance < threshold)
+// Check if kayak is present using adaptive threshold
 bool sensor_is_kayak_present() {
     float dist = sensor_get_distance();
-    return dist < PRESENCE_THRESHOLD_CM && dist > 0;  // >0 to filter invalid readings
+    return dist < presenceThresholdCm && dist > 0;  // >0 to filter invalid readings
 }
