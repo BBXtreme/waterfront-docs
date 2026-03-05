@@ -44,7 +44,7 @@ unsigned long power_manager_get_total_awake_time();
  * @brief Gets the wake-up count.
  * @return Number of wake-ups.
  */
-unsigned int power_manager_get_wake_up_count();
+uint32_t power_manager_get_wake_up_count();
 
 /**
  * @brief Gets the last wake-up cause.

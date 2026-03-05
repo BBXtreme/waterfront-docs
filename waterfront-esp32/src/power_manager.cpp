@@ -28,8 +28,8 @@ static esp_adc_cal_characteristics_t adc_chars;
 
 // RTC memory for wake-up profiling (persists across deep sleep)
 RTC_DATA_ATTR unsigned long totalAwakeTime;
-RTC_DATA_ATTR unsigned int wakeUpCount;
-RTC_DATA_ATTR int lastWakeUpCause;
+RTC_DATA_ATTR uint32_t wakeUpCount;
+RTC_DATA_ATTR int32_t lastWakeUpCause;
 RTC_DATA_ATTR unsigned long awakeStartTime;
 
 // Dynamic thresholds (can be updated via config or MQTT)
@@ -65,7 +65,7 @@ esp_err_t power_manager_init() {
     }
 
     // Set wake-up cause and increment count
-    lastWakeUpCause = (int)esp_sleep_get_wakeup_cause();
+    lastWakeUpCause = (int32_t)esp_sleep_get_wakeup_cause();
     wakeUpCount++;
 
     // Load initial thresholds from config
@@ -212,7 +212,7 @@ unsigned long power_manager_get_total_awake_time() {
 }
 
 // Get wake-up count
-unsigned int power_manager_get_wake_up_count() {
+uint32_t power_manager_get_wake_up_count() {
     return wakeUpCount;
 }
 
