@@ -21,10 +21,12 @@
 #include "config_loader.h"
 #include "deposit_logic.h"
 #include <mqtt_client.h>
-#include <WiFi.h>
-#include <ArduinoJson.h>
-#include <HTTPUpdate.h>
-#include <Preferences.h>
+#include <esp_log.h>
+#include <cJSON.h>
+#include <esp_https_ota.h>
+#include <esp_http_client.h>
+#include <nvs.h>
+#include <nvs_flash.h>
 
 // CRC32 implementation (simple polynomial)
 uint32_t computeCRC32(const char* data, size_t length) {
@@ -147,17 +149,15 @@ void mqtt_subscribe() {
 
 // Publish retained status for a compartment with CRC32
 void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
-    StaticJsonDocument<512> doc;
-    DeserializationError error = deserializeJson(doc, jsonPayload);
-    if (error) {
-        ESP_LOGE("MQTT", "Failed to parse JSON for status publish: %s", error.c_str());
+    cJSON *doc = cJSON_Parse(jsonPayload);
+    if (!doc) {
+        ESP_LOGE("MQTT", "Failed to parse JSON for status publish");
         return;  // Discard bad message
     }
     uint32_t crc = computeCRC32(jsonPayload, strlen(jsonPayload));
-    doc["crc"] = crc;
-    doc["firmwareVersion"] = FW_VERSION;  // Include firmware version
-    String updatedPayload;
-    serializeJson(doc, updatedPayload);
+    cJSON_AddNumberToObject(doc, "crc", crc);
+    cJSON_AddStringToObject(doc, "firmwareVersion", FW_VERSION);  // Include firmware version
+    char *updatedPayload = cJSON_PrintUnformatted(doc);
     char topic[96];
     vPortEnterCritical(&g_configMutex);
     char locationSlug[32];
@@ -166,18 +166,20 @@ void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload) {
     strcpy(locationCode, g_config.location.code);
     vPortExitCritical(&g_configMutex);
     snprintf(topic, sizeof(topic), "waterfront/%s/%s/compartments/%d/status", locationSlug, locationCode, compartmentId);
-    int msg_id = esp_mqtt_client_publish(mqttClient, topic, updatedPayload.c_str(), 0, 1, 1);  // QoS 1, retain
+    int msg_id = esp_mqtt_client_publish(mqttClient, topic, updatedPayload, 0, 1, 1);  // QoS 1, retain
     if (msg_id < 0) {
         ESP_LOGE("MQTT", "Failed to publish retained status");
     } else {
-        ESP_LOGI("MQTT", "Published retained status to %s: %s, msg_id=%d", topic, updatedPayload.c_str(), msg_id);
+        ESP_LOGI("MQTT", "Published retained status to %s: %s, msg_id=%d", topic, updatedPayload, msg_id);
     }
+    cJSON_free(updatedPayload);
+    cJSON_Delete(doc);
 }
 
 // Publish acknowledgment for a compartment action with CRC32
 void mqtt_publish_ack(int compartmentId, const char* action) {
     char payload[128];
-    snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", compartmentId, action, millis());
+    snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"action\":\"%s\",\"timestamp\":%lu}", compartmentId, action, esp_timer_get_time() / 1000);
     uint32_t crc = computeCRC32(payload, strlen(payload));
     char fullPayload[256];
     snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
@@ -212,10 +214,13 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
             ESP_LOGW("MQTT", "Disconnected");
             break;
         case MQTT_EVENT_DATA: {
-            String msg;
-            for (int i = 0; i < event->data_len; i++) msg += (char)event->data[i];
-            String topic = String(event->topic, event->topic_len);
-            ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic.c_str(), msg.c_str(), millis());
+            char msg[1024];
+            memcpy(msg, event->data, event->data_len);
+            msg[event->data_len] = '\0';
+            char topic[128];
+            memcpy(topic, event->topic, event->topic_len);
+            topic[event->topic_len] = '\0';
+            ESP_LOGI("MQTT", "Received on %s: %s at %lu", topic, msg, esp_timer_get_time() / 1000);
 
             // Check if config update
             vPortEnterCritical(&g_configMutex);
@@ -226,11 +231,11 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
             vPortExitCritical(&g_configMutex);
             char configTopic[96];
             snprintf(configTopic, sizeof(configTopic), "waterfront/%s/%s/config/update", locationSlug, locationCode);
-            if (topic == configTopic) {
+            if (strcmp(topic, configTopic) == 0) {
                 ESP_LOGI("MQTT", "Config update received");
-                if (updateConfigFromJson(msg.c_str())) {
+                if (updateConfigFromJson(msg)) {
                     ESP_LOGI("MQTT", "Config updated, restarting ESP");
-                    delay(5000);
+                    vTaskDelay(pdMS_TO_TICKS(5000));
                     esp_restart();
                 } else {
                     ESP_LOGE("MQTT", "Failed to update config");
@@ -241,123 +246,135 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
             // Check if OTA update
             char otaTopic[96];
             snprintf(otaTopic, sizeof(otaTopic), "waterfront/%s/%s/ota/update", locationSlug, locationCode);
-            if (topic == otaTopic) {
-                ESP_LOGI("MQTT", "OTA update received: %s", msg.c_str());
+            if (strcmp(topic, otaTopic) == 0) {
+                ESP_LOGI("MQTT", "OTA update received: %s", msg);
                 // Save current version to NVS before update
-                Preferences prefs;
-                prefs.begin("ota", false);
-                prefs.putString("prev_version", FW_VERSION);
-                prefs.putBool("attempted", true);
-                prefs.end();
-                // Assume msg is the URL
-                t_httpUpdate_return ret = httpUpdate.update(msg);
-                StaticJsonDocument<256> otaDoc;
-                otaDoc["firmwareVersion"] = FW_VERSION;
-                switch (ret) {
-                    case HTTP_UPDATE_FAILED:
-                        ESP_LOGE("OTA", "Update failed: %s", httpUpdate.getLastErrorString().c_str());
-                        otaDoc["otaResult"] = "failed";
-                        otaDoc["error"] = httpUpdate.getLastErrorString().c_str();
-                        break;
-                    case HTTP_UPDATE_NO_UPDATES:
-                        ESP_LOGI("OTA", "No updates available");
-                        otaDoc["otaResult"] = "no_updates";
-                        break;
-                    case HTTP_UPDATE_OK:
-                        ESP_LOGI("OTA", "Update successful, restarting");
-                        otaDoc["otaResult"] = "success";
-                        break;
-                    default:
-                        ESP_LOGE("OTA", "Unknown update result: %d", ret);
-                        otaDoc["otaResult"] = "unknown";
-                        break;
+                nvs_handle_t nvs_handle;
+                esp_err_t err = nvs_open("ota", NVS_READWRITE, &nvs_handle);
+                if (err == ESP_OK) {
+                    nvs_set_str(nvs_handle, "prev_version", FW_VERSION);
+                    nvs_set_u8(nvs_handle, "attempted", 1);
+                    nvs_commit(nvs_handle);
+                    nvs_close(nvs_handle);
                 }
-                String otaPayload;
-                serializeJson(otaDoc, otaPayload);
+                // Assume msg is the URL
+                esp_http_client_config_t ota_config = {
+                    .url = msg,
+                    .cert_pem = NULL,
+                    .skip_cert_common_name_check = true,
+                };
+                esp_err_t ret = esp_https_ota(&ota_config);
+                cJSON *otaDoc = cJSON_CreateObject();
+                cJSON_AddStringToObject(otaDoc, "firmwareVersion", FW_VERSION);
+                if (ret == ESP_OK) {
+                    ESP_LOGI("OTA", "Update successful, restarting");
+                    cJSON_AddStringToObject(otaDoc, "otaResult", "success");
+                    esp_restart();
+                } else {
+                    ESP_LOGE("OTA", "Update failed: %s", esp_err_to_name(ret));
+                    cJSON_AddStringToObject(otaDoc, "otaResult", "failed");
+                    cJSON_AddStringToObject(otaDoc, "error", esp_err_to_name(ret));
+                }
+                char *otaPayload = cJSON_PrintUnformatted(otaDoc);
                 char otaStatusTopic[96];
                 snprintf(otaStatusTopic, sizeof(otaStatusTopic), "waterfront/%s/%s/ota/status", locationSlug, locationCode);
-                int msg_id = esp_mqtt_client_publish(mqttClient, otaStatusTopic, otaPayload.c_str(), 0, 1, 1);
+                int msg_id = esp_mqtt_client_publish(mqttClient, otaStatusTopic, otaPayload, 0, 1, 1);
                 if (msg_id >= 0) {
                     ESP_LOGI("OTA", "Published OTA status, msg_id=%d", msg_id);
                 }
-                if (ret == HTTP_UPDATE_OK) {
-                    ESP.restart();
-                }
+                cJSON_free(otaPayload);
+                cJSON_Delete(otaDoc);
                 return;
             }
 
             // Check if booking paid
             char bookingPaidTopic[96];
             snprintf(bookingPaidTopic, sizeof(bookingPaidTopic), "waterfront/%s/%s/booking/paid", locationSlug, locationCode);
-            if (topic == bookingPaidTopic) {
-                ESP_LOGI("MQTT", "Booking paid received: %s", msg.c_str());
-                StaticJsonDocument<256> doc;
-                DeserializationError error = deserializeJson(doc, msg);
-                if (error) {
+            if (strcmp(topic, bookingPaidTopic) == 0) {
+                ESP_LOGI("MQTT", "Booking paid received: %s", msg);
+                cJSON *doc = cJSON_Parse(msg);
+                if (!doc) {
                     ESP_LOGE("MQTT", "Failed to parse booking paid payload");
                     return;
                 }
-                String bookingId = doc["bookingId"];
-                int compartmentId = doc["compartmentId"];
-                unsigned long durationSec = doc["durationSec"];
+                cJSON *bookingIdItem = cJSON_GetObjectItem(doc, "bookingId");
+                cJSON *compartmentIdItem = cJSON_GetObjectItem(doc, "compartmentId");
+                cJSON *durationSecItem = cJSON_GetObjectItem(doc, "durationSec");
+                if (!bookingIdItem || !compartmentIdItem || !durationSecItem) {
+                    ESP_LOGE("MQTT", "Invalid booking paid payload");
+                    cJSON_Delete(doc);
+                    return;
+                }
+                const char *bookingId = cJSON_GetStringValue(bookingIdItem);
+                int compartmentId = cJSON_GetNumberValue(compartmentIdItem);
+                unsigned long durationSec = cJSON_GetNumberValue(durationSecItem);
                 // Start rental timer
                 vPortEnterCritical(&g_configMutex);
                 unsigned long gracePeriod = g_config.system.gracePeriodSec;
                 vPortExitCritical(&g_configMutex);
                 startRental(compartmentId, durationSec + gracePeriod);
-                ESP_LOGI("MQTT", "Started rental for booking %s, compartment %d, duration %lu sec", bookingId.c_str(), compartmentId, durationSec);
+                ESP_LOGI("MQTT", "Started rental for booking %s, compartment %d, duration %lu sec", bookingId, compartmentId, durationSec);
+                cJSON_Delete(doc);
                 return;
             }
 
             // Validate CRC for other messages
-            StaticJsonDocument<512> doc;
-            DeserializationError error = deserializeJson(doc, msg);
-            if (error) {
-                ESP_LOGE("MQTT", "JSON parse failed for status: %s", error.c_str());
+            cJSON *doc = cJSON_Parse(msg);
+            if (!doc) {
+                ESP_LOGE("MQTT", "JSON parse failed for status");
                 return;  // Discard bad message
             }
-            uint32_t receivedCrc = doc["crc"];
-            doc.remove("crc");  // Remove for recompute
-            String cleanMsg;
-            serializeJson(doc, cleanMsg);
-            uint32_t computedCrc = computeCRC32(cleanMsg.c_str(), cleanMsg.length());
+            cJSON *crcItem = cJSON_GetObjectItem(doc, "crc");
+            if (!crcItem) {
+                ESP_LOGE("MQTT", "No CRC in message");
+                cJSON_Delete(doc);
+                return;
+            }
+            uint32_t receivedCrc = cJSON_GetNumberValue(crcItem);
+            cJSON_DeleteItemFromObject(doc, "crc");  // Remove for recompute
+            char *cleanMsg = cJSON_PrintUnformatted(doc);
+            uint32_t computedCrc = computeCRC32(cleanMsg, strlen(cleanMsg));
             if (receivedCrc != computedCrc) {
                 ESP_LOGE("MQTT", "CRC mismatch: received %lu, computed %lu", receivedCrc, computedCrc);
+                cJSON_free(cleanMsg);
+                cJSON_Delete(doc);
                 return;  // Discard bad message
             }
 
             // Log full JSON for debugging
-            ESP_LOGV("MQTT", "Full JSON after CRC validation: %s", cleanMsg.c_str());
+            ESP_LOGV("MQTT", "Full JSON after CRC validation: %s", cleanMsg);
 
             // Parse topic to extract compartmentId using sscanf for efficiency
             int compartmentId = -1;
             char locationSlugBuf[32], locationCodeBuf[32];
-            if (sscanf(topic.c_str(), "waterfront/%31[^/]/%31[^/]/compartments/%d/status", locationSlugBuf, locationCodeBuf, &compartmentId) == 3) {
+            if (sscanf(topic, "waterfront/%31[^/]/%31[^/]/compartments/%d/status", locationSlugBuf, locationCodeBuf, &compartmentId) == 3) {
                 // Handle status message (retained sync)
-                bool booked = doc["booked"];
-                const char* gateState = doc["gateState"];
+                cJSON *bookedItem = cJSON_GetObjectItem(doc, "booked");
+                cJSON *gateStateItem = cJSON_GetObjectItem(doc, "gateState");
+                bool booked = cJSON_IsTrue(bookedItem);
+                const char *gateState = cJSON_GetStringValue(gateStateItem);
                 ESP_LOGI("MQTT", "Compartment %d: booked=%d, gateState=%s", compartmentId, booked, gateState);
                 if (booked && strcmp(gateState, "locked") == 0) {
                     openCompartmentGate(compartmentId);
                     mqtt_publish_ack(compartmentId, "gate_opened");
                 }
-            } else if (sscanf(topic.c_str(), "waterfront/%31[^/]/%31[^/]/compartments/%d/command", locationSlugBuf, locationCodeBuf, &compartmentId) == 3) {
+            } else if (sscanf(topic, "waterfront/%31[^/]/%31[^/]/compartments/%d/command", locationSlugBuf, locationCodeBuf, &compartmentId) == 3) {
                 // Handle command message
-                ESP_LOGI("MQTT", "Compartment %d command: %s", compartmentId, msg.c_str());
-                if (msg == "open_gate") {
+                ESP_LOGI("MQTT", "Compartment %d command: %s", compartmentId, msg);
+                if (strcmp(msg, "open_gate") == 0) {
                     openCompartmentGate(compartmentId);
                     mqtt_publish_ack(compartmentId, "gate_opened");
-                } else if (msg == "close_gate") {
+                } else if (strcmp(msg, "close_gate") == 0) {
                     closeCompartmentGate(compartmentId);
                     mqtt_publish_ack(compartmentId, "gate_closed");
-                } else if (msg == "query_state") {
+                } else if (strcmp(msg, "query_state") == 0) {
                     const char* state = getCompartmentGateState(compartmentId);
-                    char payload[64];
-                    snprintf(payload, sizeof(payload), "{\"compartmentId\":%d,\"gateState\":\"%s\"}", compartmentId, state);
-                    uint32_t crc = computeCRC32(payload, strlen(payload));
-                    char fullPayload[128];
-                    snprintf(fullPayload, sizeof(fullPayload), "%s,\"crc\":%lu}", payload, crc);
-                    fullPayload[strlen(fullPayload) - 1] = '}';  // Fix JSON
+                    cJSON *ackDoc = cJSON_CreateObject();
+                    cJSON_AddNumberToObject(ackDoc, "compartmentId", compartmentId);
+                    cJSON_AddStringToObject(ackDoc, "gateState", state);
+                    uint32_t crc = computeCRC32(cleanMsg, strlen(cleanMsg));
+                    cJSON_AddNumberToObject(ackDoc, "crc", crc);
+                    char *fullPayload = cJSON_PrintUnformatted(ackDoc);
                     char topic[96];
                     vPortEnterCritical(&g_configMutex);
                     char locSlug[32];
@@ -370,8 +387,12 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
                     if (msg_id >= 0) {
                         ESP_LOGI("MQTT", "Published query ack, msg_id=%d", msg_id);
                     }
+                    cJSON_free(fullPayload);
+                    cJSON_Delete(ackDoc);
                 }
             }
+            cJSON_free(cleanMsg);
+            cJSON_Delete(doc);
             break;
         }
         case MQTT_EVENT_ERROR:

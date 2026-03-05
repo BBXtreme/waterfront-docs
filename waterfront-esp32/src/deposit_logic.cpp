@@ -1,8 +1,10 @@
 #include "deposit_logic.h"
 #include "config_loader.h"
-#include <PubSubClient.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
+#include <esp_log.h>
+#include <cJSON.h>
+#include <mqtt_client.h>
 
 RentalTimer activeTimers[MAX_TIMERS];
 int activeTimersCount = 0;
@@ -64,7 +66,7 @@ void startRental(int compartmentId, unsigned long durationSec) {
 
     RentalTimer timer;
     timer.compartmentId = compartmentId;
-    timer.startMs = millis();
+    timer.startMs = esp_timer_get_time() / 1000;
     timer.durationSec = durationSec;
     // Create FreeRTOS timer for overdue (duration + grace)
     vPortEnterCritical(&g_configMutex);
@@ -84,7 +86,7 @@ void startRental(int compartmentId, unsigned long durationSec) {
 
 void checkOverdue() {
     // This can be called periodically as fallback, but timers handle it
-    unsigned long now = millis();
+    unsigned long now = esp_timer_get_time() / 1000;
     vPortEnterCritical(&depositMutex);
     for (int i = 0; i < activeTimersCount; ) {
         unsigned long elapsedSec = (now - activeTimers[i].startMs) / 1000;
@@ -108,10 +110,10 @@ void checkOverdue() {
     vPortExitCritical(&depositMutex);
 }
 
-void deposit_on_take(PubSubClient* client) {
+void deposit_on_take(esp_mqtt_client_handle_t client) {
     vPortEnterCritical(&depositMutex);
     deposit_held = true;
-    rental_start_time = millis();
+    rental_start_time = esp_timer_get_time() / 1000;
     vPortEnterCritical(&g_configMutex);
     rental_duration_ms = g_config.system.gracePeriodSec * 1000;
     vPortExitCritical(&g_configMutex);
@@ -119,26 +121,31 @@ void deposit_on_take(PubSubClient* client) {
     ESP_LOGI("DEPOSIT", "Deposit held, rental started");
 }
 
-void deposit_on_return(PubSubClient* client) {
+void deposit_on_return(esp_mqtt_client_handle_t client) {
     vPortEnterCritical(&depositMutex);
     if (!deposit_held) {
         vPortExitCritical(&depositMutex);
         return;
     }
-    unsigned long elapsed = millis() - rental_start_time;
+    unsigned long elapsed = (esp_timer_get_time() / 1000) - rental_start_time;
     if (elapsed <= rental_duration_ms) {
         // On-time return: release deposit
         deposit_held = false;
         ESP_LOGI("DEPOSIT", "Deposit released (on-time return)");
         // Publish deposit release event
+        cJSON *doc = cJSON_CreateObject();
+        cJSON_AddStringToObject(doc, "action", "release");
+        cJSON_AddNumberToObject(doc, "timestamp", esp_timer_get_time() / 1000);
+        char *payload = cJSON_PrintUnformatted(doc);
         char topic[64];
-        char payload[128];
         vPortEnterCritical(&g_configMutex);
-        String locationCode = g_config.location.code;
+        char locationCode[32];
+        strcpy(locationCode, g_config.location.code);
         vPortExitCritical(&g_configMutex);
-        snprintf(topic, sizeof(topic), "waterfront/%s/deposit/release", locationCode.c_str());
-        snprintf(payload, sizeof(payload), "{\"action\":\"release\",\"timestamp\":%lu}", millis());
-        client->publish(topic, payload);
+        snprintf(topic, sizeof(topic), "waterfront/%s/deposit/release", locationCode);
+        esp_mqtt_client_publish(client, topic, payload, 0, 1, 0);
+        cJSON_free(payload);
+        cJSON_Delete(doc);
     } else {
         ESP_LOGW("DEPOSIT", "Late return, deposit not released");
     }

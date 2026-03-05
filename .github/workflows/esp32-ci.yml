@@ -23,16 +23,20 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install PlatformIO
+    - name: Install ESP-IDF
       run: |
-        python -m pip install --upgrade pip
-        pip install platformio
+        mkdir -p ~/esp
+        cd ~/esp
+        git clone -b v5.1 --recursive https://github.com/espressif/esp-idf.git
+        ./esp-idf/install.sh
+        echo "source ~/esp/esp-idf/export.sh" >> ~/.bashrc
 
     - name: Install clang-format
       run: sudo apt-get install -y clang-format
 
     - name: Check code formatting with clang-format
       run: |
+        source ~/esp/esp-idf/export.sh
         cd waterfront-esp32
         find src include -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror --style=file
       # This will fail if formatting issues are found
@@ -42,6 +46,7 @@ jobs:
 
     - name: Generate Doxygen documentation
       run: |
+        source ~/esp/esp-idf/export.sh
         cd waterfront-esp32
         doxygen Doxyfile
         # Docs will be generated in docs/html/
@@ -52,12 +57,14 @@ jobs:
         name: doxygen-docs
         path: waterfront-esp32/docs/html/
 
-    - name: Build with PlatformIO
+    - name: Build with ESP-IDF
       run: |
+        source ~/esp/esp-idf/export.sh
         cd waterfront-esp32
-        pio run
+        idf.py build
 
-    - name: Run tests with PlatformIO
+    - name: Run tests with ESP-IDF
       run: |
+        source ~/esp/esp-idf/export.sh
         cd waterfront-esp32
-        pio test
+        idf.py test

@@ -1,9 +1,9 @@
 #include "logger.h"
 #include "config_loader.h"
-#include <LittleFS.h>
+#include <esp_spiffs.h>
 #include <esp_log.h>
 
-#define LOG_FILE "/littlefs/system.log"
+#define LOG_FILE "/spiffs/system.log"
 #define LOG_MAX_SIZE 102400  // 100KB
 
 // Initialize logger
@@ -16,12 +16,13 @@ void logger_init() {
 // Log to file if verbose (logLevel >= INFO)
 void logger_log_to_file(const char* tag, const char* message) {
     if (g_config.system.logLevel >= ESP_LOG_INFO) {
-        File logFile = LittleFS.open(LOG_FILE, "a");
+        FILE *logFile = fopen(LOG_FILE, "a");
         if (logFile) {
-            logFile.printf("[%s] %s\n", tag, message);
-            logFile.close();
+            fprintf(logFile, "[%s] %s\n", tag, message);
+            fclose(logFile);
             // Check size and rotate
-            if (logFile.size() > LOG_MAX_SIZE) {
+            struct stat st;
+            if (stat(LOG_FILE, &st) == 0 && st.st_size > LOG_MAX_SIZE) {
                 logger_rotate_log_file();
             }
         }
@@ -30,9 +31,9 @@ void logger_log_to_file(const char* tag, const char* message) {
 
 // Rotate log file
 void logger_rotate_log_file() {
-    if (LittleFS.exists(LOG_FILE ".1")) {
-        LittleFS.remove(LOG_FILE ".1");
+    if (esp_spiffs_rename(LOG_FILE, LOG_FILE ".1") == ESP_OK) {
+        ESP_LOGI("LOGGER", "Log file rotated");
+    } else {
+        ESP_LOGE("LOGGER", "Failed to rotate log file");
     }
-    LittleFS.rename(LOG_FILE, LOG_FILE ".1");
-    ESP_LOGI("LOGGER", "Log file rotated");
 }
