@@ -30,6 +30,9 @@ unsigned long compartmentStartTimes[MAX_COMPARTMENTS] = {0};
 
 int retryCounts[MAX_COMPARTMENTS] = {0};
 
+// Mutex for thread-safe access to gate control state
+portMUX_TYPE gateMutex = portMUX_INITIALIZER_UNLOCKED;
+
 /**
  * @brief Initializes gate control for all compartments.
  * @note Sets up pins and servos for active compartments.
@@ -77,6 +80,7 @@ void gate_init() {
 void openCompartmentGate(int compartmentId) {
     if (compartmentId < 1 || compartmentId > g_config.compartmentCount) return;
     int idx = compartmentId - 1;
+    vPortEnterCritical(&gateMutex);
     if (compartmentStates[idx] == CLOSED || compartmentStates[idx] == ERROR) {
         compartmentStates[idx] = OPENING;
         compartmentStartTimes[idx] = millis();
@@ -86,6 +90,7 @@ void openCompartmentGate(int compartmentId) {
         retryCounts[idx] = 0;
         ESP_LOGI("GATE", "Starting open for compartment %d", compartmentId);
     }
+    vPortExitCritical(&gateMutex);
 }
 
 /**
@@ -96,6 +101,7 @@ void openCompartmentGate(int compartmentId) {
 void closeCompartmentGate(int compartmentId) {
     if (compartmentId < 1 || compartmentId > g_config.compartmentCount) return;
     int idx = compartmentId - 1;
+    vPortEnterCritical(&gateMutex);
     if (compartmentStates[idx] == OPEN || compartmentStates[idx] == ERROR) {
         compartmentStates[idx] = CLOSING;
         compartmentStartTimes[idx] = millis();
@@ -105,6 +111,7 @@ void closeCompartmentGate(int compartmentId) {
         retryCounts[idx] = 0;
         ESP_LOGI("GATE", "Starting close for compartment %d", compartmentId);
     }
+    vPortExitCritical(&gateMutex);
 }
 
 /**
@@ -116,8 +123,16 @@ void closeCompartmentGate(int compartmentId) {
 const char* getCompartmentGateState(int compartmentId) {
     if (compartmentId < 1 || compartmentId > g_config.compartmentCount) return "unknown";
     int idx = compartmentId - 1;
-    if (gpio_get_level((gpio_num_t)g_config.compartments[idx].limitOpenPin) == 0) return "open";
-    if (gpio_get_level((gpio_num_t)g_config.compartments[idx].limitClosePin) == 0) return "closed";
+    vPortEnterCritical(&gateMutex);
+    if (gpio_get_level((gpio_num_t)g_config.compartments[idx].limitOpenPin) == 0) {
+        vPortExitCritical(&gateMutex);
+        return "open";
+    }
+    if (gpio_get_level((gpio_num_t)g_config.compartments[idx].limitClosePin) == 0) {
+        vPortExitCritical(&gateMutex);
+        return "closed";
+    }
+    vPortExitCritical(&gateMutex);
     return "unknown";
 }
 
@@ -128,6 +143,7 @@ const char* getCompartmentGateState(int compartmentId) {
 void gate_task() {
     unsigned long now = millis();
     for (int i = 0; i < g_config.compartmentCount; i++) {
+        vPortEnterCritical(&gateMutex);
         if (compartmentStates[i] == OPENING || compartmentStates[i] == CLOSING) {
             if (now - compartmentStartTimes[i] > GATE_MOVE_TIMEOUT_MS) {
                 // Timeout: retry or error
@@ -159,5 +175,6 @@ void gate_task() {
                 }
             }
         }
+        vPortExitCritical(&gateMutex);
     }
 }

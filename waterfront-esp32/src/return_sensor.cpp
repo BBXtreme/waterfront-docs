@@ -17,20 +17,28 @@ static float ambientHumidityPercent = 50.0f;  // Ambient humidity in percent
 // Adaptive presence threshold (adjusted based on conditions)
 static float presenceThresholdCm = 50.0f;  // Base threshold in cm
 
+// Mutex for thread-safe access to sensor variables
+portMUX_TYPE sensorMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // Update environmental conditions (call periodically or from sensor)
 void sensor_update_environment(float tempC, float humidityPercent) {
+    vPortEnterCritical(&sensorMutex);
     ambientTemperatureC = tempC;
     ambientHumidityPercent = humidityPercent;
     // Adaptive threshold: increase slightly in high humidity or temp for better accuracy
     presenceThresholdCm = 50.0f + (humidityPercent - 50.0f) * 0.1f + (tempC - 20.0f) * 0.05f;
     if (presenceThresholdCm < 40.0f) presenceThresholdCm = 40.0f;  // Min threshold
     if (presenceThresholdCm > 60.0f) presenceThresholdCm = 60.0f;  // Max threshold
+    vPortExitCritical(&sensorMutex);
 }
 
 // Calculate speed of sound in m/s based on temperature and humidity
 // Formula: speed = 331.3 + 0.606 * T + 0.0124 * H (approximate)
 float calculate_speed_of_sound() {
-    return 331.3f + 0.606f * ambientTemperatureC + 0.0124f * ambientHumidityPercent;
+    vPortEnterCritical(&sensorMutex);
+    float speed = 331.3f + 0.606f * ambientTemperatureC + 0.0124f * ambientHumidityPercent;
+    vPortExitCritical(&sensorMutex);
+    return speed;
 }
 
 // Initialize sensor pins
@@ -76,5 +84,8 @@ float sensor_get_distance() {
 // Check if kayak is present using adaptive threshold
 bool sensor_is_kayak_present() {
     float dist = sensor_get_distance();
-    return dist < presenceThresholdCm && dist > 0;  // >0 to filter invalid readings
+    vPortEnterCritical(&sensorMutex);
+    bool present = dist < presenceThresholdCm && dist > 0;  // >0 to filter invalid readings
+    vPortExitCritical(&sensorMutex);
+    return present;
 }

@@ -10,6 +10,9 @@ bool deposit_held = false;
 unsigned long rental_start_time = 0;
 unsigned long rental_duration_ms = 0;
 
+// Mutex for thread-safe access to deposit logic state
+portMUX_TYPE depositMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // Overdue callback for FreeRTOS timer
 void overdueCallback(TimerHandle_t xTimer) {
     int compartmentId = (int)pvTimerGetTimerID(xTimer);
@@ -35,22 +38,27 @@ void overdueCallback(TimerHandle_t xTimer) {
 }
 
 void deposit_init() {
+    vPortEnterCritical(&depositMutex);
     deposit_held = false;
     activeTimersCount = 0;
+    vPortExitCritical(&depositMutex);
     ESP_LOGI("DEPOSIT", "Initialized");
 }
 
 void startRental(int compartmentId, unsigned long durationSec) {
     // Check if already active
+    vPortEnterCritical(&depositMutex);
     for (int i = 0; i < activeTimersCount; i++) {
         if (activeTimers[i].compartmentId == compartmentId) {
             ESP_LOGW("DEPOSIT", "Rental already active for compartment %d", compartmentId);
+            vPortExitCritical(&depositMutex);
             return;
         }
     }
 
     if (activeTimersCount >= MAX_TIMERS) {
         ESP_LOGE("DEPOSIT", "Max timers reached, cannot start rental for compartment %d", compartmentId);
+        vPortExitCritical(&depositMutex);
         return;
     }
 
@@ -65,16 +73,19 @@ void startRental(int compartmentId, unsigned long durationSec) {
     timer.timerHandle = xTimerCreate("OverdueTimer", pdMS_TO_TICKS(totalSec * 1000), pdFALSE, (void*)compartmentId, overdueCallback);
     if (timer.timerHandle == NULL) {
         ESP_LOGE("DEPOSIT", "Failed to create timer for compartment %d", compartmentId);
+        vPortExitCritical(&depositMutex);
         return;
     }
     xTimerStart(timer.timerHandle, 0);
     activeTimers[activeTimersCount++] = timer;
     ESP_LOGI("DEPOSIT", "Started rental timer for compartment %d, duration %lu sec, overdue in %lu sec", compartmentId, durationSec, totalSec);
+    vPortExitCritical(&depositMutex);
 }
 
 void checkOverdue() {
     // This can be called periodically as fallback, but timers handle it
     unsigned long now = millis();
+    vPortEnterCritical(&depositMutex);
     for (int i = 0; i < activeTimersCount; ) {
         unsigned long elapsedSec = (now - activeTimers[i].startMs) / 1000;
         vPortEnterCritical(&g_configMutex);
@@ -94,19 +105,26 @@ void checkOverdue() {
             ++i;
         }
     }
+    vPortExitCritical(&depositMutex);
 }
 
 void deposit_on_take(PubSubClient* client) {
+    vPortEnterCritical(&depositMutex);
     deposit_held = true;
     rental_start_time = millis();
     vPortEnterCritical(&g_configMutex);
     rental_duration_ms = g_config.system.gracePeriodSec * 1000;
     vPortExitCritical(&g_configMutex);
+    vPortExitCritical(&depositMutex);
     ESP_LOGI("DEPOSIT", "Deposit held, rental started");
 }
 
 void deposit_on_return(PubSubClient* client) {
-    if (!deposit_held) return;
+    vPortEnterCritical(&depositMutex);
+    if (!deposit_held) {
+        vPortExitCritical(&depositMutex);
+        return;
+    }
     unsigned long elapsed = millis() - rental_start_time;
     if (elapsed <= rental_duration_ms) {
         // On-time return: release deposit
@@ -124,8 +142,12 @@ void deposit_on_return(PubSubClient* client) {
     } else {
         ESP_LOGW("DEPOSIT", "Late return, deposit not released");
     }
+    vPortExitCritical(&depositMutex);
 }
 
 bool deposit_is_held() {
-    return deposit_held;
+    vPortEnterCritical(&depositMutex);
+    bool held = deposit_held;
+    vPortExitCritical(&depositMutex);
+    return held;
 }

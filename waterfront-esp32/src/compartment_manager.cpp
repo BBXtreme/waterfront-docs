@@ -39,8 +39,12 @@ struct Compartment {
 // Vector of compartments
 std::vector<Compartment> compartments;
 
+// Mutex for thread-safe access to compartments
+portMUX_TYPE compartmentMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // Load compartments from runtime config
 void load_compartments() {
+    vPortEnterCritical(&compartmentMutex);
     compartments.clear();
     for (int i = 0; i < g_config.compartmentCount; i++) {
         Compartment c;
@@ -56,20 +60,26 @@ void load_compartments() {
         compartments.push_back({1, 12, 13, 14, "Compartment 1"});
     }
     ESP_LOGI("COMPARTMENT", "Loaded %d compartments from config", compartments.size());
+    vPortExitCritical(&compartmentMutex);
 }
 
 // Get compartment by ID
 Compartment* get_compartment(int id) {
+    vPortEnterCritical(&compartmentMutex);
     for (auto& comp : compartments) {
         if (comp.id == id) {
-            return &comp;
+            Compartment* result = &comp;
+            vPortExitCritical(&compartmentMutex);
+            return result;
         }
     }
+    vPortExitCritical(&compartmentMutex);
     return nullptr;
 }
 
 // Get all compartments (for iteration)
 std::vector<Compartment>& get_all_compartments() {
+    // Note: Caller must handle mutex if modifying the vector
     return compartments;
 }
 

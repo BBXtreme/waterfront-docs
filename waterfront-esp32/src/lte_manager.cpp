@@ -7,6 +7,9 @@ esp_modem_dce_t* dce = nullptr;
 esp_netif_t* esp_netif = nullptr;
 uart_port_t uart_num = UART_NUM_1;
 
+// Mutex for thread-safe access to LTE state
+portMUX_TYPE lteMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // Initialize LTE modem (power off initially)
 void lte_init() {
     ESP_LOGI("LTE", "Initializing LTE modem");

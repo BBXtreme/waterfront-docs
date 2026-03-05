@@ -17,6 +17,9 @@ static int mqttReconnectCount = 0;
 // Last MQTT activity timestamp for idle detection
 unsigned long lastMqttActivity = 0;
 
+// Mutex for thread-safe access to MQTT state
+portMUX_TYPE mqttMutex = portMUX_INITIALIZER_UNLOCKED;
+
 // MQTT event handler: Processes incoming events and updates activity timestamp.
 // Handles connect, disconnect, data, etc.
 // Edge cases: invalid data, unknown events.
@@ -24,15 +27,21 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
     esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t) data;
     switch (event_id) {
         case MQTT_EVENT_CONNECTED:
+            vPortEnterCritical(&mqttMutex);
             mqttConnected = true;
+            vPortExitCritical(&mqttMutex);
             ESP_LOGI("MQTT", "Connected to MQTT broker");
             break;
         case MQTT_EVENT_DISCONNECTED:
+            vPortEnterCritical(&mqttMutex);
             mqttConnected = false;
+            vPortExitCritical(&mqttMutex);
             ESP_LOGW("MQTT", "Disconnected from MQTT broker");
             break;
         case MQTT_EVENT_DATA:
+            vPortEnterCritical(&mqttMutex);
             lastMqttActivity = millis();  // Track last activity for power management
+            vPortExitCritical(&mqttMutex);
             if (!event->topic || !event->data || event->data_len == 0) {
                 ESP_LOGW("MQTT", "Invalid event data: topic=%p, data=%p, len=%d", event->topic, event->data, event->data_len);
                 return;
@@ -230,7 +239,10 @@ esp_err_t mqtt_init() {
 // Includes basic state info for monitoring.
 // Edge cases: MQTT not connected, invalid topic.
 void mqtt_publish_status() {
-    if (!mqttConnected) {
+    vPortEnterCritical(&mqttMutex);
+    bool connected = mqttConnected;
+    vPortExitCritical(&mqttMutex);
+    if (!connected) {
         ESP_LOGW("MQTT", "Not connected, skipping status publish");
         return;
     }
@@ -261,7 +273,10 @@ void mqtt_publish_status() {
 // Used for individual compartment updates.
 // Edge cases: invalid slotId, MQTT not connected.
 void mqtt_publish_slot_status(int slotId, const char* jsonPayload) {
-    if (!mqttConnected) {
+    vPortEnterCritical(&mqttMutex);
+    bool connected = mqttConnected;
+    vPortExitCritical(&mqttMutex);
+    if (!connected) {
         ESP_LOGW("MQTT", "Not connected, skipping slot status publish");
         return;
     }
@@ -295,13 +310,18 @@ void mqtt_loop_task(void *pvParameters) {
     ESP_LOGI("MQTT", "MQTT loop task started");
     while (1) {
         esp_task_wdt_reset();  // Reset watchdog
-        if (!mqttConnected) {
+        vPortEnterCritical(&mqttMutex);
+        bool connected = mqttConnected;
+        vPortExitCritical(&mqttMutex);
+        if (!connected) {
             ESP_LOGI("MQTT", "Disconnected, attempting reconnect");
             if (mqtt_init() != ESP_OK) {
                 ESP_LOGE("MQTT", "Reconnect failed, will retry");
                 fatal_error("MQTT reconnect failed");  // Fatal if reconnect fails
             } else {
+                vPortEnterCritical(&mqttMutex);
                 mqttReconnectCount++;  // Track reconnects for telemetry
+                vPortExitCritical(&mqttMutex);
                 ESP_LOGI("MQTT", "Reconnected successfully, count=%d", mqttReconnectCount);
             }
         }
@@ -312,5 +332,8 @@ void mqtt_loop_task(void *pvParameters) {
 // getMqttReconnectCount: Returns reconnect count for telemetry.
 // Edge case: count overflow (int max), but unlikely.
 int getMqttReconnectCount() {
-    return mqttReconnectCount;
+    vPortEnterCritical(&mqttMutex);
+    int count = mqttReconnectCount;
+    vPortExitCritical(&mqttMutex);
+    return count;
 }
