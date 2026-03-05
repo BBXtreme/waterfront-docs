@@ -42,7 +42,7 @@ esp_err_t power_manager_init() {
     lastWakeUpCause = (int)esp_sleep_get_wakeup_cause();
     wakeUpCount++;
 
-    ESP_LOGI("POWER", "ADC initialized for power readings");
+    ESP_LOGI("POWER", "ADC initialized for power readings, wake cause: %d, count: %u", lastWakeUpCause, wakeUpCount);
     return ESP_OK;
 }
 
@@ -120,6 +120,8 @@ bool power_manager_check_conditions() {
     float solarThreshold = g_config.system.solarVoltageMin;
     vPortExitCritical(&g_configMutex);
 
+    ESP_LOGI("POWER", "Thresholds: battery %d%%, solar %.2fV", batteryThreshold, solarThreshold);
+
     if (batteryPercent < batteryThreshold || solarVoltage < solarThreshold) {
         ESP_LOGW("POWER", "Low power detected, should enter deep sleep");
         return false;  // Enter sleep
@@ -165,10 +167,13 @@ esp_sleep_wakeup_cause_t power_manager_get_last_wake_up_cause() {
 // Start awake profiling
 void power_manager_start_awake_profiling() {
     awakeStartTime = esp_timer_get_time() / 1000;
+    ESP_LOGI("POWER", "Started awake profiling at %lu", awakeStartTime);
 }
 
 // Stop awake profiling and update total
 void power_manager_stop_awake_profiling() {
     unsigned long currentTime = esp_timer_get_time() / 1000;
-    totalAwakeTime += currentTime - awakeStartTime;
+    unsigned long awakeDuration = currentTime - awakeStartTime;
+    totalAwakeTime += awakeDuration;
+    ESP_LOGI("POWER", "Stopped awake profiling, duration %lu ms, total %lu ms", awakeDuration, totalAwakeTime);
 }

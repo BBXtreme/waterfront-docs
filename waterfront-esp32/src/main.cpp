@@ -103,7 +103,7 @@ void factory_reset_task(void *pvParameters) {
                 ESP_LOGI("MAIN", "Reset button pressed, hold for 5 seconds to trigger factory reset");
             } else if ((esp_timer_get_time() / 1000) - pressStartTime > RESET_HOLD_TIME_MS) {
                 // Factory reset triggered after 5s hold
-                ESP_LOGW("MAIN", "Factory reset triggered by long-press on GPIO 0");
+                ESP_LOGW("MAIN", "Factory reset triggered by long press on GPIO 0");
                 // Publish event to MQTT for remote monitoring
                 if (mqttConnected) {
                     cJSON *doc = cJSON_CreateObject();
@@ -182,7 +182,7 @@ void debug_task(void *pvParameters) {
             cJSON_AddNumberToObject(doc, "uptime", esp_timer_get_time() / 1000000);  // Uptime in seconds
             cJSON_AddNumberToObject(doc, "heapFree", esp_get_free_heap_size());  // Free heap memory
             cJSON_AddStringToObject(doc, "fwVersion", FW_VERSION);  // Firmware version
-            cJSON_AddNumberToObject(doc, "batteryPercent", readBatteryLevel());  // Battery percentage
+            cJSON_AddNumberToObject(doc, "batteryPercent", power_manager_get_battery_percent());  // Battery percentage
             cJSON_AddNumberToObject(doc, "tasks", uxTaskGetNumberOfTasks());  // Number of active tasks
             cJSON_AddNumberToObject(doc, "reconnects", getMqttReconnectCount());  // MQTT reconnect count
             cJSON_AddNumberToObject(doc, "totalAwakeTime", power_manager_get_total_awake_time());  // Total awake time in ms
