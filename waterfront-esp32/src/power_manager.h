@@ -2,6 +2,7 @@
 #define POWER_MANAGER_H
 
 #include <esp_err.h>
+#include <esp_sleep.h>
 
 /**
  * @brief Initializes power management.
@@ -60,5 +61,18 @@ void power_manager_start_awake_profiling();
  * @brief Stops awake time profiling and updates total.
  */
 void power_manager_stop_awake_profiling();
+
+/**
+ * @brief Sets dynamic power thresholds based on external conditions.
+ * @param batteryThreshold Battery low threshold in percent.
+ * @param solarThreshold Solar voltage min in volts.
+ */
+void power_manager_set_dynamic_thresholds(int batteryThreshold, float solarThreshold);
+
+/**
+ * @brief Gets the current power status as a string.
+ * @return Status string (e.g., "OK", "LOW_BATTERY", "LOW_SOLAR").
+ */
+const char* power_manager_get_status_string();
 
 #endif // POWER_MANAGER_H
