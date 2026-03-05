@@ -32,6 +32,7 @@
 #include "deposit_logic.h"
 #include "logger.h"
 #include "ota_handler.h"
+#include "power_manager.h"
 
 // Include other headers as needed
 
@@ -44,25 +45,21 @@ static unsigned long totalAwakeTime = 0;
 static unsigned int wakeUpCount = 0;
 static esp_sleep_wakeup_cause_t lastWakeUpCause = ESP_SLEEP_WAKEUP_UNDEFINED;
 
-// ADC configuration for power readings
-#define BATTERY_ADC_CHANNEL ADC_CHANNEL_6  // GPIO 34
-#define SOLAR_ADC_CHANNEL ADC_CHANNEL_7    // GPIO 35
-#define ADC_ATTEN ADC_ATTEN_DB_11          // 0-3.9V range
-#define ADC_WIDTH ADC_WIDTH_BIT_12         // 12-bit resolution
-static esp_adc_cal_characteristics_t adc_chars;
-
 // Initialize ADC for power readings
 void adc_init() {
-    adc1_config_width(ADC_WIDTH);
-    adc1_config_channel_atten(BATTERY_ADC_CHANNEL, ADC_ATTEN);
-    adc1_config_channel_atten(SOLAR_ADC_CHANNEL, ADC_ATTEN);
-    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, 1100, &adc_chars);  // 1100mV Vref
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC_CHANNEL_6, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten(ADC_CHANNEL_7, ADC_ATTEN_DB_11);
+    esp_adc_cal_characteristics_t adc_chars;
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);  // 1100mV Vref
     ESP_LOGI("ADC", "Initialized for battery and solar readings");
 }
 
 // Read battery level as percentage (0-100)
 int readBatteryLevel() {
-    int adc_raw = adc1_get_raw(BATTERY_ADC_CHANNEL);
+    int adc_raw = adc1_get_raw(ADC_CHANNEL_6);
+    esp_adc_cal_characteristics_t adc_chars;
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
     uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
     // Assume battery voltage 3.0V (0%) to 4.2V (100%)
     float voltage_v = voltage_mv / 1000.0f;
@@ -74,7 +71,9 @@ int readBatteryLevel() {
 
 // Read solar voltage in volts
 float readSolarVoltage() {
-    int adc_raw = adc1_get_raw(SOLAR_ADC_CHANNEL);
+    int adc_raw = adc1_get_raw(ADC_CHANNEL_7);
+    esp_adc_cal_characteristics_t adc_chars;
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
     uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
     return voltage_mv / 1000.0f;
 }
@@ -289,6 +288,11 @@ void app_main() {
     // Initialize ADC for power readings
     adc_init();
 
+    // Initialize power manager
+    if (power_manager_init() != ESP_OK) {
+        ESP_LOGE("MAIN", "Power manager init failed, continuing without");
+    }
+
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -407,47 +411,8 @@ void main_loop() {
     static unsigned long lastPowerCheck = 0;
     if ((esp_timer_get_time() / 1000) - lastPowerCheck > 60000) {  // Every minute
         ESP_LOGI("MAIN", "Performing power check");
-        int batteryPercent = readBatteryLevel();
-        float solarVoltage = readSolarVoltage();
-        // Validate readings
-        if (batteryPercent < 0 || batteryPercent > 100) {
-            ESP_LOGE("MAIN", "Invalid battery percent: %d", batteryPercent);
-            batteryPercent = 50;  // Fallback
-        }
-        if (solarVoltage < 0.0f || solarVoltage > 10.0f) {
-            ESP_LOGE("MAIN", "Invalid solar voltage: %f", solarVoltage);
-            solarVoltage = 5.0f;  // Fallback
-        }
-        ESP_LOGI("MAIN", "Power check: battery %d%%, solar %.2fV", batteryPercent, solarVoltage);
-        // Publish alert if low power
-        if (batteryPercent < g_config.system.batteryLowThresholdPercent || solarVoltage < g_config.system.solarVoltageMin) {
-            ESP_LOGW("MAIN", "Low power detected, publishing alert");
-            if (mqttConnected) {
-                cJSON *doc = cJSON_CreateObject();
-                cJSON_AddStringToObject(doc, "alert", "low_power");
-                cJSON_AddNumberToObject(doc, "batteryPercent", batteryPercent);
-                cJSON_AddNumberToObject(doc, "solarVoltage", solarVoltage);
-                cJSON_AddNumberToObject(doc, "timestamp", esp_timer_get_time() / 1000);
-                char *payload = cJSON_PrintUnformatted(doc);
-                char topic[96];
-                vPortEnterCritical(&g_configMutex);
-                int len = snprintf(topic, sizeof(topic), "waterfront/%s/%s/alert", g_config.location.slug, g_config.location.code);
-                vPortExitCritical(&g_configMutex);
-                if (len < sizeof(topic)) {
-                    esp_mqtt_client_publish(mqttClient, topic, payload, 0, 1, 0);
-                    ESP_LOGI("MAIN", "Published low power alert");
-                } else {
-                    ESP_LOGE("MAIN", "Alert topic too long, skipping publish");
-                }
-                cJSON_free(payload);
-                cJSON_Delete(doc);
-            } else {
-                ESP_LOGW("MAIN", "MQTT not connected, skipping low power alert");
-            }
-        }
-        // Enter deep sleep if battery low or solar low
-        if (batteryPercent < g_config.system.batteryLowThresholdPercent || solarVoltage < g_config.system.solarVoltageMin) {
-            ESP_LOGW("MAIN", "Entering deep sleep due to low power");
+        if (!power_manager_check_conditions()) {
+            ESP_LOGW("MAIN", "Low power detected, entering deep sleep");
             enterDeepSleep();
         }
         lastPowerCheck = esp_timer_get_time() / 1000;
