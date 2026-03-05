@@ -49,7 +49,7 @@ Users book online → pay → receive PIN/QR → arrive at solar-powered locker 
 - **IoT Controller** — ESP32-S3 (ESP-IDF), MQTT (esp-mqtt), TinyGSM (LTE fallback)
 - **MQTT Broker** — Mosquitto (Docker)
 - **Development** — pnpm, Aider (AI pair programming), GitHub monorepo
-- **Deployment** — Vercel (frontend), Railway/Render/VPS (MQTT broker, future BTCPay)
+- **Deployment** — e.g. Vercel (frontend), Railway/Render/VPS (MQTT broker, future BTCPay)
 
 ## Project Structure (Monorepo)
 
@@ -61,7 +61,7 @@ Waterfront/
 
 ├── waterfront-web/         # Next.js PWA → deployed to Vercel 
 
-├── waterfront-esp32/       # ESP-IDF project (PlatformIO/VS Code) 
+├── waterfront-esp32/       # ESP-IDF project 
 
 ├── waterfront-infra/       # Docker Compose (Mosquitto, future BTCPay) 
 
@@ -75,7 +75,6 @@ Waterfront/
 - pnpm (`npm install -g pnpm`)
 - Docker Desktop
 - Supabase CLI (`brew install supabase/tap/supabase` or `npm install -g supabase`)
-- PlatformIO (VS Code extension)
 - Git
 
 ### 1. Clone & Install
@@ -124,10 +123,9 @@ docker compose up -d
 
 ### 5. Build & Flash ESP32 Firmware
 
-The ESP32 controller uses **PlatformIO + ESP-IDF framework** (not Arduino core).
+The ESP32 controller uses **ESP-IDF framework** (not Arduino core).
 
 #### Prerequisites
-- Install **VS Code** + **PlatformIO IDE** extension
 - (Optional but recommended) Also install **ESP-IDF** extension by Espressif for menuconfig & advanced debugging
 
 #### Steps
