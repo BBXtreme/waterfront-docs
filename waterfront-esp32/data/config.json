@@ -51,6 +51,13 @@
     "logLevel": 3,
     "otaPassword": "secureota123"
   },
+  "sleep": {
+    "enableDeepSleep": true,
+    "timerWakeupSec": 300,
+    "sensorWakeupPin": 16,
+    "mqttWakeupPin": 17,
+    "maxAwakeTimeSec": 60
+  },
   "other": {
     "offlinePinTtlSec": 86400,
     "depositHoldAmountFallback": 50
