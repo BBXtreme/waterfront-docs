@@ -38,7 +38,7 @@ bool mockGpioFail = false;  // Simulate GPIO failure
 void mock_gpio_set_direction(gpio_num_t pin, gpio_mode_t mode) {
     if (mockGpioFail) throw std::runtime_error("GPIO set direction failed");
 }
-void mock_gpio_set_pull_mode(gpio_num_t pin, gpio_pull_mode_t mode) {
+void mock_gpio_set_pull_mode(gpio_num_t pin, gpio_mode_t mode) {
     if (mockGpioFail) throw std::runtime_error("GPIO set pull mode failed");
 }
 int mock_gpio_get_level(gpio_num_t pin) {

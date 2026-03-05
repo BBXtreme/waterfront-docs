@@ -1,7 +1,7 @@
 // test_lte_manager.cpp - Unit tests for lte_manager.cpp using Catch2
 // This file contains tests for LTE manager functions, focusing on power management and signal checks.
 // Uses Catch2 for test framework (header-only, include via PlatformIO lib_deps).
-// Mocks TinyGsm, WiFi, and other dependencies to simulate LTE operations without hardware.
+// Mocks TinyGsm, WiFiClient, and other dependencies to simulate LTE operations without hardware.
 // Run tests with PlatformIO: pio test
 
 #define CATCH_CONFIG_RUNNER  // Catch2 runner for multiple test files

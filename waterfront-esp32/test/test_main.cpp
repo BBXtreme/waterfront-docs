@@ -51,7 +51,7 @@ int readBatteryLevel() {
 float readSolarVoltage() {
     int adcValue = analogRead(35);  // ADC pin for solar
     if (adcValue < 0 || adcValue > 4095) {
-        ESP_LOGE("MAIN", "Invalid ADC value for solar: %d", adcValue);
+        ESP_LOGE("MAIN", "Invalid ADC value for solar: %f", adcValue);
         return 0.0f;  // Fallback
     }
     // Calculate voltage: ADC * (3.3V / 4095) * divider ratio

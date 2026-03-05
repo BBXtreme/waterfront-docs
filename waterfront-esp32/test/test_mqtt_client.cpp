@@ -47,6 +47,7 @@ public:
     static int publishCount;
 };
 bool MockPubSubClient::mockConnected = false;
+bool MockPubSubClient::mockConnected = false;
 bool MockPubSubClient::serverSet = false;
 bool MockPubSubClient::callbackSet = false;
 int MockPubSubClient::publishCount = 0;

@@ -10,7 +10,7 @@
 // Include headers under test
 #include "compartment_manager.h"
 #include "config_loader.h"
-#include <ArduinoJson.h>
+#include <nlohmann/json.hpp>
 
 // Mock GlobalConfig for tests
 GlobalConfig g_config;
@@ -19,7 +19,7 @@ GlobalConfig g_config;
 class MockLittleFS {
 public:
     static bool begin() { return true; }
-    static File open(const char* path, const char* mode) {
+    static FILE* open(const char* path, const char* mode) {
         if (strcmp(path, "/config.json") == 0 && strcmp(mode, "r") == 0) {
             return MockFile(mockConfigJson);
         }

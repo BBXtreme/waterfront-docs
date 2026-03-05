@@ -12,7 +12,7 @@
 #include "config.h"
 #include <PubSubClient.h>
 #include <Client.h>
-#include <ArduinoJson.h>
+#include <nlohmann/json.hpp>
 #include <cstring>
 
 // Mock GlobalConfig for tests
@@ -85,9 +85,10 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
 
     // Parse JSON
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, msg);
-    if (error) {
+    nlohmann::json doc;
+    try {
+        doc = nlohmann::json::parse(msg);
+    } catch (const nlohmann::json::parse_error& e) {
         return;
     }
 
