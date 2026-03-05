@@ -39,12 +39,6 @@
 // Firmware version define
 const char* FW_VERSION = "0.9.2-beta"; ///< Firmware version string
 
-// Deep sleep profiling variables
-static unsigned long awakeStartTime = 0;
-static unsigned long totalAwakeTime = 0;
-static unsigned int wakeUpCount = 0;
-static esp_sleep_wakeup_cause_t lastWakeUpCause = ESP_SLEEP_WAKEUP_UNDEFINED;
-
 // Initialize ADC for power readings
 void adc_init() {
     adc1_config_width(ADC_WIDTH_BIT_12);
@@ -76,33 +70,6 @@ float readSolarVoltage() {
     esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
     uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
     return voltage_mv / 1000.0f;
-}
-
-// Enter deep sleep to conserve power
-void enterDeepSleep() {
-    ESP_LOGI("SLEEP", "Entering deep sleep for power conservation");
-    // Configure wake-up sources
-    vPortEnterCritical(&g_configMutex);
-    bool enableSleep = g_config.sleep.enableDeepSleep;
-    int timerSec = g_config.sleep.timerWakeupSec;
-    int sensorPin = g_config.sleep.sensorWakeupPin;
-    int mqttPin = g_config.sleep.mqttWakeupPin;
-    vPortExitCritical(&g_configMutex);
-    if (!enableSleep) {
-        ESP_LOGI("SLEEP", "Deep sleep disabled in config, skipping");
-        return;
-    }
-    // Timer wakeup
-    esp_sleep_enable_timer_wakeup(timerSec * 1000000ULL);  // Convert to microseconds
-    // GPIO wakeup for sensor (rising edge, assume active high)
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)sensorPin, 1);
-    // GPIO wakeup for MQTT (rising edge, assume active high)
-    esp_sleep_enable_ext1_wakeup(1ULL << mqttPin, ESP_EXT1_WAKEUP_ANY_HIGH);
-    // Disable WiFi and Bluetooth to save power
-    esp_wifi_stop();
-    esp_bt_controller_disable();
-    // Enter deep sleep
-    esp_deep_sleep_start();
 }
 
 /**
@@ -273,14 +240,6 @@ void ota_task(void *pvParameters) {
 void app_main() {
     ESP_LOGI("MAIN", "WATERFRONT starting...");
 
-    // Profile wake-up cause
-    lastWakeUpCause = esp_sleep_get_wakeup_cause();
-    wakeUpCount++;
-    ESP_LOGI("MAIN", "Wake-up cause: %d, total wake-ups: %u", lastWakeUpCause, wakeUpCount);
-
-    // Start awake time profiling
-    power_manager_start_awake_profiling();
-
     // Initialize task watchdog timer for stability (12s timeout)
     esp_task_wdt_init(12, true);
     esp_task_wdt_add(NULL);  // Add main task to watchdog
@@ -288,10 +247,16 @@ void app_main() {
     // Initialize ADC for power readings
     adc_init();
 
-    // Initialize power manager
+    // Initialize power manager (sets wake cause and count)
     if (power_manager_init() != ESP_OK) {
         ESP_LOGE("MAIN", "Power manager init failed, continuing without");
     }
+
+    // Log wake-up cause and count
+    ESP_LOGI("MAIN", "Wake-up cause: %d, total wake-ups: %u", power_manager_get_last_wake_up_cause(), power_manager_get_wake_up_count());
+
+    // Start awake time profiling
+    power_manager_start_awake_profiling();
 
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -414,7 +379,7 @@ void main_loop() {
         if (!power_manager_check_conditions()) {
             ESP_LOGW("MAIN", "Low power detected, entering deep sleep");
             power_manager_stop_awake_profiling();
-            enterDeepSleep();
+            power_manager_enter_deep_sleep();
         }
         lastPowerCheck = esp_timer_get_time() / 1000;
     }

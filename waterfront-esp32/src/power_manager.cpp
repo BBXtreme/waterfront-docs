@@ -37,6 +37,11 @@ esp_err_t power_manager_init() {
     adc1_config_channel_atten(BATTERY_ADC_CHANNEL, ADC_ATTEN);
     adc1_config_channel_atten(SOLAR_ADC_CHANNEL, ADC_ATTEN);
     esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, 1100, &adc_chars);  // 1100mV Vref
+
+    // Set wake-up cause and increment count
+    lastWakeUpCause = (int)esp_sleep_get_wakeup_cause();
+    wakeUpCount++;
+
     ESP_LOGI("POWER", "ADC initialized for power readings");
     return ESP_OK;
 }
