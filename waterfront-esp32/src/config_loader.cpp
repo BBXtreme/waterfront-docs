@@ -291,6 +291,8 @@ bool loadConfig() {
         g_config.system.batteryLowThresholdPercent = cJSON_GetNumberValue(cJSON_GetObjectItem(sys, "batteryLowThresholdPercent"));
         g_config.system.solarVoltageMin = cJSON_GetNumberValue(cJSON_GetObjectItem(sys, "solarVoltageMin"));
         g_config.system.logLevel = cJSON_GetNumberValue(cJSON_GetObjectItem(sys, "logLevel"));
+        const char *otaPassword = cJSON_GetStringValue(cJSON_GetObjectItem(sys, "otaPassword"));
+        strcpy(g_config.system.otaPassword, otaPassword ? otaPassword : "");
         ESP_LOGI("CONFIG", "Loaded system config: debugMode=%d, gracePeriod=%d, logLevel=%d", g_config.system.debugMode, g_config.system.gracePeriodSec, g_config.system.logLevel);
     } else {
         ESP_LOGW("CONFIG", "System section missing, using defaults");
@@ -382,6 +384,7 @@ bool saveConfig() {
     cJSON_AddNumberToObject(sys, "batteryLowThresholdPercent", g_config.system.batteryLowThresholdPercent);
     cJSON_AddNumberToObject(sys, "solarVoltageMin", g_config.system.solarVoltageMin);
     cJSON_AddNumberToObject(sys, "logLevel", g_config.system.logLevel);
+    cJSON_AddStringToObject(sys, "otaPassword", g_config.system.otaPassword);
     // Serialize other section
     cJSON *oth = cJSON_AddObjectToObject(doc, "other");
     cJSON_AddNumberToObject(oth, "offlinePinTtlSec", g_config.other.offlinePinTtlSec);
@@ -485,6 +488,7 @@ GlobalConfig getDefaultConfig() {
     def.system.batteryLowThresholdPercent = 20;
     def.system.solarVoltageMin = 3.0f;
     def.system.logLevel = LOG_LEVEL_DEFAULT;
+    strcpy(def.system.otaPassword, "secureota123");
     def.other.offlinePinTtlSec = 86400;
     def.other.depositHoldAmountFallback = 50;
     return def;
@@ -550,6 +554,7 @@ const char* getConfigAsJson() {
     cJSON_AddNumberToObject(sys, "batteryLowThresholdPercent", g_config.system.batteryLowThresholdPercent);
     cJSON_AddNumberToObject(sys, "solarVoltageMin", g_config.system.solarVoltageMin);
     cJSON_AddNumberToObject(sys, "logLevel", g_config.system.logLevel);
+    cJSON_AddStringToObject(sys, "otaPassword", g_config.system.otaPassword);
     // Serialize other section
     cJSON *oth = cJSON_AddObjectToObject(doc, "other");
     cJSON_AddNumberToObject(oth, "offlinePinTtlSec", g_config.other.offlinePinTtlSec);

@@ -248,6 +248,26 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
             snprintf(otaTopic, sizeof(otaTopic), "waterfront/%s/%s/ota/update", locationSlug, locationCode);
             if (strcmp(topic, otaTopic) == 0) {
                 ESP_LOGI("MQTT", "OTA update received: %s", msg);
+                cJSON *otaDoc = cJSON_Parse(msg);
+                if (!otaDoc) {
+                    ESP_LOGE("OTA", "Invalid OTA JSON");
+                    return;
+                }
+                const char *url = cJSON_GetStringValue(cJSON_GetObjectItem(otaDoc, "url"));
+                const char *password = cJSON_GetStringValue(cJSON_GetObjectItem(otaDoc, "password"));
+                vPortEnterCritical(&g_configMutex);
+                bool passwordMatch = password && strcmp(password, g_config.system.otaPassword) == 0;
+                vPortExitCritical(&g_configMutex);
+                if (!passwordMatch) {
+                    ESP_LOGE("OTA", "OTA password mismatch or missing, skipping update");
+                    cJSON_Delete(otaDoc);
+                    return;
+                }
+                if (!url) {
+                    ESP_LOGE("OTA", "OTA URL missing");
+                    cJSON_Delete(otaDoc);
+                    return;
+                }
                 // Save current version to NVS before update
                 nvs_handle_t nvs_handle;
                 esp_err_t err = nvs_open("ota", NVS_READWRITE, &nvs_handle);
@@ -259,23 +279,23 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
                 }
                 // Assume msg is the URL
                 esp_http_client_config_t ota_config = {
-                    .url = msg,
+                    .url = url,
                     .cert_pem = NULL,
                     .skip_cert_common_name_check = true,
                 };
                 esp_err_t ret = esp_https_ota(&ota_config);
-                cJSON *otaDoc = cJSON_CreateObject();
-                cJSON_AddStringToObject(otaDoc, "firmwareVersion", FW_VERSION);
+                cJSON *statusDoc = cJSON_CreateObject();
+                cJSON_AddStringToObject(statusDoc, "firmwareVersion", FW_VERSION);
                 if (ret == ESP_OK) {
                     ESP_LOGI("OTA", "Update successful, restarting");
-                    cJSON_AddStringToObject(otaDoc, "otaResult", "success");
+                    cJSON_AddStringToObject(statusDoc, "otaResult", "success");
                     esp_restart();
                 } else {
                     ESP_LOGE("OTA", "Update failed: %s", esp_err_to_name(ret));
-                    cJSON_AddStringToObject(otaDoc, "otaResult", "failed");
-                    cJSON_AddStringToObject(otaDoc, "error", esp_err_to_name(ret));
+                    cJSON_AddStringToObject(statusDoc, "otaResult", "failed");
+                    cJSON_AddStringToObject(statusDoc, "error", esp_err_to_name(ret));
                 }
-                char *otaPayload = cJSON_PrintUnformatted(otaDoc);
+                char *otaPayload = cJSON_PrintUnformatted(statusDoc);
                 char otaStatusTopic[96];
                 snprintf(otaStatusTopic, sizeof(otaStatusTopic), "waterfront/%s/%s/ota/status", locationSlug, locationCode);
                 int msg_id = esp_mqtt_client_publish(mqttClient, otaStatusTopic, otaPayload, 0, 1, 1);
@@ -283,6 +303,7 @@ void event_handler(void* args, esp_event_base_t base, int32_t event_id, void* da
                     ESP_LOGI("OTA", "Published OTA status, msg_id=%d", msg_id);
                 }
                 cJSON_free(otaPayload);
+                cJSON_Delete(statusDoc);
                 cJSON_Delete(otaDoc);
                 return;
             }

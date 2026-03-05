@@ -49,7 +49,8 @@
     "gracePeriodSec": 3600,
     "batteryLowThresholdPercent": 20,
     "solarVoltageMin": 3.0,
-    "logLevel": 3
+    "logLevel": 3,
+    "otaPassword": "secureota123"
   },
   "other": {
     "offlinePinTtlSec": 86400,

@@ -74,6 +74,7 @@ struct SystemConfig {
     int batteryLowThresholdPercent;
     float solarVoltageMin;
     int logLevel;
+    char otaPassword[32];  // OTA password for security
 };
 
 // Other config
