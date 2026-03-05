@@ -21,4 +21,7 @@
 // Compartment settings
 #define MAX_COMPARTMENTS 10                ///< Maximum number of compartments supported
 
+// Logging settings
+#define LOG_LEVEL_DEFAULT 3                ///< Default log level (3 = INFO)
+
 #endif // CONFIG_H

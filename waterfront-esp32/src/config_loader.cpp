@@ -56,6 +56,11 @@ bool validateConfig(const GlobalConfig& cfg) {
         ESP_LOGE("CONFIG", "Invalid solar voltage min: %f", cfg.system.solarVoltageMin);
         return false;
     }
+    // Log level validation
+    if (cfg.system.logLevel < 0 || cfg.system.logLevel > 5) {
+        ESP_LOGE("CONFIG", "Invalid log level: %d", cfg.system.logLevel);
+        return false;
+    }
     // Compartment pin validation
     for (int i = 0; i < cfg.compartmentCount; i++) {
         const auto& comp = cfg.compartments[i];
@@ -296,7 +301,8 @@ bool loadConfig() {
         g_config.system.gracePeriodSec = sys.value("gracePeriodSec", 0);
         g_config.system.batteryLowThresholdPercent = sys.value("batteryLowThresholdPercent", 0);
         g_config.system.solarVoltageMin = sys.value("solarVoltageMin", 0.0f);
-        ESP_LOGI("CONFIG", "Loaded system config: debugMode=%d, gracePeriod=%d", g_config.system.debugMode, g_config.system.gracePeriodSec);
+        g_config.system.logLevel = sys.value("logLevel", LOG_LEVEL_DEFAULT);
+        ESP_LOGI("CONFIG", "Loaded system config: debugMode=%d, gracePeriod=%d, logLevel=%d", g_config.system.debugMode, g_config.system.gracePeriodSec, g_config.system.logLevel);
     } else {
         ESP_LOGW("CONFIG", "System section missing, using defaults");
     }
@@ -375,6 +381,7 @@ bool saveConfig() {
     doc["system"]["gracePeriodSec"] = g_config.system.gracePeriodSec;
     doc["system"]["batteryLowThresholdPercent"] = g_config.system.batteryLowThresholdPercent;
     doc["system"]["solarVoltageMin"] = g_config.system.solarVoltageMin;
+    doc["system"]["logLevel"] = g_config.system.logLevel;
     // Serialize other section
     doc["other"]["offlinePinTtlSec"] = g_config.other.offlinePinTtlSec;
     doc["other"]["depositHoldAmountFallback"] = g_config.other.depositHoldAmountFallback;
@@ -470,6 +477,7 @@ GlobalConfig getDefaultConfig() {
     def.system.gracePeriodSec = 3600;
     def.system.batteryLowThresholdPercent = 20;
     def.system.solarVoltageMin = 3.0f;
+    def.system.logLevel = LOG_LEVEL_DEFAULT;
     def.other.offlinePinTtlSec = 86400;
     def.other.depositHoldAmountFallback = 50;
     return def;
@@ -525,6 +533,7 @@ std::string getConfigAsJson() {
     doc["system"]["gracePeriodSec"] = g_config.system.gracePeriodSec;
     doc["system"]["batteryLowThresholdPercent"] = g_config.system.batteryLowThresholdPercent;
     doc["system"]["solarVoltageMin"] = g_config.system.solarVoltageMin;
+    doc["system"]["logLevel"] = g_config.system.logLevel;
     // Serialize other section
     doc["other"]["offlinePinTtlSec"] = g_config.other.offlinePinTtlSec;
     doc["other"]["depositHoldAmountFallback"] = g_config.other.depositHoldAmountFallback;

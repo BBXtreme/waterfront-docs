@@ -22,6 +22,7 @@
 #include <nvs_flash.h>
 #include <ArduinoOTA.h>
 #include <Preferences.h>
+#include "logger.h"
 
 // Include other headers as needed
 
@@ -178,6 +179,9 @@ void setup() {
     if (!loadConfig()) {
         ESP_LOGW("MAIN", "Using defaults");
     }
+
+    // Initialize logger
+    logger_init();
 
     // Initialize compartment manager with loaded config
     compartment_init();

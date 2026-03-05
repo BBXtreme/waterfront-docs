@@ -74,6 +74,7 @@ struct SystemConfig {
     int gracePeriodSec;
     int batteryLowThresholdPercent;
     float solarVoltageMin;
+    int logLevel;
 };
 
 // Other config

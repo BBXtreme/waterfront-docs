@@ -48,7 +48,8 @@
     "debugMode": true,
     "gracePeriodSec": 3600,
     "batteryLowThresholdPercent": 20,
-    "solarVoltageMin": 3.0
+    "solarVoltageMin": 3.0,
+    "logLevel": 3
   },
   "other": {
     "offlinePinTtlSec": 86400,
