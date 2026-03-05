@@ -112,7 +112,7 @@ supabase init     # only first time
 supabase start
 ```
 
-→ Studio: [http://127.0.0.1:54323](http://127.0.0.1:54323/) Login: postgres / postgres
+→ Studio: [http://127.0.0.1:54323](http://localhost:54323/)
 
 ### 4. Start Local MQTT Broker
 

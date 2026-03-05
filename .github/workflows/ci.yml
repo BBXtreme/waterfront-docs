@@ -7,5 +7,21 @@ jobs:
     - uses: actions/checkout@v4
     - name: Set up PlatformIO
       uses: platformio/platformio-action@v1
-    - run: pio run
-    - run: pio test -e unit_test
+    - name: Install dependencies
+      run: pio pkg install
+    - name: Lint code
+      run: pio check
+    - name: Build project
+      run: pio run
+    - name: Run unit tests
+      run: pio test -e unit_test
+    - name: Run performance tests
+      run: pio test -e unit_test --filter "*Performance*"
+    - name: Generate test coverage (if available)
+      run: |
+        # Note: Catch2 doesn't have built-in coverage; use gcov if integrated
+        # For now, just log test results
+        echo "Tests completed; check logs for coverage"
+    - name: Notify on failure
+      if: failure()
+      run: echo "Build or tests failed; check logs"

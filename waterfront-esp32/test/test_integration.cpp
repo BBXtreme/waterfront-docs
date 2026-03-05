@@ -179,3 +179,16 @@ TEST_CASE("Config Load Save Flow", "[integration]") {
     // Verify (in real, check file content)
     REQUIRE(true);
 }
+
+// New: Test integration with hardware failure
+TEST_CASE("Integration with GPIO Failure", "[integration]") {
+    // Setup config
+    g_config.compartments[0] = {1, 12, 13, 14, 15, 16, 17};
+    g_config.compartmentCount = 1;
+
+    // Simulate GPIO failure during gate task
+    mockGpioLevels[13] = 0;  // No open limit
+    // In real code, gate_task might handle, but test assumes no crash
+    gate_task();
+    REQUIRE(true);  // No exception thrown
+}

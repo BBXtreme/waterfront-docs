@@ -1,7 +1,6 @@
 // test_config_loader.cpp - Unit tests for config_loader.cpp using Catch2
 // This file contains tests for config loader functions, focusing on JSON parsing, validation, and file operations.
 // Uses Catch2 for test framework (header-only, include via PlatformIO lib_deps).
-// Mocks LittleFS and nlohmann/json to simulate file system without ESP32.
 // Run tests with PlatformIO: pio test
 
 #define CATCH_CONFIG_RUNNER  // Catch2 runner for multiple test files
@@ -220,4 +219,30 @@ TEST_CASE("Get Default Config", "[config]") {
     REQUIRE(def.mqtt.broker == "8bee884b3e6048c280526f54fe81b9b9.s1.eu.hivemq.cloud");
     REQUIRE(def.location.slug == "bremen");
     REQUIRE(def.compartmentCount == 1);
+}
+
+// New: Test config save failure
+TEST_CASE("Save Config - File Write Failure", "[config]") {
+    // Mock file open failure
+    MockLittleFS::mockFile = nullptr;
+
+    // Call save
+    bool result = saveConfig();
+
+    // Verify failure
+    REQUIRE(result == false);
+}
+
+// New: Test config update with partial JSON
+TEST_CASE("Update Config - Partial JSON", "[config]") {
+    // Mock partial JSON (only MQTT)
+    const char* json = "{\"mqtt\":{\"broker\":\"partial.com\"}}";
+
+    // Call update
+    bool result = updateConfigFromJson(json);
+
+    // Verify success and partial update
+    REQUIRE(result == true);
+    REQUIRE(g_config.mqtt.broker == "partial.com");
+    // Other fields should remain default or previous
 }
