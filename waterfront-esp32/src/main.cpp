@@ -19,10 +19,14 @@
 #include <esp_http_client.h>
 #include <cJSON.h>
 #include <mqtt_client.h>
+#include <esp_task_wdt.h>
+#include <driver/adc.h>
+#include <esp_adc_cal.h>
+#include <esp_sleep.h>
 #include "config_loader.h"
 #include "compartment_manager.h"
 #include "mqtt_handler.h"
-#include <esp_task_wdt.h>
+#include <esp_timer.h>
 #include "error_handler.h"
 #include "deposit_logic.h"
 #include "logger.h"
@@ -37,6 +41,54 @@ static unsigned long awakeStartTime = 0;
 static unsigned long totalAwakeTime = 0;
 static unsigned int wakeUpCount = 0;
 static esp_sleep_wakeup_cause_t lastWakeUpCause = ESP_SLEEP_WAKEUP_UNDEFINED;
+
+// ADC configuration for power readings
+#define BATTERY_ADC_CHANNEL ADC_CHANNEL_6  // GPIO 34
+#define SOLAR_ADC_CHANNEL ADC_CHANNEL_7    // GPIO 35
+#define ADC_ATTEN ADC_ATTEN_DB_11          // 0-3.9V range
+#define ADC_WIDTH ADC_WIDTH_BIT_12         // 12-bit resolution
+static esp_adc_cal_characteristics_t adc_chars;
+
+// Initialize ADC for power readings
+void adc_init() {
+    adc1_config_width(ADC_WIDTH);
+    adc1_config_channel_atten(BATTERY_ADC_CHANNEL, ADC_ATTEN);
+    adc1_config_channel_atten(SOLAR_ADC_CHANNEL, ADC_ATTEN);
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH, 1100, &adc_chars);  // 1100mV Vref
+    ESP_LOGI("ADC", "Initialized for battery and solar readings");
+}
+
+// Read battery level as percentage (0-100)
+int readBatteryLevel() {
+    int adc_raw = adc1_get_raw(BATTERY_ADC_CHANNEL);
+    uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
+    // Assume battery voltage 3.0V (0%) to 4.2V (100%)
+    float voltage_v = voltage_mv / 1000.0f;
+    int percent = (int)((voltage_v - 3.0f) / (4.2f - 3.0f) * 100.0f);
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+    return percent;
+}
+
+// Read solar voltage in volts
+float readSolarVoltage() {
+    int adc_raw = adc1_get_raw(SOLAR_ADC_CHANNEL);
+    uint32_t voltage_mv = esp_adc_cal_raw_to_voltage(adc_raw, &adc_chars);
+    return voltage_mv / 1000.0f;
+}
+
+// Enter deep sleep to conserve power
+void enterDeepSleep() {
+    ESP_LOGI("SLEEP", "Entering deep sleep for power conservation");
+    // Configure wake-up sources
+    esp_sleep_enable_timer_wakeup(3600000000ULL);  // Wake up every 1 hour (adjust as needed)
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);   // Wake up on GPIO 0 low (reset button)
+    // Disable WiFi and Bluetooth to save power
+    esp_wifi_stop();
+    esp_bt_controller_disable();
+    // Enter deep sleep
+    esp_deep_sleep_start();
+}
 
 /**
  * @brief Factory reset task: Monitors GPIO 0 for long press to trigger factory reset.
@@ -193,6 +245,9 @@ void app_main() {
     // Initialize task watchdog timer for stability (12s timeout)
     esp_task_wdt_init(12, true);
     esp_task_wdt_add(NULL);  // Add main task to watchdog
+
+    // Initialize ADC for power readings
+    adc_init();
 
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
