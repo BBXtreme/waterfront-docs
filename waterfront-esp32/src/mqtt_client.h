@@ -5,7 +5,6 @@
 
 extern esp_mqtt_client_handle_t mqttClient;
 extern bool mqttConnected;
-extern unsigned long lastMqttActivity;
 
 /**
  * @brief Initializes the MQTT client with server and callback.
@@ -29,6 +28,42 @@ void mqtt_publish_status();
  * @param jsonPayload The JSON payload string.
  */
 void mqtt_publish_slot_status(int slotId, const char* jsonPayload);
+
+/**
+ * @brief Publishes retained status for a compartment.
+ * @param compartmentId The compartment ID.
+ * @param jsonPayload The JSON payload.
+ */
+void mqtt_publish_retained_status(int compartmentId, const char* jsonPayload);
+
+/**
+ * @brief Publishes acknowledgment for a compartment action.
+ * @param compartmentId The compartment ID.
+ * @param action The action performed.
+ */
+void mqtt_publish_ack(int compartmentId, const char* action);
+
+/**
+ * @brief Attempts to connect to MQTT broker.
+ * @return True if connected, false otherwise.
+ */
+bool mqtt_connect();
+
+/**
+ * @brief Subscribes to MQTT topics.
+ */
+void mqtt_subscribe();
+
+/**
+ * @brief Maintains MQTT connection and processes messages.
+ */
+void mqtt_loop();
+
+/**
+ * @brief MQTT loop task.
+ * @param pvParameters Task parameters.
+ */
+void mqtt_loop_task(void *pvParameters);
 
 /**
  * @brief Returns the MQTT reconnect count for telemetry.
