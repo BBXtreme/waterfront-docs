@@ -13,6 +13,9 @@
 #include "return_sensor.h"
 #include "deposit_logic.h"
 
+// Define global config for tests
+GlobalConfig g_config;
+
 // Mock MQTT client
 class MockPubSubClient {
 public:
@@ -25,8 +28,51 @@ public:
     }
 };
 
-// Mock global config
-GlobalConfig g_config;
+// Mock LittleFS for file operations
+class MockLittleFS {
+public:
+    static bool begin() { return mockBegin; }
+    static FILE* open(const char* path, const char* mode) {
+        if (strcmp(path, "/littlefs/config.json") == 0) {
+            return mockFile;
+        }
+        return nullptr;
+    }
+    static bool remove(const char* path) { return mockRemove; }
+    static std::string mockContent;
+    static bool mockBegin;
+    static bool mockRemove;
+    static FILE* mockFile;
+};
+std::string MockLittleFS::mockContent = "";
+bool MockLittleFS::mockBegin = true;
+bool MockLittleFS::mockRemove = true;
+FILE* MockLittleFS::mockFile = nullptr;
+
+// Mock FILE functions
+size_t mockFread(void* ptr, size_t size, size_t count, FILE* stream) {
+    if (stream == MockLittleFS::mockFile) {
+        memcpy(ptr, MockLittleFS::mockContent.c_str(), MockLittleFS::mockContent.size());
+        return MockLittleFS::mockContent.size();
+    }
+    return 0;
+}
+int mockFseek(FILE* stream, long offset, int whence) { return 0; }
+long mockFtell(FILE* stream) { return MockLittleFS::mockContent.size(); }
+int mockFclose(FILE* stream) { return 0; }
+FILE* mockFopen(const char* path, const char* mode) { return MockLittleFS::mockFile; }
+size_t mockFwrite(const void* ptr, size_t size, size_t count, FILE* stream) { return count; }
+int mockUnlink(const char* path) { return 0; }
+#define fread mockFread
+#define fseek mockFseek
+#define ftell mockFtell
+#define fclose mockFclose
+#define fopen mockFopen
+#define fwrite mockFwrite
+#define unlink mockUnlink
+
+// Override LittleFS
+#define LittleFS MockLittleFS
 
 // Mock millis
 unsigned long mockMillis = 0;
