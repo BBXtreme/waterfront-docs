@@ -13,10 +13,19 @@
 
 #include "compartment_manager.h"
 #include "config_loader.h"
+#include <esp_vfs.h>
+#include <esp_littlefs.h>
+#include <nlohmann/json.hpp>
 #include <vector>
 #include <string>
-#include <LittleFS.h>
-#include <ArduinoJson.h>
+
+// LittleFS configuration
+static esp_littlefs_config_t littlefs_config = {
+    .base_path = "/littlefs",
+    .partition_label = NULL,
+    .format_if_mount_failed = true,
+    .dont_mount = false
+};
 
 // Compartment struct (updated to match config)
 struct Compartment {
