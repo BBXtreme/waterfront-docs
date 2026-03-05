@@ -22,7 +22,7 @@ extern bool mqttConnected;
 // fatal_error function: Handles unrecoverable errors.
 // Logs the error, publishes to MQTT if connected and debug mode enabled, and restarts the ESP32.
 // Edge cases: MQTT not connected (skips publish), invalid code (logs as is).
-void fatal_error(const char* msg, esp_err_t code) {
+void fatal_error(const char* msg, esp_err_t code = ESP_FAIL) {
     // Validate inputs
     if (!msg) {
         msg = "Unknown error";  // Fallback for null message

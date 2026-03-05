@@ -1,10 +1,11 @@
 #ifndef DEPOSIT_LOGIC_H
 #define DEPOSIT_LOGIC_H
 
-#include <vector>
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
 #include <PubSubClient.h>
+
+#define MAX_TIMERS 10 ///< Maximum number of active timers
 
 struct RentalTimer {
     int compartmentId; ///< ID of the compartment
@@ -13,7 +14,8 @@ struct RentalTimer {
     TimerHandle_t timerHandle; ///< FreeRTOS timer handle
 };
 
-extern std::vector<RentalTimer> activeTimers; ///< Vector of active rental timers
+extern RentalTimer activeTimers[MAX_TIMERS]; ///< Array of active rental timers
+extern int activeTimersCount; ///< Number of active timers
 
 /**
  * @brief Initializes deposit logic.

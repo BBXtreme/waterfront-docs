@@ -4,7 +4,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
 
-std::vector<RentalTimer> activeTimers;
+RentalTimer activeTimers[MAX_TIMERS];
+int activeTimersCount = 0;
 bool deposit_held = false;
 unsigned long rental_start_time = 0;
 unsigned long rental_duration_ms = 0;
@@ -16,13 +17,17 @@ void overdueCallback(TimerHandle_t xTimer) {
     // Auto-lock: close the gate (assuming gate_control is available)
     // TODO: Integrate with gate_control.h to close the gate
     // For now, log and remove from activeTimers
-    for (auto it = activeTimers.begin(); it != activeTimers.end(); ) {
-        if (it->compartmentId == compartmentId) {
-            xTimerDelete(it->timerHandle, 0);
-            it = activeTimers.erase(it);
+    for (int i = 0; i < activeTimersCount; ) {
+        if (activeTimers[i].compartmentId == compartmentId) {
+            xTimerDelete(activeTimers[i].timerHandle, 0);
+            // Shift array
+            for (int j = i; j < activeTimersCount - 1; j++) {
+                activeTimers[j] = activeTimers[j + 1];
+            }
+            activeTimersCount--;
             break;
         } else {
-            ++it;
+            ++i;
         }
     }
     // Publish overdue event if MQTT available
@@ -31,16 +36,22 @@ void overdueCallback(TimerHandle_t xTimer) {
 
 void deposit_init() {
     deposit_held = false;
+    activeTimersCount = 0;
     ESP_LOGI("DEPOSIT", "Initialized");
 }
 
 void startRental(int compartmentId, unsigned long durationSec) {
     // Check if already active
-    for (const auto& timer : activeTimers) {
-        if (timer.compartmentId == compartmentId) {
+    for (int i = 0; i < activeTimersCount; i++) {
+        if (activeTimers[i].compartmentId == compartmentId) {
             ESP_LOGW("DEPOSIT", "Rental already active for compartment %d", compartmentId);
             return;
         }
+    }
+
+    if (activeTimersCount >= MAX_TIMERS) {
+        ESP_LOGE("DEPOSIT", "Max timers reached, cannot start rental for compartment %d", compartmentId);
+        return;
     }
 
     RentalTimer timer;
@@ -57,26 +68,30 @@ void startRental(int compartmentId, unsigned long durationSec) {
         return;
     }
     xTimerStart(timer.timerHandle, 0);
-    activeTimers.push_back(timer);
+    activeTimers[activeTimersCount++] = timer;
     ESP_LOGI("DEPOSIT", "Started rental timer for compartment %d, duration %lu sec, overdue in %lu sec", compartmentId, durationSec, totalSec);
 }
 
 void checkOverdue() {
     // This can be called periodically as fallback, but timers handle it
     unsigned long now = millis();
-    for (auto it = activeTimers.begin(); it != activeTimers.end(); ) {
-        unsigned long elapsedSec = (now - it->startMs) / 1000;
+    for (int i = 0; i < activeTimersCount; ) {
+        unsigned long elapsedSec = (now - activeTimers[i].startMs) / 1000;
         vPortEnterCritical(&g_configMutex);
-        unsigned long totalAllowedSec = it->durationSec + g_config.system.gracePeriodSec;
+        unsigned long totalAllowedSec = activeTimers[i].durationSec + g_config.system.gracePeriodSec;
         vPortExitCritical(&g_configMutex);
         if (elapsedSec > totalAllowedSec) {
             // Overdue: auto-lock (fallback if timer failed)
-            ESP_LOGI("DEPOSIT", "Compartment %d overdue (fallback check), auto-locking", it->compartmentId);
+            ESP_LOGI("DEPOSIT", "Compartment %d overdue (fallback check), auto-locking", activeTimers[i].compartmentId);
             // TODO: Close gate
-            xTimerDelete(it->timerHandle, 0);
-            it = activeTimers.erase(it);
+            xTimerDelete(activeTimers[i].timerHandle, 0);
+            // Shift array
+            for (int j = i; j < activeTimersCount - 1; j++) {
+                activeTimers[j] = activeTimers[j + 1];
+            }
+            activeTimersCount--;
         } else {
-            ++it;
+            ++i;
         }
     }
 }

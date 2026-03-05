@@ -14,8 +14,8 @@
 /**
  * @brief Handles fatal errors by logging and restarting ESP32.
  * @param msg Descriptive error message.
- * @param code ESP error code (default ESP_FAIL).
+ * @param code ESP error code.
  */
-void fatal_error(const char* msg, esp_err_t code = ESP_FAIL);
+void fatal_error(const char* msg, esp_err_t code);
 
 #endif // ERROR_HANDLER_H
