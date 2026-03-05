@@ -153,6 +153,7 @@ void setup() {
 
     // Initialize LittleFS for config storage
     if (!LittleFS.begin()) {
+        ESP_LOGE("MAIN", "LittleFS mount failed, attempting graceful degradation");
         fatal_error("LittleFS mount failed");
     } else {
         ESP_LOGI("MAIN", "LittleFS mounted");
@@ -168,7 +169,8 @@ void setup() {
 
     // Initialize MQTT handler
     if (mqtt_init() != ESP_OK) {
-        ESP_LOGE("MAIN", "MQTT init failed, but continuing");
+        ESP_LOGE("MAIN", "MQTT init failed, continuing with degraded mode");
+        // Graceful degradation: continue without MQTT, log critical events locally
     }
 
     // Initialize deposit logic
@@ -262,13 +264,15 @@ void setup() {
     // Create factory reset task
     BaseType_t task_ret = xTaskCreate(factory_reset_task, "factory_reset", 2048, NULL, 5, NULL);
     if (task_ret != pdPASS) {
-        fatal_error("Failed to create factory reset task");
+        ESP_LOGE("MAIN", "Failed to create factory reset task, continuing without");
+        // Graceful degradation: continue without factory reset
     }
 
     // Create overdue check task
     task_ret = xTaskCreate(overdue_check_task, "overdue", 2048, NULL, 4, NULL);
     if (task_ret != pdPASS) {
-        fatal_error("Failed to create overdue task");
+        ESP_LOGE("MAIN", "Failed to create overdue task, continuing without");
+        // Graceful degradation: continue without overdue checks
     }
 
     // Create debug task if debug mode enabled
@@ -278,7 +282,8 @@ void setup() {
     if (debugEnabled) {
         task_ret = xTaskCreate(debug_task, "debug", 4096, NULL, 1, NULL);  // Low priority
         if (task_ret != pdPASS) {
-            ESP_LOGE("MAIN", "Failed to create debug task");
+            ESP_LOGE("MAIN", "Failed to create debug task, continuing without");
+            // Graceful degradation: continue without debug telemetry
         } else {
             ESP_LOGI("MAIN", "Debug task started");
         }
@@ -290,20 +295,29 @@ void setup() {
 // Main loop: Handles MQTT, OTA, LTE power, and power checks.
 // Edge cases: MQTT loop failure, OTA handle failure, power check failures.
 void loop() {
+    esp_task_wdt_reset();  // Reset watchdog at start of loop
+
     // Process MQTT messages
     mqtt_loop();
+
+    esp_task_wdt_reset();  // Reset after MQTT
 
     // Handle OTA updates
     ArduinoOTA.handle();
 
+    esp_task_wdt_reset();  // Reset after OTA
+
     // Manage LTE power based on conditions
     lte_power_management();
+
+    esp_task_wdt_reset();  // Reset after LTE
 
     // Other loop tasks can be added here
 
     // Periodic power check for deep sleep
     static unsigned long lastPowerCheck = 0;
     if (millis() - lastPowerCheck > 60000) {  // Every minute
+        ESP_LOGI("MAIN", "Performing power check");
         int batteryPercent = readBatteryLevel();
         float solarVoltage = readSolarVoltage();
         // Validate readings
@@ -315,8 +329,10 @@ void loop() {
             ESP_LOGE("MAIN", "Invalid solar voltage: %f", solarVoltage);
             solarVoltage = 5.0f;  // Fallback
         }
+        ESP_LOGI("MAIN", "Power check: battery %d%%, solar %.2fV", batteryPercent, solarVoltage);
         // Publish alert if low power
         if (batteryPercent < g_config.system.batteryLowThresholdPercent || solarVoltage < g_config.system.solarVoltageMin) {
+            ESP_LOGW("MAIN", "Low power detected, publishing alert");
             if (mqttClient.connected()) {
                 DynamicJsonDocument doc(256);
                 doc["alert"] = "low_power";
@@ -329,7 +345,7 @@ void loop() {
                 int len = snprintf(topic, sizeof(topic), "waterfront/%s/%s/alert", g_config.location.slug.c_str(), g_config.location.code.c_str());
                 if (len < sizeof(topic)) {
                     mqttClient.publish(topic, payload.c_str(), false);
-                    ESP_LOGW("MAIN", "Published low power alert");
+                    ESP_LOGI("MAIN", "Published low power alert");
                 } else {
                     ESP_LOGE("MAIN", "Alert topic too long, skipping publish");
                 }
@@ -339,11 +355,11 @@ void loop() {
         }
         // Enter deep sleep if battery low or solar low
         if (batteryPercent < g_config.system.batteryLowThresholdPercent || solarVoltage < g_config.system.solarVoltageMin) {
+            ESP_LOGW("MAIN", "Entering deep sleep due to low power");
             enterDeepSleep();
         }
         lastPowerCheck = millis();
     }
 
-    // Reset watchdog every loop iteration
-    esp_task_wdt_reset();
+    esp_task_wdt_reset();  // Reset watchdog at end of loop
 }
