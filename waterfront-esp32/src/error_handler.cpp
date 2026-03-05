@@ -41,7 +41,7 @@ void fatal_error(const char* msg, esp_err_t code = ESP_FAIL) {
         StaticJsonDocument<256> doc;
         doc["error"] = msg;
         doc["code"] = esp_err_to_name(code);  // Human-readable error code
-        doc["timestamp"] = millis();
+        doc["timestamp"] = esp_timer_get_time() / 1000;
         size_t len = serializeJson(doc, jsonBuffer, sizeof(jsonBuffer));
         if (len >= sizeof(jsonBuffer)) {
             ESP_LOGE("FATAL", "JSON buffer too small");
@@ -69,7 +69,7 @@ void fatal_error(const char* msg, esp_err_t code = ESP_FAIL) {
     StaticJsonDocument<256> alertDoc;
     alertDoc["error"] = msg;
     alertDoc["code"] = code;  // Numeric code for alerts
-    alertDoc["timestamp"] = millis();
+    alertDoc["timestamp"] = esp_timer_get_time() / 1000;
     size_t alertLen = serializeJson(alertDoc, jsonBuffer, sizeof(jsonBuffer));
     if (alertLen >= sizeof(jsonBuffer)) {
         ESP_LOGE("FATAL", "Alert JSON buffer too small");
@@ -91,6 +91,6 @@ void fatal_error(const char* msg, esp_err_t code = ESP_FAIL) {
     }
 
     // Delay to allow publish to complete before restart
-    delay(5000);
+    vTaskDelay(pdMS_TO_TICKS(5000));
     esp_restart();  // Restart ESP32 to recover
 }

@@ -112,7 +112,8 @@ bool shouldDisableLTE() {
 // Power management for LTE based on conditions
 void lte_power_management() {
     // Power down LTE if WiFi is connected and MQTT has been idle for >5 minutes
-    if (WiFi.status() == WL_CONNECTED && mqttClient.connected() && (millis() - lastMqttActivity > 300000)) {  // 5 min idle
+    wifi_ap_record_t ap_info;
+    if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK && mqttConnected && (esp_timer_get_time() / 1000 - lastMqttActivity > 300000)) {  // 5 min idle
         lte_power_down();
         ESP_LOGI("LTE", "Powered down due to WiFi connected and idle > 5 min");
     }

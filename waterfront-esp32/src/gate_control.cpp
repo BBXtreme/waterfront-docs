@@ -83,7 +83,7 @@ void openCompartmentGate(int compartmentId) {
     vPortEnterCritical(&gateMutex);
     if (compartmentStates[idx] == CLOSED || compartmentStates[idx] == ERROR) {
         compartmentStates[idx] = OPENING;
-        compartmentStartTimes[idx] = millis();
+        compartmentStartTimes[idx] = esp_timer_get_time() / 1000;
         // Set servo to open position (adjust duty cycle for angle)
         ledc_set_duty(LEDC_MODE, (ledc_channel_t)idx, 512);  // Example duty for 90 degrees; adjust
         ledc_update_duty(LEDC_MODE, (ledc_channel_t)idx);
@@ -104,7 +104,7 @@ void closeCompartmentGate(int compartmentId) {
     vPortEnterCritical(&gateMutex);
     if (compartmentStates[idx] == OPEN || compartmentStates[idx] == ERROR) {
         compartmentStates[idx] = CLOSING;
-        compartmentStartTimes[idx] = millis();
+        compartmentStartTimes[idx] = esp_timer_get_time() / 1000;
         // Set servo to close position (adjust duty cycle for angle)
         ledc_set_duty(LEDC_MODE, (ledc_channel_t)idx, 128);  // Example duty for 0 degrees; adjust
         ledc_update_duty(LEDC_MODE, (ledc_channel_t)idx);
@@ -141,7 +141,7 @@ const char* getCompartmentGateState(int compartmentId) {
  * @note Checks if movement duration has passed, updates state, handles retries on timeout.
  */
 void gate_task() {
-    unsigned long now = millis();
+    unsigned long now = esp_timer_get_time() / 1000;
     for (int i = 0; i < g_config.compartmentCount; i++) {
         vPortEnterCritical(&gateMutex);
         if (compartmentStates[i] == OPENING || compartmentStates[i] == CLOSING) {

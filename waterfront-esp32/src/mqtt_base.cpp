@@ -15,10 +15,10 @@ void setup() {
 }
 
 void loop() {
-    mqttClient.loop();
+    mqtt_loop();
     static unsigned long lastPublish = 0;
-    if (millis() - lastPublish > 60000) {
+    if (esp_timer_get_time() / 1000 - lastPublish > 60000) {
         mqtt_publish_status();
-        lastPublish = millis();
+        lastPublish = esp_timer_get_time() / 1000;
     }
 }
