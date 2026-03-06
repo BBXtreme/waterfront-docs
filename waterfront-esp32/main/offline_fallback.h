@@ -1,4 +1,3 @@
-// main/offline_fallback.h
 #ifndef OFFLINE_FALLBACK_H
 #define OFFLINE_FALLBACK_H
 
@@ -6,10 +5,18 @@
 #include <nvs.h>
 #include <time.h>
 
-void offline_init();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void offline_init(void);
 void offline_sync_pins(const char* payload);
 bool offline_validate_pin(const char* enteredPin);
-void offline_load_pins();
-void offline_cleanup_expired();
+void offline_load_pins(void);
+void offline_cleanup_expired(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // OFFLINE_FALLBACK_H

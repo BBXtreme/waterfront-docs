@@ -4,7 +4,7 @@
 
 #include "relay_handler.h"
 #include "config.h"
-#include <Arduino.h>
+
 
 // Initialize relay pin
 void relay_init() {

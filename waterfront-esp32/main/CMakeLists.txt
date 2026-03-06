@@ -26,12 +26,12 @@ idf_component_register(
         esp_https_ota
         json                # cJSON
         driver
+        esp_adc
         esp_event
         esp_netif
         freertos
         lwip
         bt
         spiffs              # for esp_spiffs.h
-        esp_modem           # for esp_modem.h (LTE)
         wifi_provisioning   # for BLE provisioning
 )
