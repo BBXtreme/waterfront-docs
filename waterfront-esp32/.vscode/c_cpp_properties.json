@@ -8,7 +8,7 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/Users/marco/Documents/GitHub/Waterfront/waterfront-esp32/src",
+                "/Users/marco/Documents/GitHub/Waterfront/waterfront-esp32/main",
                 "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/ESPmDNS/src",
                 "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
                 "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
@@ -247,7 +247,7 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/Users/marco/Documents/GitHub/Waterfront/waterfront-esp32/src",
+                    "/Users/marco/Documents/GitHub/Waterfront/waterfront-esp32/main",
                     "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/ESPmDNS/src",
                     "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src",
                     "/Users/marco/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
