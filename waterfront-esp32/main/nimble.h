@@ -1,17 +1,22 @@
-// nimble.h - Header file for BLE (NimBLE) functions
-// This header declares functions for initializing and managing BLE provisioning.
-// It provides an interface for starting BLE-based WiFi configuration.
-// Used in conjunction with nimble.cpp for BLE operations.
+// nimble.cpp - BLE provisioning using native IDF wifi_provisioning
+#include "esp_log.h"
+#include "wifi_provisioning/manager.h"
+#include "wifi_provisioning/scheme_ble.h"
 
-#ifndef NIMBLE_H
-#define NIMBLE_H
+static const char* TAG = "BLE";
 
-// Initialize BLE with a device name for advertising
-// deviceName: The name to advertise (e.g., "WATERFRONT-PROV")
-void ble_init(const char* deviceName);
+void startBLEProvisioning() {
+    ESP_LOGI(TAG, "Starting BLE provisioning (IDF native)");
 
-// Set the BLE device name (if server is active)
-// deviceName: New name to set
-void ble_set_device_name(const char* deviceName);
+    wifi_prov_mgr_config_t cfg = {
+        .scheme = wifi_prov_scheme_ble,
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_HANDLER_FREE_BTDM
+    };
 
-#endif // NIMBLE_H
+    ESP_ERROR_CHECK(wifi_prov_mgr_init(cfg));
+    ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_0, NULL, "WATERFRONT-PROV", NULL));
+}
+
+void stopBLEProvisioning() {
+    ESP_LOGI(TAG, "Stopping BLE provisioning");
+}

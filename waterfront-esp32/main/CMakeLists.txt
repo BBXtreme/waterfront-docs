@@ -3,16 +3,16 @@ idf_component_register(
     SRCS
         "main.cpp"
         "lte_manager.cpp"
-        "MQTT_Client.cpp"           # fixed case
+        "MQTT_Client.cpp"
         "nimble.cpp"
         "offline_fallback.cpp"
         "ota_handler.cpp"
-        "power_manager.cpp"
         "provisioning.cpp"
         "relay_handler.cpp"
         "return_sensor.cpp"
         "wifi_manager.cpp"
-        "error_handler.cpp"         # added if you have it
+        "error_handler.cpp"
+        # "power_manager.cpp"     # still commented
 
     INCLUDE_DIRS
         "."
@@ -24,7 +24,8 @@ idf_component_register(
         esp-tls
         esp_http_client
         esp_https_ota
-        json                # cJSON
+        app_update              # correct for esp_ota_ops.h
+        json
         driver
         esp_adc
         esp_event
@@ -32,6 +33,6 @@ idf_component_register(
         freertos
         lwip
         bt
-        spiffs              # for esp_spiffs.h
-        wifi_provisioning   # for BLE provisioning
+        spiffs
+        wifi_provisioning
 )

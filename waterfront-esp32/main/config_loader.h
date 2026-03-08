@@ -1,6 +1,9 @@
 #ifndef CONFIG_LOADER_H
 #define CONFIG_LOADER_H
 
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/portmacro.h>     // for portMUX_TYPE
 #include <cJSON.h>
 #include "config.h"
 
