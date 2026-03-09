@@ -3,7 +3,7 @@
  * @brief Power management for deep sleep and low-power operation.
  * @author BBXtreme + Grok
  * @date 2026-02-28
- * @note Uses modern ESP-IDF ADC oneshot + calibration API (v5+).
+ * @note Uses ESP-IDF ADC calibration API.
  *       Deep sleep current target <50 µA.
  */
 
@@ -12,9 +12,9 @@
 #include <esp_log.h>
 #include <esp_sleep.h>
 #include <esp_system.h>
-#include <esp_adc/adc_oneshot.h>
-#include <esp_adc/adc_cali.h>
-#include <esp_adc/adc_cali_scheme.h>
+#include <driver/adc.h>
+#include <esp_adc_cal.h>
+/* Using ESP-IDF v4 ADC calibration API */
 #include <esp_wifi.h>
 #include <esp_bt.h>
 #include <driver/gpio.h>
@@ -28,9 +28,8 @@
 #define ADC_ATTEN           ADC_ATTEN_DB_11
 #define ADC_BITWIDTH        ADC_BITWIDTH_12
 
-// ADC handles
-static adc_oneshot_unit_handle_t adc_handle = NULL;
-static adc_cali_handle_t cali_handle = NULL;
+// ADC calibration handle
+static esp_adc_cal_characteristics_t *cali_handle = NULL;
 
 // RTC memory (persists across deep sleep)
 RTC_DATA_ATTR uint64_t totalAwakeTimeMs = 0;
@@ -56,44 +55,12 @@ esp_err_t power_manager_init(void) {
     ESP_LOGI(TAG, "Initializing power manager (ADC oneshot + calibration)");
 
     // Initialize oneshot ADC unit
-    adc_oneshot_unit_init_cfg_t init_cfg = {
-        .unit_id = BATTERY_ADC_UNIT,
-        .ulp_mode = ADC_ULP_MODE_DISABLE,
-    };
-    esp_err_t ret = adc_oneshot_new_unit(&init_cfg, &adc_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to init ADC unit: %s", esp_err_to_name(ret));
-        return ret;
-    }
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(BATTERY_ADC_CH, ADC_ATTEN);
+    adc1_config_channel_atten(SOLAR_ADC_CH, ADC_ATTEN);
 
-    // Configure channels
-    adc_oneshot_chan_cfg_t chan_cfg = {
-        .atten = ADC_ATTEN,
-        .bitwidth = ADC_BITWIDTH,
-    };
-    ret = adc_oneshot_config_channel(adc_handle, BATTERY_ADC_CH, &chan_cfg);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to config battery channel: %s", esp_err_to_name(ret));
-        return ret;
-    }
-    ret = adc_oneshot_config_channel(adc_handle, SOLAR_ADC_CH, &chan_cfg);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to config solar channel: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    // Initialize calibration
-    adc_cali_curve_fitting_config_t cali_cfg = {
-        .unit_id = BATTERY_ADC_UNIT,
-        .atten = ADC_ATTEN,
-        .bitwidth = ADC_BITWIDTH,
-    };
-    ret = adc_cali_create_scheme_curve_fitting(&cali_cfg, &cali_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Calibration curve fitting not supported, falling back to raw values");
-        cali_handle = NULL;  // use raw ADC if calibration fails
-    }
-
+    cali_handle = (esp_adc_cal_characteristics_t *) calloc(1, sizeof(esp_adc_cal_characteristics_t));
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN, ADC_WIDTH_BIT_12, 1100, cali_handle);
     ESP_LOGI(TAG, "ADC initialized successfully");
     return ESP_OK;
 }
@@ -132,20 +99,11 @@ int power_manager_get_battery_percent(void) {
     int percent = ((voltage_mv - 3000) * 100) / (4200 - 3000);
     percent = (percent < 0) ? 0 : (percent > 100 ? 100 : percent);
 
-    ESP_LOGD(TAG, "Battery voltage: %d mV → %d%%", voltage_mv, percent);
-    return percent;
-}
+    ESP_LOGD(TAG, "Battery voltage: %dchannel_t ch, int* out_voltage_mv) {
+    int raw = adc1_get_raw((adc1_channel_t)ch);
 
-// Get solar voltage (direct mV → V conversion)
-float power_manager_get_solar_voltage(void) {
-    int voltage_mv = 0;
-    if (read_adc_voltage(SOLAR_ADC_UNIT, SOLAR_ADC_CH, &voltage_mv) != ESP_OK) {
-        return -1.0f;
-    }
-
-    float voltage = voltage_mv / 1000.0f;
-    ESP_LOGD(TAG, "Solar voltage: %.2f V", voltage);
-    return voltage;
+    if (cali_handle) {
+        *out_voltage_mv = esp_adc_cal_raw_to_voltage(raw, cali_handle);n voltage;
 }
 
 // Enter deep sleep
@@ -166,7 +124,7 @@ void power_manager_enter_deep_sleep(uint64_t sleep_time_us) {
 }
 
 // Start awake time measurement
-void power_manager_start_awake_profiling(void) {
+void power_manager_start_awake_profil
     awakeStartTimeUs = esp_timer_get_time();
     ESP_LOGD(TAG, "Awake profiling started");
 }
@@ -181,7 +139,7 @@ void power_manager_stop_awake_profiling(void) {
 }
 
 // Get last wake-up cause
-esp_sleep_wakeup_cause_t power_manager_get_last_wake_up_cause(void) {
+esp_sleep_wakeup_cause_t power_manae_up_cause(void) {
     return lastWakeUpCause;
 }
 

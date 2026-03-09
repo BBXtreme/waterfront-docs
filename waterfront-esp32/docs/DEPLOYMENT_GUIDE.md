@@ -1,77 +1,173 @@
-# WATERFRONT ESP32 Deployment Guide
+- # WATERFRONT ESP32 Deployment Guide (Pure ESP-IDF)
 
-## What is Deployment?
-Deployment means setting up the WATERFRONT system at your kayak rental location. This guide is for beginners – follow each step carefully.
+  ## What is Deployment?
+  Deployment means installing and configuring the WATERFRONT ESP32 Kayak Rental Controller at your real kayak rental location.  
+  This guide is written for beginners and assumes you are using **pure ESP-IDF** (Espressif's official development framework) — no PlatformIO, no Arduino core.
 
-## Before You Start (Prerequisites)
-1. **Hardware**: Gather ESP32 board, sensors, motors, solar panel, battery.
-2. **Software**: Install PlatformIO (free tool for coding ESP32).
-3. **MQTT Broker**: Set up a server for messages (e.g., Mosquitto on a computer).
-4. **Certificates** (if using secure connection): Get TLS certs from a CA.
-5. **Basic Knowledge**: Know how to connect wires and use a computer.
+  ## Before You Start (Prerequisites)
 
-## Step 1: Prepare the Hardware
-1. Connect ultrasonic sensors to ESP32 pins (e.g., Trig to GPIO 15, Echo to GPIO 16).
-2. Attach servo motors to GPIO 12.
-3. Connect limit switches to GPIO 13 and 14.
-4. Wire solar panel and battery to ADC pins (GPIO 34 for battery, GPIO 35 for solar).
-5. Optional: Connect LTE modem to serial pins.
+  1. **Hardware**
+     - ESP32 development board (e.g. ESP32-DevKitC, NodeMCU-32S, or any ESP32-WROOM-32 module)
+     - Sensors: ultrasonic (HC-SR04), limit switches, current/voltage sensors for solar/battery
+     - Actuators: relays or solenoids for locks, servo for gate (if used)
+     - Power: solar panel + charge controller + LiFePO4/Li-ion battery
+     - USB cable (for flashing & serial monitor)
 
-## Step 2: Install the Software
-1. Download the WATERFRONT code from GitHub.
-2. Open it in PlatformIO.
-3. Install libraries: Run `pio lib install` (it will download PubSubClient, ArduinoJson, etc.).
-4. Select your ESP32 board in `platformio.ini`.
-5. Build the code: Click "Build" in PlatformIO.
+  2. **Computer Setup**
+     - macOS / Windows / Linux (macOS used in examples)
+     - ESP-IDF v5.5.3 installed (recommended: git clone or official installer)
+       → Your path: `/Users/marco/.espressif/v5.5.3/esp-idf` or `/Users/marco/esp/esp-idf`
+     - Python 3.9–3.11 (included in ESP-IDF installer)
+     - Git (for updating IDF if needed)
 
-## Step 3: Configure the System
-1. Create a file named `config.json` with your settings (copy from README.md example).
-2. Change values:
-   - `broker`: Your MQTT server IP.
-   - `location.slug` and `code`: Your site name.
-   - `wifiProvisioning.fallbackSsid` and `pass`: Default WiFi.
-   - `compartments`: List your gates with correct pin numbers.
-3. Upload config: Run `pio run --target uploadfs` in PlatformIO.
-4. Upload certificates if using TLS: Put `ca.pem` in the data folder and upload.
+  3. **MQTT Broker**
+     - Public test broker (for development): `broker.emqx.io` port 1883 (no auth)
+     - Production: your own Mosquitto / EMQX / HiveMQ server (TLS + username/password recommended)
 
-## Step 4: Upload Code to ESP32
-1. Connect ESP32 to computer via USB.
-2. In PlatformIO, click "Upload".
-3. Wait for "Upload successful".
-4. Open serial monitor to see startup messages.
+  4. **Certificates** (for secure MQTT / HTTPS OTA)
+     - Root CA certificate (e.g. Let's Encrypt, DigiCert) → save as `.pem` file
+     - Optional: client certificate + key if your broker requires mutual TLS
 
-## Step 5: Set Up WiFi
-If WiFi isn't configured:
-- **Option 1: Bluetooth**: Use an app like nRF Connect to send SSID/password to the ESP32.
-- **Option 2: Web Page**: Connect to "WATERFRONT-DEFAULT" WiFi, open 192.168.4.1 in browser, enter details.
+  5. **Tools**
+     - Terminal (Terminal.app on macOS, PowerShell / cmd on Windows)
+     - Text editor: VS Code + Espressif IDF extension, or nano/vim/Zed/BBEdit
+     - Serial monitor: `idf.py monitor`, CoolTerm, PuTTY, or screen/minicom
 
-## Step 6: Test the System
-1. Power on the ESP32.
-2. Check serial logs for errors.
-3. Send a test MQTT command (e.g., open gate).
-4. Verify gate moves and MQTT responses.
-5. Run tests: `pio test` to check code.
+  ## Step-by-Step Deployment
 
-## Step 7: Go Live
-1. Mount hardware at your rental site.
-2. Connect solar panel and battery.
-3. Monitor MQTT topics for health updates.
-4. Set up alerts to notify you of issues.
+  ### Step 1 – Prepare ESP-IDF Environment
 
-## Step 8: Maintenance
-- Check battery levels via debug messages.
-- Update firmware via OTA topic when new versions come out.
-- Backup config.json regularly.
-- Clean sensors and check wires.
+  1. Open Terminal  
+  2. Activate ESP-IDF (run this in every new terminal):
 
-## Troubleshooting During Setup
-- **ESP32 not recognized**: Try different USB port or cable.
-- **Build fails**: Check PlatformIO version and reinstall libraries.
-- **WiFi fails**: Double-check SSID/password, move closer to router.
-- **MQTT fails**: Verify broker IP/port, check firewall.
+     ```bash
+     . /Users/marco/.espressif/tools/activate_idf_v5.5.3.sh
+     # or if you cloned manually:
+     # . /Users/marco/esp/esp-idf/export.sh
 
-## Tips for Success
-- Start small: Test one compartment first.
-- Label wires: Note which pin connects to what.
-- Keep backups: Save config.json copies.
-- Learn MQTT: Use a client like MQTT Explorer to monitor messages.
+  3. Verify installation:
+
+​	Bash
+
+```
+idf.py --version
+```
+
+​	→ Should show ESP-IDF v5.5.3
+
+### Step 2 – Clone / Update Project
+
+Bash
+
+```
+cd ~/Documents/GitHub
+git clone https://github.com/yourusername/Waterfront.git   # if not already cloned
+cd Waterfront/waterfront-esp32
+git pull origin main   # get latest code
+```
+
+### Step 3 – Configure Project Settings
+
+1. Open configuration menu:
+
+   Bash
+
+   ```
+   idf.py menuconfig
+   ```
+
+2. Important settings to enable / adjust:
+
+   - **Component config → ESP HTTPS OTA → Enable**
+   - **Component config → SPIFFS → Enable** (for config.json, logs)
+   - **Component config → NVS → Enable** (for persistent keys)
+   - **Component config → Wi-Fi → Wi-Fi Provisioning → Enable BLE + SoftAP**
+   - **Component config → MQTT → Enable**
+   - **Serial flasher config → Default serial port** → set to /dev/cu.usbserial-XXXX (check with ls /dev/cu.*)
+   - **Partition Table → Custom partition table CSV** (if you need custom sizes)
+
+3. Save (S) → Exit (Q) → confirm
+
+### Step 4 – Build the Firmware
+
+Bash
+
+```
+idf.py fullclean    # optional – only if previous build was broken
+idf.py build
+```
+
+→ Look for [100%] Built target waterfront-esp32 If errors → read the message carefully (most common: missing header → add to main/CMakeLists.txt REQUIRES)
+
+### Step 5 – Flash to ESP32
+
+1. Connect ESP32 via USB
+
+2. Find serial port:
+
+   Bash
+
+   ```
+   ls /dev/cu.*
+   ```
+
+   Usually /dev/cu.usbserial-XXXX or /dev/cu.SLAB_USBtoUART
+
+3. Flash & open monitor:
+
+   Bash
+
+   ```
+   idf.py -p /dev/cu.usbserial-XXXX flash monitor
+   ```
+
+   → Press reset button on ESP32 if it hangs
+
+### Step 6 – First Boot & Provisioning
+
+1. Watch serial output (idf.py monitor):
+   - Boot log, NVS init, WiFi provisioning start
+   - If BLE provisioning enabled → use nRF Connect app (iOS/Android) to connect to “WATERFRONT-PROV”
+   - Enter your WiFi SSID/password → device connects to internet
+2. Check MQTT connection:
+   - Use MQTT Explorer → connect to broker → subscribe to waterfront/#
+   - You should see waterfront/status messages
+
+### Step 7 – OTA & Production Setup
+
+1. Upload firmware.bin to your server (HTTPS)
+
+2. Update OTA URL in config.json or via MQTT command
+
+3. Trigger OTA:
+
+   Bash
+
+   ```
+   # or send MQTT message to trigger ota_perform_update()
+   ```
+
+4. Device downloads, verifies, reboots into new version
+
+### Troubleshooting
+
+- **ESP32 not recognized** → different USB cable/port, hold BOOT button while connecting
+- **Build fails on missing header** → add component to REQUIRES in main/CMakeLists.txt (e.g. mqtt, app_update, esp_https_ota)
+- **WiFi fails** → check SSID/password, signal strength, idf.py menuconfig → WiFi → max TX power
+- **MQTT fails** → verify broker IP/port/username/password, firewall, TLS settings
+- **OTA fails** → check HTTPS URL, cert pinning, firewall, enough heap
+- **Low power / deep sleep issues** → measure current with multimeter, check esp_sleep_enable_timer_wakeup()
+
+### Tips for Success
+
+- Start small: test one compartment lock/unlock first
+- Label all wires and pins (take photos!)
+- Keep backups of sdkconfig and config.json
+- Use idf.py size to check flash/RAM usage
+- Monitor with idf.py monitor or screen /dev/cu.usbserial-XXXX 115200
+- Use QEMU for quick testing: idf.py qemu
+- Document MQTT topics & payloads early
+
+Good luck deploying WATERFRONT at your location! If stuck → share the exact error from idf.py build or monitor output.
+
+Last updated: March 2026

@@ -2,6 +2,7 @@
 #include "config_loader.h"   // assuming this exists
 #include <string.h>
 #include "cJSON.h"
+#include "nvs_flash.h"
 
 #define TAG "OFFLINE"
 #define NVS_NAMESPACE "pins"

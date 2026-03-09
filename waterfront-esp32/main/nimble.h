@@ -10,7 +10,7 @@ void startBLEProvisioning() {
 
     wifi_prov_mgr_config_t cfg = {
         .scheme = wifi_prov_scheme_ble,
-        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_HANDLER_FREE_BTDM
+        .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM
     };
 
     ESP_ERROR_CHECK(wifi_prov_mgr_init(cfg));

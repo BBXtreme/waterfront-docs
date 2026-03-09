@@ -3,7 +3,7 @@ idf_component_register(
     SRCS
         "main.cpp"
         "lte_manager.cpp"
-        "MQTT_Client.cpp"
+        "mqtt_client.cpp"
         "nimble.cpp"
         "offline_fallback.cpp"
         "ota_handler.cpp"
