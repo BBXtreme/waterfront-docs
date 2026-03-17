@@ -1,27 +1,80 @@
-/**
- * @file config.h
- * @brief Central configuration header for WATERFRONT ESP32 Kayak Rental Controller.
- * @author BBXtreme + Grok
- * @date 2026-02-28
- * @note Contains all global constants, pin definitions, and settings for easy maintenance and adaptation.
- */
-
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Configuration header file for WATERFRONT ESP32 Kayak Rental Controller
-// This file contains all global constants, pin definitions, and settings used across the project.
-// It centralizes configuration to make the code easier to maintain and adapt for different hardware setups.
-// All values are defined as macros for compile-time constants, avoiding runtime overhead.
+#include <cstdint>
+#include <cstring>
 
-// Debug settings
-#define DEBUG_MODE 1                       ///< Enable debug mode (1 = enabled, 0 = disabled)
-#define DEBUG_PUBLISH_INTERVAL_MS 5000     ///< Interval to publish debug traces in ms
+#define MAX_COMPARTMENTS 10
 
-// Compartment settings
-#define MAX_COMPARTMENTS 10                ///< Maximum number of compartments supported
+// Global config struct
+struct GlobalConfig {
+    char version[16];
 
-// Logging settings
-#define LOG_LEVEL_DEFAULT 3                ///< Default log level (3 = INFO)
+    struct {
+        char broker[64];
+        int port;
+        char username[32];
+        char password[32];
+        char clientIdPrefix[32];
+        bool useTLS;
+        char caCertPath[64];
+        char clientCertPath[64];
+        char clientKeyPath[64];
+    } mqtt;
+
+    struct {
+        char slug[32];
+        char code[32];
+    } location;
+
+    struct {
+        char fallbackSsid[32];
+        char fallbackPass[32];
+    } wifiProvisioning;
+
+    struct {
+        char apn[32];
+        char simPin[16];
+        int rssiThreshold;
+        int dataUsageAlertLimitKb;
+    } lte;
+
+    struct {
+        char serviceUuid[37];
+        char ssidCharUuid[37];
+        char passCharUuid[37];
+        char statusCharUuid[37];
+    } ble;
+
+    struct {
+        int number;
+        int servoPin;
+        int limitOpenPin;
+        int limitClosePin;
+        int ultrasonicTriggerPin;
+        int ultrasonicEchoPin;
+        int weightSensorPin;
+    } compartments[MAX_COMPARTMENTS];
+
+    int compartmentCount;
+
+    struct {
+        int maxCompartments;
+        bool debugMode;
+        int gracePeriodSec;
+        int batteryLowThresholdPercent;
+        float solarVoltageMin;
+        int logLevel;
+        char otaPassword[32];
+    } system;
+
+    struct {
+        int offlinePinTtlSec;
+        int depositHoldAmountFallback;
+    } other;
+};
+
+extern GlobalConfig g_config;
+extern portMUX_TYPE g_configMutex;
 
 #endif // CONFIG_H

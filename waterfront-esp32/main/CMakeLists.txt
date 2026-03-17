@@ -1,10 +1,9 @@
-# main/CMakeLists.txt
 idf_component_register(
     SRCS
         "main.cpp"
         "lte_manager.cpp"
         "mqtt_client.cpp"
-        "nimble.cpp"
+        "nimble.cpp"              # ← stubbed below
         "offline_fallback.cpp"
         "ota_handler.cpp"
         "provisioning.cpp"
@@ -12,7 +11,7 @@ idf_component_register(
         "return_sensor.cpp"
         "wifi_manager.cpp"
         "error_handler.cpp"
-        # "power_manager.cpp"     # still commented
+        # "power_manager.cpp"
 
     INCLUDE_DIRS
         "."
@@ -24,7 +23,7 @@ idf_component_register(
         esp-tls
         esp_http_client
         esp_https_ota
-        app_update              # correct for esp_ota_ops.h
+        app_update
         json
         driver
         esp_adc
@@ -32,7 +31,7 @@ idf_component_register(
         esp_netif
         freertos
         lwip
-        bt
+        bt                    # needed for esp_bt.h
         spiffs
         wifi_provisioning
 )
