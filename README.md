@@ -8,6 +8,10 @@ Unmanned, 24/7 kayak/SUP rental platform with **Next.js PWA**, **Supabase** back
 
 Users book online → pay → receive PIN/QR → arrive at solar-powered locker → enter code / scan → take kayak → return to same bay → sensors confirm → deposit released automatically.
 
+→ Code lives in separate repos:
+- Booking app: https://github.com/BBXtreme/waterfront-app
+- ESP32 firmware: https://github.com/BBXtreme/waterfront-esp32
+
 ## Features – Status
 
 | Feature                               | Status    | Notes / Next                   |
