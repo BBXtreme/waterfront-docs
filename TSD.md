@@ -12,7 +12,7 @@
 
 **Changes in 1.3**: Marked all ESP32 firmware tasks as completed; added CI/CD with GitHub Actions; full centralized config achieved; overdue timer + watchdog implemented.
 
-This TSD now fully aligns with **RentalBuddy** (self-service 24/7 unmanned rentals, Stripe integration, digital lock/PIN access, ID checks, website embedding, reminders) and **HEIUKI Share** (heiuki.com / app.heiuki.com – automated SUP/kayak vending machines, book-online → open-compartment → take → paddle → return-to-machine flow, solar-powered lockers, booking-number entry, centralized smartphone management, Progressive Web App).
+This TSD now fully aligns with **RentalBuddy** (self-service 24/7 unmanned rentals, Stripe integration, digital lock/PIN access, ID checks, website embedding, reminders) and **HEIUKI Share** (heiuki.com / app.heiuki.com – automated Equipment (SUP/Kayak) vending machines, book-online → open-compartment → take → paddle → return-to-machine flow, solar-powered lockers, booking-number entry, centralized smartphone management, Progressive Web App).
 
 Type Safety → Zod schemas are the single source of truth. No raw interfaces allowed.
 
@@ -27,7 +27,7 @@ Type Safety → Zod schemas are the single source of truth. No raw interfaces al
 5. **At location** → Open confirmation link / scan QR in smartphone browser → PWA loads access screen → User taps "Unlock Now" button → Backend validates and publishes MQTT unlock command → ESP32 opens compartment/lock. (Optional future enhancement: Enter 4–6 digit PIN directly on physical keypad at location → local ESP32 validation & unlock)
 6. **Take equipment** → Sensors detect removal → ESP32 publishes “taken” event.
 7. **Use** → Customer paddles (no on-site staff).
-8. **Return** → Put kayak back into bay → Sensors confirm presence → ESP32 auto-locks + publishes “returned”.
+8. **Return** → Put Equipment back into bay → Sensors confirm presence → ESP32 auto-locks + publishes “returned”.
 9. **Post-return** → Auto-release deposit (if any), send receipt/reminder.
 
 **Edge Cases Covered** (from HEIUKI GTC/FAQ + RentalBuddy logic):
@@ -74,7 +74,7 @@ Example config.json structure (loaded from LittleFS at runtime):
 - Self-host on same VPS as Mosquitto (Docker compose).
 - Generate Lightning invoices via BTCPay API on payment success.
 - Optional Liquid BTC (faster/cheaper sidechain) via BTCPay’s altcoin support or Coinsnap fallback.
-- Webhook → Backend → MQTT /kayak/{locationId}/unlock on confirmed payment.
+- Webhook → Backend → MQTT /station/{locationId}/unlock on confirmed payment.
 
 ## 3. Updated MQTT Topic Structure
 
@@ -95,7 +95,7 @@ Example config.json structure (loaded from LittleFS at runtime):
 - return_sensor.cpp → Ultrasonic / magnetic / weight sensors per bay (detect equipment presence).
 - deposit_handler.cpp → Hold/release logic (LED blink or secondary lock if deposit pending).
 - offline_fallback.cpp → Pre-load recent PIN list via MQTT retained message; validate locally if broker unreachable.
-- pin_validator.cpp (optional – for phase 2 keypad support) → Compare entered PIN against pre-loaded list from retained topic /kayak/{locationId}/pins or local NVS cache. Only compile/activate when keypad hardware is present.
+- pin_validator.cpp (optional – for phase 2 keypad support) → Compare entered PIN against pre-loaded list from retained topic /station/{locationId}/pins or local NVS cache. Only compile/activate when keypad hardware is present.
 
 **Note on unlock variants**
 
@@ -103,7 +103,7 @@ Example config.json structure (loaded from LittleFS at runtime):
 - **Phase 2 optional path**: Add support for local keypad entry. Requires:
   - Hardware: I²C or matrix keypad + small OLED/e-ink display
   - Software: GPIO input handling, PIN comparison logic, fallback unlock if MQTT unreachable
-  - Retained message strategy: Backend publishes current active PINs as retained message on /kayak/{locationId}/pins (array or JSON)
+  - Retained message strategy: Backend publishes current active PINs as retained message on /station/{locationId}/pins (array or JSON)
 
 **4.2 Power / Solar Optimisation** (autonomous locations):
 
@@ -114,11 +114,11 @@ Example config.json structure (loaded from LittleFS at runtime):
 
 - Use Espressif's official **wifi_provisioning** component (built into ESP-IDF).
   - Preferred scheme: **BLE transport** (wifi_prov_scheme_ble) – low power, secure, works with smartphone apps (nRF Connect, LightBlue, or custom).
-  - Fallback scheme: **SoftAP + HTTP + captive portal** (wifi_prov_scheme_softap) – operator connects to temporary AP ("KayakMachine-Setup"), browser opens config page automatically.
+  - Fallback scheme: **SoftAP + HTTP + captive portal** (wifi_prov_scheme_softap) – operator connects to temporary AP ("Station-Setup"), browser opens config page automatically.
 - Trigger provisioning mode:
   - On first boot if no credentials in NVS (wifi_prov_mgr_is_provisioned() returns false).
   - On operator command (physical button long-press → GPIO interrupt → enter provisioning).
-  - Optional: MQTT admin command (/kayak/{locationId}/provision/start) – requires strong auth.
+  - Optional: MQTT admin command (/station/{locationId}/provision/start) – requires strong auth.
 - Storage: Save credentials to **NVS** namespace "wifi" using nvs_set_str() / nvs_commit().
 - Post-provisioning:
   - Stop provisioning service.

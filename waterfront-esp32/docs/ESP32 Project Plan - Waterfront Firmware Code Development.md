@@ -1,198 +1,244 @@
-# Waterfront ESP32 MQTT Code Development
+# ESP32 Project Plan - Waterfront Firmware Code Development
 
-### Project Plan for Adapting of Nodestark/mdb-esp32-cashless 
+**Project**: WATERFRONT – Kayak / SUP Rental Vending Machine Controller  
+**Firmware Target**: ESP32 (Arduino framework via PlatformIO)  
+**Current Status**: PlatformIO baseline restored (March 2026) – MQTT connect + status publish working, topics updated to `/station/`  
+**Goal**: Self-hosted, solar-powered, unmanned lock control with sensor confirmation, WiFi + LTE failover, runtime provisioning  
+**Base**: Adapted from nodestark/mdb-esp32-cashless + custom additions for HEIUKI/RentalBuddy flow
 
-This project plan focuses on the beginner roadmap tie-in for the Waterfront Kayak Rental Application and Control System, as outlined in the TSD (Technical Specification Document) sub-steps. It adapts the Nodestark repo (https://github.com/nodestark/mdb-esp32-cashless) for ESP32-based lock control without local payments or MDB (Multi-Drop Bus) hardware. Since bookings and payments occur via the PWA (Progressive Web App) using Stripe/BTCPay, we'll strip MDB-specific components, add relay and sensor logic for kayak bays, handle JSON payloads over MQTT (e.g., for unlock commands and status events), and integrate with Supabase for the full flow: booking → pay → MQTT unlock → sensor confirm.
+## 1. Technology & Build Stack (Updated 2026)
 
-The plan is broken into 1-2 hour tasks/goals, assuming beginner-level skills (e.g., basic Git, Arduino IDE/ESP-IDF, and AI tools like Grok or Claude for code generation). Each task includes:
-- **Goal**: What to achieve.
-- **Estimated Time**: 1-2 hours.
-- **Steps**: Actionable sub-steps.
-- **AI Prompt Example**: For code assistance.
-- **Testing/Tips**: Verification and pitfalls.
+- **Framework**: Arduino core for ESP32 (not pure ESP-IDF)
+- **Build System**: PlatformIO (VS Code extension) – preferred for beginners (auto toolchain, lib management, IntelliSense)
+- **Board**: ESP32 Dev Module (esp32dev)
+- **Core Libraries**:
+  - PubSubClient (MQTT)
+  - ArduinoJson (payloads)
+  - TinyGSM (LTE failover – SIM7600 / SIM7000 / Quectel)
+  - NimBLE-Arduino (planned for BLE WiFi provisioning)
+- **platformio.ini** key settings:
+  - platform = platformio/espressif32
+  - lib_deps: PubSubClient, ArduinoJson, TinyGSM (NimBLE later)
+  - build_flags: verbose debug, SPI auto-init, JSON std::string support
 
-Total estimated time: 10-15 hours, spread over days. Prerequisites: Install VS Code, Git, Arduino IDE (or PlatformIO for ESP-IDF), and set up a local MQTT broker (e.g., Mosquitto via Docker). Use Serial Monitor for ESP32 debugging. Align with TSD Section 6 (Development Roadmap) and FSD FR-ESP-01 to FR-ESP-04.
+## 2. Current Working Features (March 2026 baseline)
 
-#### General Assignment
+- WiFi station mode with fallback credentials (NVS later)
+- MQTT connect to broker (test.mosquitto.org or self-hosted Mosquitto)
+- Subscribe to:
+  - `/station/{machineId}/unlock`
+  - `/station/{machineId}/returnConfirm`
+  - `/station/{machineId}/depositRelease`
+- Publish to:
+  - `/station/{machineId}/status` (periodic + retained online announce)
+  - `/station/{machineId}/event` (future taken/returned)
+- Basic relay pulse on unlock command (LED + lock GPIO)
+- Serial debug output
 
-The **WATERFRONT** kayak rental ESP32 firmware will be built by heavily adapting the **nodestark/mdb-esp32-cashless** repository. The original project implements an MDB (Multi-Drop Bus) cashless vending device on ESP32(-S3), with strong MQTT integration for payments/telemetry, BLE for local interaction, and modular master/slave architecture.
+## 3. MQTT Topic Structure (Final – aligned with backend)
 
-For **WATERFRONT**, we completely remove MDB vending logic (no local coin/bill/credit card handling), keep and extend the MQTT + JSON handling parts, and add new modules for:
+Prefix changed to `/station/` for generality (not product-specific like `/kayak/`).
 
-- Relay/solenoid lock control (compartment open/close)
-- Sensor-based kayak presence detection (taken/returned events)
-- Runtime WiFi provisioning (BLE preferred + SoftAP fallback)
-- LTE cellular failover (TinyGSM)
-- Offline fallback (pre-synced PIN list in NVS)
-- Power optimization (deep sleep, modem power gating)
+| Topic                               | Direction     | QoS  | Payload Example (JSON)                                | Purpose                           |
+| ----------------------------------- | ------------- | ---- | ----------------------------------------------------- | --------------------------------- |
+| /station/{machineId}/unlock         | Backend → ESP | 1    | {"bookingId":"bk123","pin":"7482","durationSec":7200} | Payment confirmed → open lock     |
+| /station/{machineId}/returnConfirm  | Backend → ESP | 1    | {"bookingId":"bk123","action":"autoLock"}             | Force lock or late-return command |
+| /station/{machineId}/depositRelease | Backend → ESP | 1    | {"bookingId":"bk123","release":true}                  | Timely return → release deposit   |
+| /station/{machineId}/status         | ESP → Backend | 1    | {"state":"connected","uptimeMin":45,"rssi":-68}       | Telemetry (periodic + changes)    |
+| /station/{machineId}/event          | ESP → Backend | 1    | {"event":"taken","bookingId":"bk123"}                 | Kayak removed / returned          |
 
-This keeps proven networking code while aligning exactly with TSD §3 (MQTT topics), §4 (firmware extensions), and §6 (roadmap priorities: provisioning, LTE, sensors, return logic).
+Retained messages used for status/online state.
 
-#### Proposed Firmware Structure (after adaptation)
+## 4. Development Roadmap & Priorities
 
-waterfront-kayak-esp32/                  # New root project name (fork or new from nodestark base)
-├── CMakeLists.txt                       # Root project CMake (idf_component_register style)
-├── sdkconfig                            # Project-wide config (via menuconfig)
-├── sdkconfig.defaults                   # Default settings (WiFi, MQTT broker, machineId, etc.)
-├── partitions.csv                       # Custom partition table if needed (e.g. larger NVS)
-├── main/                                # Main application source
-│   ├── CMakeLists.txt
-│   ├── main.cpp                         # Entry point: setup(), loop(), task creation
-│   ├── config.h                         # Global constants (pins, topics, timeouts)
-│   ├── wifi_manager.cpp / .h            # WiFi station + provisioning (from nodestark BLE/SoftAP)
-│   ├── mqtt_handler.cpp / .h            # MQTT client (PubSubClient), subscribe callback, JSON parse
-│   ├── relay_handler.cpp / .h           # Lock control (pulse open/close on GPIO)
-│   ├── return_sensor.cpp / .h           # Kayak presence (ultrasonic/magnetic/weight polling)
-│   ├── deposit_logic.cpp / .h           # Timer for rental duration, auto-lock, deposit release flag
-│   ├── offline_fallback.cpp / .h        # NVS-stored PIN list, local validation if broker down
-│   ├── telemetry.cpp / .h               # Periodic status publish (battery, conn type, RSSI)
-│   └── power_manager.cpp / .h           # Deep sleep, modem power control, wake sources
-├── components/                          # Reusable IDF components (add as needed)
-│   ├── tinygsm/                         # TinyGSM for LTE modem (external component or local)
-│   └── arduinojson/                     # If not using managed component
-├── managed_components/                  # IDF component manager deps (if using)
-│   └── espressif__...                   # e.g. arduino-esp32 if hybrid, mqtt, etc.
-└── docs/                                # Optional: pinout diagram, wiring notes, flowcharts
+1. **Done – PlatformIO Baseline** (March 2026)
+   - Clean build, serial output, WiFi connect
+   - MQTT reconnect + subscribe/publish
+   - Topic prefix `/station/`
+
+2. **Next – Runtime WiFi Provisioning (BLE preferred)**
+   - Use NimBLE-Arduino + ESP32 WiFi provisioning service
+   - Trigger: first boot (no NVS creds) or long-press GPIO button
+   - Schemes: BLE (primary), SoftAP + captive portal (fallback)
+   - Store SSID/password in NVS
+   - Publish success status via MQTT
+
+3. **LTE Cellular Failover**
+   - Integrate TinyGSM (UART2 + PWRKEY control)
+   - State machine: WiFi → timeout → power-up modem → LTE → MQTT
+   - Telemetry: connType ("WiFi"/"LTE"), rssi, data usage estimate
+   - Power optimization: modem sleep/off when WiFi ok
+
+4. **Return Sensor & Confirmation Logic**
+   - Ultrasonic (HC-SR04) or magnetic reed + weight/pressure per bay
+   - Detect "taken" → publish /event {"event":"taken"}
+   - Detect "returned" → publish /event {"event":"returned"} + auto-lock
+   - Timeout handling (no return → late fee via backend)
+
+5. **Deposit & Overdue Handling**
+   - Hold deposit flag (MQTT command)
+   - LED blink / secondary lock if overdue
+   - Release on confirmed return + timely
+
+6. **Offline Fallback**
+   - Pre-sync recent PIN list via retained MQTT message
+   - Local PIN validation if broker unreachable
+
+7. **Power & Solar Optimizations**
+   - Deep sleep 99% (wake on timer / external interrupt / MQTT)
+   - Battery voltage monitoring (ADC)
+   - Status publish includes battery %
+
+8. **Testing & Diagnostics**
+   - Unit tests (Catch2 via PlatformIO test)
+   - Serial + MQTT logging levels
+   - Over-the-air (OTA) update support (ArduinoOTA lib)
+
+## 5. Hardware Pin Mapping (Tentative)
+
+- Relay / Solenoid lock: GPIO 5
+- Status LED: GPIO 2
+- Provisioning button (long press): GPIO 0
+- Ultrasonic Trigger / Echo: GPIO 18 / 19 (example)
+- LTE modem UART: GPIO 16 (TX), 17 (RX) + PWRKEY GPIO 4
+- Battery voltage divider: GPIO 34 (ADC)
+
+## 6. Tips for Beginners
+
+- Always open project via PlatformIO Home → Open → select waterfront-esp32 folder
+- After changes to platformio.ini: PlatformIO → Rebuild IntelliSense Index
+- Build errors? Check TERMINAL tab, not just PROBLEMS panel
+- Test MQTT early: Use mqtt-explorer desktop app to publish unlock commands
+- Commit often on feature branches (e.g. feat/ble-provisioning)
+- Ask for incremental code: "Add BLE provisioning module" / "Implement ultrasonic return sensor"
+
+## 7. References
+
+- PlatformIO docs: https://docs.platformio.org
+- PubSubClient: https://github.com/knolleary/pubsubclient
+- TinyGSM examples: https://github.com/vshymanskyy/TinyGSM
+- NimBLE provisioning: ESP-IDF WiFiProv examples adapted to Arduino
+- TSD.md / FSD.md (root docs)
+
+Last updated: March 17, 2026 – PlatformIO revival complete
 
 
 
-**Key architectural decisions**
+## 9. OTA (Over-The-Air) Updates
 
-- **Framework** — Full ESP-IDF (v5.5.3) preferred over Arduino for better power control, NVS, provisioning components, and TinyGSM integration. If nodestark base is Arduino-style, gradually migrate main logic to IDF tasks.
+**Goal**: Enable remote firmware updates for deployed ESP32 controllers without physical access (critical for off-grid/solar machines at waterfront locations).  
+**Priority**: Medium – implement after basic MQTT + sensors are stable (to avoid bricking during testing).  
+**Library**: ArduinoOTA (built-in to espressif32 Arduino framework – no extra lib_deps needed)
 
-- **Execution model** — FreeRTOS tasks:
+### 9.1 Configuration in platformio.ini
 
-  - Main loop → minimal (watchdog feeding)
-  - Separate tasks: mqtt_task, sensor_poll_task, power_task, provisioning_task
+Add these lines to your `[env:esp32dev]` section (or create a separate env like `[env:ota]` for testing):
 
-- **Configuration** — Use menuconfig for compile-time choices (broker URL, machineId, pin numbers, LTE APN, etc.)
+```ini
+; OTA support
+upload_protocol = espota
+; upload_port = mywaterfront.local     ; or specific IP e.g. 192.168.5.123 – set per device or use mDNS
+upload_port = 192.168.0.255               ; broadcast for discovery (works if mDNS not set)
+upload_flags =
+    --port=3232                           ; default OTA port
+    --auth=your_secure_password_2026      ; REQUIRED for production – set a strong password
+```
 
-- **JSON handling** — ArduinoJson 6/7 exclusively for parsing unlock payloads and building status/event messages
+- For mDNS discovery (recommended): Use ArduinoOTA.setHostname("waterfront-" MACHINE_ID) in code → upload with pio run -t upload --upload-port waterfront-kayak-bremen-01.local
+- Test upload: After flashing initial firmware via USB, use pio run -t upload with --upload-port set.
 
-- **Connectivity** — State machine: WiFi → LTE failover → offline mode
+### 9.2 Code Integration (add to src/main.cpp)
 
-- **Security** — MQTT over TLS (later), NVS encrypted if possible, BLE secure pairing
+Include and initialize ArduinoOTA in setup() and loop().
 
-  
+C++
 
-#### Task 1: Clone Repo and Setup Development Environment
+```
+// Add near top (after other includes)
+#include <ArduinoOTA.h>
 
-- **Goal**: Get the Nodestark base code locally and prepare for ESP32 development without MDB dependencies.
-- **Estimated Time**: 1 hour.
-- **Steps**:
-  1. Clone the repo: `git clone https://github.com/nodestark/mdb-esp32-cashless.git` and create a new branch: `git checkout -b waterfront-adaptation`.
-  2. Install dependencies: Open in VS Code/Arduino IDE; add libraries like PubSubClient (for MQTT), ArduinoJson (for payloads), and ESP-IDF components if switching from Arduino.
-  3. Flash a basic ESP32 test sketch to verify hardware (e.g., blink LED on GPIO).
-- **AI Prompt Example**: "Provide a beginner setup guide for cloning and branching the Nodestark/mdb-esp32-cashless repo in VS Code for ESP32 development."
-- **Testing/Tips**: Build and upload a simple "Hello World" sketch via Serial Monitor. Tip: If using ESP-IDF, follow Espressif docs for environment setup; avoid MDB folders initially.
+// In setup() – after WiFi is connected
+void setup() {
+  // ... existing WiFi connect code ...
 
-**Environment Decision (Feb 2026)**: Use **PlatformIO + ESP-IDF framework** instead of pure ESP-IDF or Arduino.  This provides faster setup, library management, and daily workflow while keeping full IDF capabilities.
+  if (WiFi.status() == WL_CONNECTED) {
+    // OTA Configuration
+    ArduinoOTA.setHostname(("waterfront-" MACHINE_ID).c_str());  // e.g. waterfront-kayak-bremen-01.local
+    ArduinoOTA.setPassword("your_secure_password_2026");         // match upload_flags --auth
 
-#### Task 1.5: Hardware Pinout Planning
+    // Optional: customize port if not 3232
+    // ArduinoOTA.setPort(3232);
 
-- **Goal**: Define and document ESP32 GPIO assignments for relay, sensors, LTE, etc., to avoid conflicts in firmware.
-- **Estimated Time**: 1 hour.
-- **Steps**:
-  1. Review provided "ESP32 Pinout Plan and Diagram.md" (in docs folder).
-  2. Confirm board model and peripherals (e.g., ultrasonic sensor, SIM7600 modem).
-  3. Customize table with your exact GPIOs; add wiring photos if available.
-  4. Commit: `git add docs/ESP32\ Pinout\ Plan.md && git commit -m "Added pinout diagram for WATERFRONT ESP32 controller"`.
-- **AI Prompt Example**: "Generate a customized ESP32 pinout table and wiring diagrams for kayak rental controller: Relay on GPIO 23, ultrasonic on 5/18, LTE UART on 16/17, based on DevKitC board."
-- **Testing/Tips**: Cross-check with board datasheet; test individual pins with blink sketch before full integration. Tip: Use #define in config.h to make pins configurable.
+    // Callbacks for progress/feedback (optional but useful)
+    ArduinoOTA.onStart([]() {
+      Serial.println("OTA Start");
+      // Optional: stop sensors/MQTT temporarily if needed
+    });
+    ArduinoOTA.onEnd([]() {
+      Serial.println("\nOTA End");
+      ESP.restart();
+    });
+    ArduinoOTA.onProgress(<a href="unsigned int progress, unsigned int total" target="_blank" rel="noopener noreferrer nofollow"></a> {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError(<a href="ota_error_t error" target="_blank" rel="noopener noreferrer nofollow"></a> {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
 
-#### Task 2: Remove MDB-Specific Folders and Code
-- **Goal**: Strip out vending/MDB-related components to simplify for kayak lock control (focus on MQTT and GPIO).
-- **Estimated Time**: 1-2 hours.
-- **Steps**:
-  1. Delete MDB folders: Remove `mdb-master-esp32s3/` and `mdb-slave-esp32s3/` (core MDB protocol logic, irrelevant for PWA-only payments).
-  2. Clean up references: In README.md and any shared files, remove mentions of MDB/EVA-DTS/DEX (e.g., telemetry parsing tied to vending).
-  3. Retain useful parts: Keep MQTT client code, BLE stack (for potential provisioning), and general ESP32 setup (e.g., WiFi manager).
-  4. Commit changes: `git commit -m "Removed MDB-specific folders for Waterfront adaptation"`.
-- **AI Prompt Example**: "Help remove MDB-related code from Nodestark/mdb-esp32-cashless repo: Identify and delete vending protocol files while keeping MQTT and BLE for a non-payment ESP32 lock controller."
-- **Testing/Tips**: Build the remaining code; check for errors in Serial Monitor (e.g., unresolved MDB includes). Tip: Backup the original repo; search for "MDB" keywords in code to ensure full removal.
+    ArduinoOTA.begin();
+    Serial.println("OTA Ready – hostname: " + String(ArduinoOTA.getHostname()));
+  }
+}
 
-#### Task 2.5: Define & Implement New Firmware Structure
+// In loop() – add this call (non-blocking)
+void loop() {
+  // ... existing MQTT loop, status publish etc. ...
 
-- **Goal**: Restructure the cleaned repo into a clean, modular ESP-IDF project layout matching WATERFRONT requirements (MQTT + relay + sensors + provisioning + LTE).
-- **Estimated Time**: 1.5–2.5 hours.
-- **Steps**:
-  1. Create new project root: Rename folder to waterfront-kayak-esp32 or create fresh via idf.py create-project waterfront-kayak-esp32.
-  2. Copy useful parts from cleaned nodestark base:
-     - WiFi + MQTT client code
-     - BLE provisioning (if present)
-     - JSON handling helpers
-  3. Create folder structure as shown above (main/, components/).
-  4. Move/rewrite entry point to main/main.cpp: init NVS → WiFi → MQTT connect → task creation.
-  5. Add empty skeleton files for new modules (relay_handler, return_sensor, etc.) with basic headers and placeholders.
-  6. Update root CMakeLists.txt to include all source files and components.
-  7. Run first build: idf.py build → fix includes/links.
-  8. Commit: git commit -m "Introduced WATERFRONT firmware structure with modular MQTT/relay/sensor layout"
-- **AI Prompt Example**: "Generate a complete ESP-IDF project structure for a kayak rental lock controller adapted from nodestark/mdb-esp32-cashless (MQTT-based, no MDB). Include folder layout, root CMakeLists.txt snippet, main.cpp skeleton with FreeRTOS tasks for MQTT, sensor polling, relay control, and placeholders for WiFi provisioning, TinyGSM LTE failover, NVS offline PINs."
-- **Testing/Tips**: Build must succeed without errors. Use idf.py size to check binary fits. Tip: Start with esp32 target (idf.py set-target esp32); switch to esp32s3 later if more RAM/PSRAM needed for JSON buffers.
+  ArduinoOTA.handle();  // MUST be called regularly – processes OTA requests
+}
+```
 
-#### Task 3: Add Basic Relay Code for Lock Control
+### 9.3 Security & Production Notes
 
-- **Goal**: Implement relay control for 12V solenoid locks (e.g., pulse open/close on GPIO), aligning with TSD Section 4 (ESP32 Firmware Extensions).
-- **Estimated Time**: 1-2 hours.
-- **Steps**:
-  1. Choose GPIO: Assign a pin (e.g., GPIO 23) for relay in code (use Arduino/ESP-IDF digitalWrite or gpio_set_level).
-  2. Add relay functions: Create a module like `relay_handler.cpp` with unlock (high for 1s) and lock (low) logic.
-  3. Integrate with base: Add to the retained ESP32 setup loop; test manual trigger via button or Serial command.
-- **AI Prompt Example**: "Add relay code to Nodestark ESP32 base (post-MDB removal) using Arduino/ESP-IDF: Control a 12V solenoid lock on GPIO 23 with pulse functions for unlock/lock in a kayak rental system."
-- **Testing/Tips**: Wire a relay/LED to ESP32; use Serial Monitor to send test commands (e.g., "unlock"). Tip: Ensure power safety (use MOSFET for 12V); debug with multimeter.
+- **Always use password**: Set --auth in platformio.ini + matching setPassword() in code.
+- **mDNS**: Enables easy discovery (hostname.local) – works on most home/office networks.
+- **Disable in deep sleep**: ArduinoOTA.handle() is lightweight, but if power is ultra-critical, call it only when connected and not sleeping.
+- **Risk mitigation**:
+  - OTA only active after WiFi connect
+  - Use strong, per-device passwords (or derive from MACHINE_ID)
+  - Consider VPN or firewall for production broker network
+- **Alternative libraries** (for later):
+  - **ElegantOTA** → Modern web UI (/update page) – add via lib_deps if you want browser-based updates.
+  - **HTTPUpdate** → Pull .bin from HTTPS server on MQTT command (e.g., admin sends "update" → ESP downloads from your VPS).
 
-#### Task 4: Modify Code to Handle JSON Unlock Payloads via MQTT
-- **Goal**: Adapt MQTT subscriber to process JSON from backend (e.g., {"bookingId":"bk_abc","pin":"7482","durationSec":7200}) and trigger relay.
-- **Estimated Time**: 1-2 hours.
-- **Steps**:
-  1. Use ArduinoJson: Parse incoming MQTT messages in callback function.
-  2. Update topics: Subscribe to `/kayak/{machineId}/unlock` (per TSD Section 3).
-  3. Add logic: On valid JSON, validate PIN (simple check), trigger relay unlock, and set timer for duration.
-  4. Publish response: Send status back to `/kayak/{machineId}/status` (e.g., {"state":"unlocked"}).
-- **AI Prompt Example**: "Modify Nodestark ESP32 code to handle JSON unlock payloads and sensor events without MDB: Use ArduinoJson to parse MQTT messages like {'bookingId':'bk_abc','pin':'7482'} and trigger a relay unlock."
-- **Testing/Tips**: Use a local MQTT broker; publish test JSON via mosquitto_pub. Monitor Serial for parsing logs. Tip: Handle errors (e.g., invalid JSON) with retries.
+### 9.4 Testing OTA
 
-#### Task 5: Add Sensor Events for Kayak Presence Detection
-- **Goal**: Integrate sensors (e.g., ultrasonic HC-SR04) for "taken" and "returned" events, enabling auto-lock and deposit release.
-- **Estimated Time**: 1-2 hours.
-- **Steps**:
-  1. Wire sensor: Assign GPIOs (e.g., trigger 5, echo 18).
-  2. Add module: Create `return_sensor.cpp` to detect presence (distance threshold for kayak in bay).
-  3. Event handling: In loop, check sensor; publish MQTT events like `/kayak/{machineId}/event` ({"event":"taken"}) or `/kayak/{machineId}/status` ({"kayakPresent":true}).
-  4. Link to relay: Auto-lock on return detection.
-- **AI Prompt Example**: "Extend Nodestark ESP32 MQTT code with ultrasonic sensor (HC-SR04) for kayak presence: Publish JSON events on detection and auto-lock relay for Waterfront rental flow."
-- **Testing/Tips**: Simulate with objects; view Serial output for distance readings. Tip: Debounce readings to avoid false triggers; calibrate threshold for kayak size.
+1. Flash initial firmware via USB.
+2. Check serial: "OTA Ready – hostname: waterfront-..."
+3. From terminal: pio run -t upload --upload-port waterfront-kayak-bremen-01.local (or IP)
+4. Make a small code change (e.g. add Serial.println("OTA test v2")) → upload OTA → verify new message in serial.
 
-#### Task 6: Test MQTT Unlocks Locally with Serial Monitor
-- **Goal**: Verify end-to-end ESP32 logic (MQTT receive → JSON parse → relay/sensor action) without backend.
-- **Estimated Time**: 1 hour.
-- **Steps**:
-  1. Flash updated firmware to ESP32.
-  2. Connect to local MQTT broker; subscribe/publish test messages.
-  3. Simulate unlock: Send JSON payload; observe relay pulse and sensor event publishes.
-  4. Edge cases: Test invalid PIN or offline (queue messages).
-- **AI Prompt Example**: "Debug script for testing Nodestark-adapted ESP32 MQTT unlocks: Provide mosquitto commands and Serial Monitor checks for JSON handling and relay/sensor."
-- **Testing/Tips**: Use Serial Monitor for logs (e.g., "Received unlock for booking bk_abc"). Tip: Monitor MQTT traffic with tools like MQTT Explorer.
+### 9.5 Integration with Waterfront Flow
 
-#### Task 7: Integrate with Supabase for Booking and Payment Flow
-- **Goal**: Connect ESP32 to Supabase backend for real bookings (PWA → pay → webhook → MQTT unlock).
-- **Estimated Time**: 2 hours.
-- **Steps**:
-  1. Setup Supabase: Create tables for bookings (per TSD Section 6: DB schema with paymentMethod, btcInvoiceId).
-  2. Add webhooks: Configure Stripe/BTCPay to hit Supabase functions that publish MQTT on success.
-  3. Test partial flow: Book via local PWA → simulate pay → MQTT unlock → ESP32 relay/sensor confirm → update DB status.
-- **AI Prompt Example**: "Integrate Nodestark ESP32 MQTT with Supabase for Waterfront flow: Code webhook to publish JSON unlock on payment, and handle sensor confirm events."
-- **Testing/Tips**: Use Supabase local CLI for dev; log webhook hits. Tip: Start with fiat (Stripe) before BTC; ensure TLS for MQTT.
+- Trigger OTA via admin dashboard: Publish MQTT command to new topic /station/{machineId}/ota/update → ESP subscribes → calls OTA logic or restarts into update mode.
+- Future: Version check via MQTT status publish (include "fwVersion": "1.2.3").
 
-#### Task 8: Full End-to-End Flow Testing and Refinements
-- **Goal**: Validate complete cycle (booking → pay → MQTT unlock → sensor confirm) with edge cases.
-- **Estimated Time**: 1-2 hours.
-- **Steps**:
-  1. Run PWA locally (Next.js setup from TSD).
-  2. Test flow: Book slot → pay (test mode) → unlock → simulate take/return → confirm deposit release via MQTT.
-  3. Add refinements: Offline fallback (pre-sync PINs), power optimization (deep sleep).
-  4. Commit and deploy: Push to Git; flash production ESP32.
-- **AI Prompt Example**: "Test plan for full Waterfront flow using adapted Nodestark ESP32: Debug booking → pay → MQTT unlock → sensor confirm with Supabase integration."
-- **Testing/Tips**: Use Serial Monitor and Supabase console for end-to-end logs. Tip: Handle Bremen-specific edge cases (e.g., weather cancels via admin MQTT); iterate with AI for fixes.
+Implement after MQTT stability is confirmed – OTA is powerful but can brick if interrupted during update (rare with good WiFi).
 
-This plan aligns with HEIUKI/RentalBuddy flows (TSD Section 1.1) and emphasizes modular ESP32 MQTT development. Track progress in Git; if stuck, use AI for error fixes (e.g., "Fix this ESP32 compile error: [paste]"). Next steps: Extend to WiFi provisioning and LTE (TSD Section 4.3-4.4).
+### Quick Summary of Changes
+- Uses **built-in ArduinoOTA** (zero extra deps)
+- PlatformIO OTA upload via `espota` protocol
+- mDNS hostname + password for discovery & security
+- Callbacks for progress/error logging
+- Ready for MQTT-triggered extension later
+
+
+
+Add this section to your document, commit it, then test the code snippet in your `main.cpp`. Once OTA works (first successful wireless upload), reply "OTA tested OK" – we can then add BLE provisioning or LTE failover next.
+
+Let me know if you want a variant (e.g. ElegantOTA web UI instead) or immediate code diff for your current main.cpp!

@@ -1,173 +1,207 @@
-- # WATERFRONT ESP32 Deployment Guide (Pure ESP-IDF)
+- # DEPLOYMENT GUIDE – Waterfront Kayak Rental System
 
-  ## What is Deployment?
-  Deployment means installing and configuring the WATERFRONT ESP32 Kayak Rental Controller at your real kayak rental location.  
-  This guide is written for beginners and assumes you are using **pure ESP-IDF** (Espressif's official development framework) — no PlatformIO, no Arduino core.
+  **Project**: Self-service kayak/SUP vending machines with ESP32 MQTT control, BTC/Lightning payments, and Next.js PWA  
+  **Target Environments**: 
+  - Development (local macOS/Windows)
+- Staging (Vercel preview + local broker)
+  - Production (VPS + Docker + off-grid solar machines)
 
-  ## Before You Start (Prerequisites)
+  **Last Updated**: March 17, 2026 – PlatformIO baseline + /station/ topics
+  
+  ## 1. Prerequisites
+  
+  - **Hardware**:
+    - ESP32 Dev board (or custom PCB)
+  - LTE modem (SIM7600/SIM7000 recommended, microSIM with data plan)
+    - 12V solenoid lock/relay, ultrasonic sensor (HC-SR04), status LED
+    - Solar panel + LiFePO4 battery + charge controller (for autonomous bays)
+  
+  - **Software/Tools**:
+    - VS Code + PlatformIO extension
+    - Git
+  - Docker + Docker Compose (for Mosquitto + backend)
+    - Node.js 18+ (for web)
+    - Supabase account (free tier ok for start)
+    - BTCPay Server (self-hosted) or test instance
+  - MQTT client tester: MQTT Explorer (desktop) or mqtt-cli
+  
+  ## 2. Local Development Deployment
+  
+### 2.1 ESP32 Firmware (waterfront-esp32/)
 
-  1. **Hardware**
-     - ESP32 development board (e.g. ESP32-DevKitC, NodeMCU-32S, or any ESP32-WROOM-32 module)
-     - Sensors: ultrasonic (HC-SR04), limit switches, current/voltage sensors for solar/battery
-     - Actuators: relays or solenoids for locks, servo for gate (if used)
-     - Power: solar panel + charge controller + LiFePO4/Li-ion battery
-     - USB cable (for flashing & serial monitor)
+  1. Open folder in VS Code via PlatformIO Home → Open Project
+  2. Update `include/config.h`:
+     - `MACHINE_ID` = unique per device (e.g. "bremen-harbor-01")
+   - `MQTT_BROKER` = "localhost" or "test.mosquitto.org" for dev
+  3. Build & Upload:
+   - PlatformIO → Build (checkmark icon)
+     - Connect ESP32 via USB → PlatformIO → Upload
+4. Monitor:
+     - PlatformIO → Serial Monitor (115200 baud)
+     - Expect: WiFi connect → MQTT connected → periodic status publish
 
-  2. **Computer Setup**
-     - macOS / Windows / Linux (macOS used in examples)
-     - ESP-IDF v5.5.3 installed (recommended: git clone or official installer)
-       → Your path: `/Users/marco/.espressif/v5.5.3/esp-idf` or `/Users/marco/esp/esp-idf`
-     - Python 3.9–3.11 (included in ESP-IDF installer)
-     - Git (for updating IDF if needed)
+  ### 2.2 MQTT Broker (Mosquitto – local or Docker)
 
-  3. **MQTT Broker**
-     - Public test broker (for development): `broker.emqx.io` port 1883 (no auth)
-     - Production: your own Mosquitto / EMQX / HiveMQ server (TLS + username/password recommended)
+  Quick local test (no auth):
+  ```bash
+docker run -it -p 1883:1883 eclipse-mosquitto
 
-  4. **Certificates** (for secure MQTT / HTTPS OTA)
-     - Root CA certificate (e.g. Let's Encrypt, DigiCert) → save as `.pem` file
-     - Optional: client certificate + key if your broker requires mutual TLS
+  ```
 
-  5. **Tools**
-     - Terminal (Terminal.app on macOS, PowerShell / cmd on Windows)
-     - Text editor: VS Code + Espressif IDF extension, or nano/vim/Zed/BBEdit
-     - Serial monitor: `idf.py monitor`, CoolTerm, PuTTY, or screen/minicom
-
-  ## Step-by-Step Deployment
-
-  ### Step 1 – Prepare ESP-IDF Environment
-
-  1. Open Terminal  
-  2. Activate ESP-IDF (run this in every new terminal):
-
-     ```bash
-     . /Users/marco/.espressif/tools/activate_idf_v5.5.3.sh
-     # or if you cloned manually:
-     # . /Users/marco/esp/esp-idf/export.sh
-
-  3. Verify installation:
-
-​	Bash
-
-```
-idf.py --version
-```
-
-​	→ Should show ESP-IDF v5.5.3
-
-### Step 2 – Clone / Update Project
+Or use waterfront-infra/docker-compose.yml (if present):
 
 Bash
 
 ```
-cd ~/Documents/GitHub
-git clone https://github.com/yourusername/Waterfront.git   # if not already cloned
-cd Waterfront/waterfront-esp32
-git pull origin main   # get latest code
+cd waterfront-infra
+docker compose up -d mosquitto
 ```
 
-### Step 3 – Configure Project Settings
+Test with MQTT Explorer:
 
-1. Open configuration menu:
+- Host: localhost (or machine IP)
+- Port: 1883
+- Subscribe to /station/# → see status messages from ESP32
+
+### 2.3 Backend & Web (waterfront-web/)
+
+1. Supabase setup:
+
+   - Create project at app.supabase.com
+   - Copy URL + anon key → .env.local
+
+2. Install deps:
 
    Bash
 
    ```
-   idf.py menuconfig
+   cd waterfront-web
+   npm install
    ```
 
-2. Important settings to enable / adjust:
+3. Run dev server:
 
-   - **Component config → ESP HTTPS OTA → Enable**
-   - **Component config → SPIFFS → Enable** (for config.json, logs)
-   - **Component config → NVS → Enable** (for persistent keys)
-   - **Component config → Wi-Fi → Wi-Fi Provisioning → Enable BLE + SoftAP**
-   - **Component config → MQTT → Enable**
-   - **Serial flasher config → Default serial port** → set to /dev/cu.usbserial-XXXX (check with ls /dev/cu.*)
-   - **Partition Table → Custom partition table CSV** (if you need custom sizes)
+   Bash
 
-3. Save (S) → Exit (Q) → confirm
+   ```
+   npm run dev
+   ```
 
-### Step 4 – Build the Firmware
+   → Open
 
-Bash
+    
+
+   http://localhost:3000
+
+    
+
+   (PWA booking flow)
+
+### 2.4 End-to-End Local Test
+
+- Start Mosquitto
+- Flash ESP32
+- Open PWA → simulate booking/payment → webhook → MQTT publish to /station/{machineId}/unlock
+- Verify: ESP32 logs callback → relay pulses
+
+## 3. Production Deployment
+
+### 3.1 ESP32 Devices (Off-Grid Machines)
+
+1. **Firmware**:
+   - Use real broker IP/domain in config.h (or provision via BLE)
+   - Enable deep sleep + LTE failover in code
+   - Flash via USB once (or OTA later)
+2. **Provisioning**:
+   - First boot: BLE mode (use nRF Connect app on phone)
+   - Enter WiFi creds → ESP32 connects & saves to NVS
+   - Long-press button to re-enter provisioning
+3. **Connectivity**:
+   - Primary: WiFi (provisioned)
+   - Failover: LTE (APN from SIM provider, e.g. "internet.t-mobile.de")
+   - Monitor RSSI/telemetry via /station/.../status
+4. **Power**:
+   - Deep sleep between MQTT wakes
+   - Modem power-down when WiFi active
+   - Battery voltage publish in status
+
+### 3.2 Backend & MQTT Broker (VPS / Render / Hetzner)
+
+Recommended: Docker Compose on VPS (Ubuntu 24.04+)
+
+YAML
 
 ```
-idf.py fullclean    # optional – only if previous build was broken
-idf.py build
+# waterfront-infra/docker-compose.yml example
+version: '3.8'
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+      - "9001:9001"  # websocket if needed
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+  backend:  # your Node.js/Express webhook + Supabase logic
+    build: ../waterfront-backend
+    environment:
+      - MQTT_BROKER=mosquitto
+      - SUPABASE_URL=...
+    depends_on:
+      - mosquitto
+volumes:
+  mosquitto-data:
 ```
 
-→ Look for [100%] Built target waterfront-esp32 If errors → read the message carefully (most common: missing header → add to main/CMakeLists.txt REQUIRES)
+- Add TLS (Let's Encrypt + nginx reverse proxy) for production MQTT
+- BTCPay webhook → backend → MQTT publish on invoice paid
 
-### Step 5 – Flash to ESP32
+### 3.3 Frontend (PWA + Admin Portal)
 
-1. Connect ESP32 via USB
+- Deploy to **Vercel** (recommended – free tier sufficient):
+  1. Connect GitHub repo
+  2. Root directory: /waterfront-web
+  3. Framework Preset: Next.js
+  4. Environment Variables: SUPABASE_URL, SUPABASE_ANON_KEY, MQTT_BROKER_URL (ws:// or wss://)
+  5. Deploy → automatic previews on branches
+- PWA: Installable on mobile (manifest + service worker)
+- Admin routes: Protected via Supabase auth
 
-2. Find serial port:
+### 3.4 Payments
 
-   Bash
+- **Fiat**: Stripe webhooks → backend → MQTT unlock
+- **BTC/Lightning/Liquid**: BTCPay Server (Docker on same VPS)
+  - Create store → enable Lightning + Liquid plugins
+  - Webhook URL: your-backend.com/webhook/btcpay
+  - On paid → publish to /station/{machineId}/unlock
 
-   ```
-   ls /dev/cu.*
-   ```
+## 4. Monitoring & Maintenance
 
-   Usually /dev/cu.usbserial-XXXX or /dev/cu.SLAB_USBtoUART
+- **Telemetry Dashboard**: Use admin portal to subscribe to /station/+/status
+- **Alerts**: Low battery / offline → email/SMS via backend cron
+- **OTA Updates**: Add ArduinoOTA lib later → update firmware remotely
+- **Logs**: ESP32 serial (via USB when servicing) + MQTT debug publishes
+- **Backup**: Supabase DB snapshots, BTCPay wallet seed, Mosquitto data volume
 
-3. Flash & open monitor:
+## 5. Security Notes
 
-   Bash
+- MQTT: Enable username/password + TLS in production (mosquitto.conf)
+- API: JWT via Supabase, rate-limit webhooks
+- ESP32: Secure BLE pairing, NVS encryption if sensitive
+- GDPR: Store minimal data, secure ID uploads
 
-   ```
-   idf.py -p /dev/cu.usbserial-XXXX flash monitor
-   ```
+## 6. Troubleshooting Checklist
 
-   → Press reset button on ESP32 if it hangs
+- ESP32 no WiFi? → Re-provision via BLE/button
+- No MQTT? → Check broker reachability (ping/telnet port 1883)
+- Unlock not working? → MQTT Explorer test publish → serial logs
+- High power use? → Verify modem sleep, deep sleep entry
 
-### Step 6 – First Boot & Provisioning
+Questions? Ask Grok for "Add OTA support" / "Secure MQTT config" / etc.
 
-1. Watch serial output (idf.py monitor):
-   - Boot log, NVS init, WiFi provisioning start
-   - If BLE provisioning enabled → use nRF Connect app (iOS/Android) to connect to “WATERFRONT-PROV”
-   - Enter your WiFi SSID/password → device connects to internet
-2. Check MQTT connection:
-   - Use MQTT Explorer → connect to broker → subscribe to waterfront/#
-   - You should see waterfront/status messages
+Happy deploying – get those Bremen kayaks renting 24/7!
 
-### Step 7 – OTA & Production Setup
 
-1. Upload firmware.bin to your server (HTTPS)
 
-2. Update OTA URL in config.json or via MQTT command
-
-3. Trigger OTA:
-
-   Bash
-
-   ```
-   # or send MQTT message to trigger ota_perform_update()
-   ```
-
-4. Device downloads, verifies, reboots into new version
-
-### Troubleshooting
-
-- **ESP32 not recognized** → different USB cable/port, hold BOOT button while connecting
-- **Build fails on missing header** → add component to REQUIRES in main/CMakeLists.txt (e.g. mqtt, app_update, esp_https_ota)
-- **WiFi fails** → check SSID/password, signal strength, idf.py menuconfig → WiFi → max TX power
-- **MQTT fails** → verify broker IP/port/username/password, firewall, TLS settings
-- **OTA fails** → check HTTPS URL, cert pinning, firewall, enough heap
-- **Low power / deep sleep issues** → measure current with multimeter, check esp_sleep_enable_timer_wakeup()
-
-### Tips for Success
-
-- Start small: test one compartment lock/unlock first
-- Label all wires and pins (take photos!)
-- Keep backups of sdkconfig and config.json
-- Use idf.py size to check flash/RAM usage
-- Monitor with idf.py monitor or screen /dev/cu.usbserial-XXXX 115200
-- Use QEMU for quick testing: idf.py qemu
-- Document MQTT topics & payloads early
-
-Good luck deploying WATERFRONT at your location! If stuck → share the exact error from idf.py build or monitor output.
-
-Last updated: March 2026
+This guide is modular, step-by-step, and matches the project's current monorepo structure while preparing for future repo splits. Commit it, then we can move to the next code piece (e.g., BLE provisioning or LTE integration). Let me know what's next!

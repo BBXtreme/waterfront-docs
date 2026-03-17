@@ -9,14 +9,14 @@ QoS: 1 or 2 for commands, 0 for telemetry
 ## Topics
 
 Inbound (backend → ESP32)
-- `waterfront/locations/{locationCode}/compartments/{compartmentNumber}/status`          QoS 1   JSON payload (retained)
-- `waterfront/locations/{locationCode}/compartments/{compartmentNumber}/command`         QoS 1   JSON payload
+- `waterfront/location/{locationCode}/compartment/{compartmentNumber}/status`          QoS 1   JSON payload (retained)
+- `waterfront/location/{locationCode}/compartment/{compartmentNumber}/command`         QoS 1   JSON payload
 
 Outbound (ESP32 → backend)
-- `waterfront/locations/{locationCode}/status`     QoS 0   location telemetry (retained) – provisioning, IP, conn type, battery etc.
-- `waterfront/locations/{locationCode}/compartments/{compartmentNumber}/status`          QoS 0   compartment telemetry (retained) – booked, gateState, bookingId etc.
-- `waterfront/locations/{locationCode}/compartments/{compartmentNumber}/event`           QoS 1   taken / returned / error
-- `waterfront/locations/{locationCode}/compartments/{compartmentNumber}/ack`             QoS 1   acknowledgments
+- `waterfront/location/{locationCode}/status`     QoS 0   location telemetry (retained) – provisioning, IP, conn type, battery etc.
+- `waterfront/location/{locationCode}/compartment/{compartmentNumber}/status`          QoS 0   compartment telemetry (retained) – booked, gateState, bookingId etc.
+- `waterfront/location/{locationCode}/compartment/{compartmentNumber}/event`           QoS 1   taken / returned / error
+- `waterfront/location/{locationCode}/compartment/{compartmentNumber}/ack`             QoS 1   acknowledgments
 
 ## Payload Schemas (JSON)
 
@@ -83,7 +83,7 @@ Example payload:
 {
   "mqtt": {"broker": "192.168.178.50", "port": 1883},
   "location": {"slug": "bremen", "code": "harbor-01"},
-  "compartments": [
+  "compartment": [
     {"number":1, "servoPin":12, "limitOpenPin":13, "limitClosePin":14},
     ...
   ],
