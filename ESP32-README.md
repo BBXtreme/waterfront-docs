@@ -6,6 +6,11 @@ ESP32 firmware for Waterfront unmanned kayak rental compartments. Controls servo
 
 This firmware runs on ESP32-S3 (or ESP32 classic) to manage unmanned rental compartments for Waterfront. It connects to an MQTT broker for real-time control, publishes telemetry, and supports WiFi provisioning + LTE failover. All settings are loaded from `/config.json` on LittleFS, enabling remote updates without reflashing.
 
+ → Code lives in separate repos:
+Waterfront Project Docs: https://github.com/BBXtreme/waterfront-docs
+Booking app: https://github.com/BBXtreme/waterfront-app
+ESP32 firmware: https://github.com/BBXtreme/waterfront-esp32
+
 Key features:
 
 - MQTT-based unlock on payment (Stripe/BTCPay webhooks)
